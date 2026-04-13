@@ -42,6 +42,13 @@ Những ý sau **đã có nền tảng trong fork `akaoio/gun`**:
 - base62 pack/unpack cho PEN bytecode soul
 - seed-based keys, authenticators, và các mở rộng crypto khác trong fork
 
+Điều quan trọng cần nhớ là `akaoio/gun` **không phải chỉ là một bước chuyển tên**. Nó đã là một bản cải tiến mạnh, có tài liệu riêng trong:
+
+- `gun/README.md`
+- `gun/docs/`
+
+với các chủ đề như OPFS, authenticators, WebAuthn, seed-based keys, worker compatibility, và PEN.
+
 ### 3. ZEN direction
 
 Những ý sau là **định hướng kiến trúc cho ZEN**:
@@ -181,11 +188,29 @@ ZEN vẫn favor deterministic conflict resolution.
 
 Đây là một trong những điểm phân biệt quan trọng nhất.
 
+### Abstract key naming
+
+ZEN học từ GUN một bài học quan trọng về graph naming:
+
+> key không nhất thiết phải là English word dễ đọc, mà có thể là các ký hiệu trừu tượng mang semantics rất nén như `>`, `#`, `.`, `:`, `~`, ...
+
+ZEN favor cách đặt key này và cố giữ chúng **tương đồng với GUN nhất có thể**.
+
+Lý do:
+
+- đây là một phần của graph language mà GUN đã hình thành
+- các key ngắn và trừu tượng giúp metadata / wire shape / graph contract gọn hơn
+- continuity với GUN lineage quan trọng hơn việc đổi tên sang các từ tiếng Anh “dễ đọc” nhưng làm lệch semantics gốc
+
 ### Metadata shape
 
-**Định hướng ZEN:** metadata của node sẽ giữ **shape giống node của GUN** để tương thích với graph model quen thuộc.
+**Định hướng ZEN:** metadata của node **phải giống metadata của node GUN**.
 
-Nhưng phần `state` trong metadata sẽ **không dùng `Gun.state`**.
+Điều này có nghĩa là ZEN **không** tạo ra một metadata model khác. Graph intuition và node metadata contract vẫn phải giữ theo cách GUN biểu diễn node.
+
+Phần khác biệt nằm ở **cách sinh giá trị `state`**, không nằm ở shape metadata.
+
+`state` trong metadata sẽ **không dùng `Gun.state`**.
 
 ### `zen.now`
 
@@ -346,10 +371,43 @@ Nó kế thừa:
 - các mở rộng thực tế đã có trong `akaoio/gun`
 - hướng đi nơi PEN trở thành nền tảng chính
 
+`akaoio/gun` cần được hiểu là một **fork đã được cải tiến rất nhiều**, không chỉ là một bản mirror trung gian. Các tài liệu trong `gun/README.md` và `gun/docs/` là phần quan trọng để hiểu lineage mà ZEN đang tiếp nối.
+
+## Testing mindset
+
+Một trong những bài học quan trọng nhất mà ZEN học từ GUN là:
+
+> **tests là spec**
+
+ZEN favor **test-driven programming**:
+
+1. viết test trước
+2. để test fail trước, chứng minh rằng test thật sự đang kiểm tra đúng behavior
+3. code được viết sau
+4. red phải chuyển thành green
+
+Điều này quan trọng vì:
+
+- test không chỉ để chống regression
+- test là cách mô tả behavior thật sự của hệ thống
+- test fail trước mới chứng minh được rằng test có giá trị
+- implementation phải đi theo spec, không phải spec chạy theo implementation
+
+Với ZEN, tư duy đúng là:
+
+- tests go first
+- fail first
+- code later
+- red turns green
+
+Nếu một behavior quan trọng chưa được mô tả bằng test, thì behavior đó chưa thật sự đủ chắc để trở thành nền tảng của hệ.
+
 ## Triết lý thiết kế
 
 - Không phá bỏ -> kế thừa
 - Không vá lỗi -> tái kiến trúc
+- Test trước -> code sau
+- Fail trước -> rồi mới cho green
 - Không tách data và crypto -> unified
 - Không đặt policy ở wrapper layer -> đưa về core qua PEN
 - Không để clock semantics bị khóa trong mô hình cũ -> xây clock riêng cho ZEN
