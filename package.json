@@ -14,7 +14,7 @@
     "build": "npm run buildGUN",
     "prepublishOnly": "npm run buildGUN",
     "clean": "node --input-type=module -e \"import fs from 'node:fs'; const drop = ['tmp','radata','data','radatatest','data.json']; for (const d of drop) { fs.rmSync(d,{recursive:true,force:true}); } for (const name of fs.readdirSync('.')) { if (name.startsWith('radatatest-') || name.startsWith('radata-')) { fs.rmSync(name,{recursive:true,force:true}); } }\"",
-    "test": "npm run clean && echo 'Did you run PANIC holy-grail, 1~X, on-recover, etc.?' && mocha --exit test/abc.js test/rad/rad.js test/radix.js test/pen.js",
+    "test": "npm run clean && echo 'Did you run PANIC holy-grail, 1~X, on-recover, etc.?' && mocha --exit test/abc.js test/rad/rad.js test/radix.js test/pen.js test/zen.js",
     "test:browser": "playwright test",
     "test:browser:setup": "playwright install chromium",
     "testSEA": "npm run clean && mocha test/sea/sea.js",
