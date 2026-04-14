@@ -8,7 +8,8 @@ let __defaultExport;
 (function(){
 
     const SEA = __root
-    const api = {Buffer: __buffer}
+    const globalScope = (typeof globalThis !== 'undefined') ? globalThis : (typeof global !== 'undefined' ? global : (typeof window !== 'undefined' ? window : {}));
+    const api = {Buffer: __buffer || globalScope.Buffer}
     var o = {}, u;
 
     // ideally we can move away from JSON entirely? unlikely due to compatibility issues... oh well.
@@ -29,6 +30,13 @@ let __defaultExport;
       api.TextDecoder = SEA.window.TextDecoder;
       api.random = (len) => api.Buffer.from(api.crypto.getRandomValues(new Uint8Array(api.Buffer.alloc(len))));
     }
+    if(!api.crypto && globalScope.crypto){
+      api.crypto = globalScope.crypto;
+      api.subtle = (api.crypto||o).subtle || (api.crypto||o).webkitSubtle;
+      api.random = (len) => api.Buffer.from(api.crypto.getRandomValues(new Uint8Array(api.Buffer.alloc(len))));
+    }
+    if(!api.TextEncoder){ api.TextEncoder = globalScope.TextEncoder }
+    if(!api.TextDecoder){ api.TextDecoder = globalScope.TextDecoder }
     if(!api.TextDecoder)
     {
       const { TextEncoder, TextDecoder } = __text_encoding;

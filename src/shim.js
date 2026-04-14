@@ -48,7 +48,7 @@ Object.keys = Object.keys || function(o){
 	return l;
 }
 ;(function(){
-	var u, sT = setTimeout, l = 0, c = 0
+	var u, sT = setTimeout, l = 0, c = 0, active = 0
 	, sI = (typeof setImmediate !== ''+u && setImmediate) || (function(c,f){
 		if(typeof MessageChannel == ''+u){ return sT }
 		(c = new MessageChannel()).port1.onmessage = function(e){ ''==e.data && f() }
@@ -57,8 +57,16 @@ Object.keys = Object.keys || function(o){
 	|| {now: function(){ return +new Date }};
 	sT.hold = sT.hold || 9; // half a frame benchmarks faster than < 1ms?
 	sT.poll = sT.poll || function(f){
-		if((sT.hold >= (check.now() - l)) && c++ < 3333){ f(); return }
-		sI(function(){ l = check.now(); f() },c=0)
+		if(active){
+			sI(function(){ l = check.now(); active = 1; try{ f() } finally { active = 0 } }, c=0);
+			return;
+		}
+		if((sT.hold >= (check.now() - l)) && c++ < 3333){
+			active = 1;
+			try{ f() } finally { active = 0 }
+			return;
+		}
+		sI(function(){ l = check.now(); active = 1; try{ f() } finally { active = 0 } },c=0)
 	}
 }());
 ;(function(){ // Too many polls block, this "threads" them in turns over a single thread in time.

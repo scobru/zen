@@ -217,12 +217,7 @@
 ;(function(){ // need to isolate into separate module!
 	var joy = window.JOY = function(){};
 	joy.auth = function(a,b,cb,o){
-		if(!o){ o = cb ; cb = 0 }
-		if(o === true){
-			gun.user().create(a, b);
-			return;
-		}
-		gun.user().auth(a,b, cb,o);
+		throw new Error('Legacy SEA user/create/auth APIs have been removed. Use authenticator pairs and PEN policies instead.');
 	}
 
 	var opt = joy.opt = window.CONFIG || {}, peers;

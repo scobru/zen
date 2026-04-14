@@ -20,7 +20,7 @@
     "testSEA": "npm run clean && mocha test/sea/sea.js",
     "e2e": "mocha e2e/distributed.js",
     "docker": "hooks/build",
-    "minify": "uglifyjs gun.js -o gun.min.js -c -m",
+    "minify": "uglifyjs gun.js --module -o gun.min.js -c -m",
     "buildGUN": "node lib/build.js gun && npm run minify",
     "unbuild": "npm run unbuildGUN",
     "unbuildGUN": "node lib/unbuild.js gun",

@@ -2894,9 +2894,11 @@ describe('Gun', function(){
 			list.set(gun.get('alice-s').put({name: "Alice", group: "awesome", married: true}));
 			var check = {}, count = {};
 			list.map().on(function(data, id){
+				if(done.c){ return }
 				expect(data.group).to.be('awesome');
 				expect(data.married).to.be(true);
 				expect(data.name).to.be('Alice');
+				done.c = 1;
 				nopasstun(done, gun);
 			});
 		});

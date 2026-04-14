@@ -223,8 +223,10 @@ import __gun from '../gun.js';
         }catch(e){ msg._.sea = o }
         return o
       }())
-      var authenticator = opt.authenticator || (user._ || {}).sea
-      var upub = opt.authenticator ? (opt.pub || (user.is || {}).pub || pub) : (user.is || {}).pub
+      var sea = (user && user._) || {}
+      var is = (user && user.is) || {}
+      var authenticator = opt.authenticator || sea.sea
+      var upub = opt.pub || (authenticator || {}).pub || is.pub || pub
       if (!msg._.done) {
         delete ctx.authenticator; delete ctx.pub
         msg._.done = true
@@ -417,7 +419,7 @@ import __gun from '../gun.js';
         return no("Account not same!")
       }
 
-      if ((user.is || authenticator) && upub && !raw['*'] && !raw['+'] && (pub === upub || (pub !== upub && cert))){
+      if (((user && user.is) || authenticator) && upub && !raw['*'] && !raw['+'] && (pub === upub || (pub !== upub && cert))){
         check.auth(msg, no, authenticator, function(data){
           if(!$expect(data)){ return }
           $hash(data, $sign)
