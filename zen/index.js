@@ -2,9 +2,52 @@ import GUN from '../gun.js';
 import SEA from '../sea.js';
 import PEN from '../lib/pen.js';
 
+var hasOwn = Object.prototype.hasOwnProperty;
+var STATIC_SKIP = { length: 1, name: 1, prototype: 1 };
+var CHAIN_SKIP = { constructor: 1 };
+
+function mirrorStatics(target, source) {
+  Object.getOwnPropertyNames(source).forEach(function(name) {
+    if (STATIC_SKIP[name] || hasOwn.call(target, name)) { return }
+    var desc = Object.getOwnPropertyDescriptor(source, name);
+    if (!desc) { return }
+    Object.defineProperty(target, name, desc);
+  });
+}
+
+function mirrorMethods(target, source, pick) {
+  Object.getOwnPropertyNames(source).forEach(function(name) {
+    if ((pick && !pick(name)) || hasOwn.call(target, name)) { return }
+    var desc = Object.getOwnPropertyDescriptor(source, name);
+    if (!desc || 'function' !== typeof desc.value) { return }
+    Object.defineProperty(target, name, {
+      configurable: true,
+      writable: true,
+      value: function(...args) {
+        return this.constructor[name](...args);
+      }
+    });
+  });
+}
+
+function mirrorChain(target, source) {
+  Object.getOwnPropertyNames(source).forEach(function(name) {
+    if (CHAIN_SKIP[name] || hasOwn.call(target, name)) { return }
+    var desc = Object.getOwnPropertyDescriptor(source, name);
+    if (!desc || 'function' !== typeof desc.value) { return }
+    Object.defineProperty(target, name, {
+      configurable: true,
+      writable: true,
+      value: function(...args) {
+        return this.GUN[name](...args);
+      }
+    });
+  });
+}
+
 class ZEN {
   constructor(opt = {}) {
-    this.opt = opt;
+    this.OPT = opt;
     this._GUN = opt.GUN || opt.gun || null;
     this._GUNOpt = this._GUN ? null : (opt.GUNOpt || opt.gunOpt || opt);
   }
@@ -28,6 +71,7 @@ class ZEN {
   }
 
   get PEN() { return PEN }
+  get SEA() { return SEA }
   get ready() { return PEN.ready }
 
   use(gun) {
@@ -55,6 +99,13 @@ class ZEN {
   set(...args) { return this.GUN.set(...args) }
   back(...args) { return this.GUN.back(...args) }
 }
+
+mirrorStatics(ZEN, GUN);
+mirrorStatics(ZEN, SEA);
+mirrorStatics(ZEN, PEN);
+mirrorMethods(ZEN.prototype, SEA, function(name) { return !CHAIN_SKIP[name] });
+mirrorMethods(ZEN.prototype, PEN, function(name) { return !CHAIN_SKIP[name] });
+mirrorChain(ZEN.prototype, GUN.chain);
 
 ZEN.GUN = GUN;
 ZEN.SEA = SEA;
