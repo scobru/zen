@@ -88,6 +88,8 @@
   },
   "dependencies": {
     "aws-sdk": "^2.528.0",
+    "emailjs": "^2.2.0",
+    "formidable": "^3.5.4",
     "ws": "^7.5.10"
   },
   "optionalDependencies": {
@@ -95,7 +97,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
-    "emailjs": "^2.2.0",
     "ip": "^1.1.5",
     "mocha": "^6.2.0",
     "uglify-js": "^3.6.0"
