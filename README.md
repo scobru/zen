@@ -1,357 +1,447 @@
 # ZEN — Zen Entropy Network
 
-**ZEN** là một **offline-first decentralized graph database** được tạo ra để **thay thế GUN trong repo akao**.
+**ZEN** is an **offline-first decentralized graph database** created to **replace GUN in the akao repo**.
 
-Nó không sinh ra như một side project vô ích. Nó tồn tại vì `akao` cần một nền tảng graph + crypto + execution mới, kế thừa những gì tốt nhất từ GUN nhưng sửa các điểm nghẽn cốt lõi về runtime, storage, identity, và policy.
+It was not born as a pointless side project. It exists because `akao` needs a new graph + crypto + execution foundation that inherits the best parts of GUN while fixing its core bottlenecks around runtime, storage, identity, and policy.
 
 > **Carry the legacy. Fix the core. Evolve the system.**
 
-## TL;DR cho developer mới
+## TL;DR for new developers
 
-Nếu bạn mới đọc repo này, đây là điều quan trọng nhất cần biết:
+If you are new to this repo, here is the most important context:
 
-1. **ZEN là successor định hướng từ `akaoio/gun`**, không phải một project tách rời lineage.
-2. **Mục tiêu thực tế của ZEN là thay thế GUN trong akao.**
-3. **PEN là core policy/execution system** và ZEN sẽ không kế thừa các lớp cũ như `SEA.certify`, user namespace, hay content-address như feature layer riêng.
-4. **ZEN muốn giữ graph feeling của GUN**, nhưng tái thiết kế clock, crypto, storage, và execution model.
-5. README này phân biệt rõ:
-   - cái gì là **lineage đã có trong `akaoio/gun`**
-   - cái gì là **định hướng của ZEN**
-   - cái gì là **không được kế thừa**
+1. **ZEN now evolves forward from the invention base in `akaoio/gun`**, not from Mark's original `amark/gun` alone.
+2. **ZEN's practical goal is to replace GUN inside akao.**
+3. **PEN is the core policy/execution system**, and ZEN does not intend to inherit older layers like `SEA.certify`, the user namespace model, or content-addressing as separate first-class feature layers.
+4. **ZEN wants to preserve the graph feeling of GUN**, while redesigning the clock, crypto, storage, and execution model.
+5. This README clearly distinguishes:
+   - what belongs to **Mark's original GUN lineage**
+   - what was **invented in `akaoio/gun`**
+   - what is **the direction of ZEN**
+   - what is **not intended to be inherited**
 
 ## README contract
 
-Để tránh overclaim, nên đọc README này theo 3 lớp:
+To avoid overclaiming, this README should be read in three layers:
 
 ### 1. Current repo reality
 
-Repo `zen/` hiện tại đã pivot sang branch `attempt2`.
+The current `zen/` repo has already pivoted to the `attempt2` branch.
 
-Điều đó có nghĩa là:
+That means:
 
-- codebase hiện tại **không còn** là runtime scratch-build của `attempt1`
-- codebase hiện tại là **tree fork từ `akaoio/gun`**
-- docs cấp `zen` như `README.md`, `docs/`, và `PLAN.md` được giữ lại để mô tả direction
-- `npm start` hiện đang chạy theo base runtime của gun tree
-- `npm test` hiện cũng đang chạy theo test system của gun tree
+- the current codebase is **no longer** the scratch-built runtime from `attempt1`
+- the current codebase started from a **tree imported from `akaoio/gun`**
+- ZEN-level docs such as `README.md`, `docs/`, and `PLAN.md` are preserved to describe the direction
+- `npm start` currently runs on top of the gun-based runtime
+- `npm test` also currently runs on top of the gun-based test system
 
-Nói cách khác, current reality bây giờ là:
+In other words, current reality is now:
 
-> **ZEN docs + gun-based implementation base**
+> **ZEN docs + akaoio/gun invention base**
 
-chứ chưa phải một codebase nơi mọi ZEN direction đã được re-applied đầy đủ lên fork mới.
+not yet a codebase where every ZEN design direction has already been fully re-applied to the new fork.
 
-Điều cũng phải nói rõ:
+This also needs to be stated clearly:
 
-- `attempt1` được xem là hướng implementation bị bỏ
-- `attempt2` là base mới đúng hơn vì bắt đầu từ lineage đã chạy thật
-- repo hiện đã có server/runtime/test harness mạnh hơn trước vì kế thừa trực tiếp từ gun
-- nhưng README này vẫn chứa nhiều phần nói về **ZEN direction**, không nên đọc nó như thể toàn bộ direction đó đã được hiện thực hết trong branch hiện tại
+- `attempt1` is considered an abandoned implementation direction
+- `attempt2` is the more correct new base because it starts from lineage that already runs for real
+- the repo now has a stronger server/runtime/test harness because it inherits from the more advanced `akaoio/gun` base rather than from `amark/gun`
+- but this README still contains many sections describing **ZEN direction**, so it should not be read as if that entire direction has already been implemented in the current branch
 
-README này vẫn mô tả:
+This README still describes:
 
-- mục tiêu của project
-- các nguyên tắc kiến trúc
-- những gì được kế thừa từ `akaoio/gun`
-- những gì ZEN dự định xây thành core
+- the goal of the project
+- the architectural principles
+- what is carried forward from `akaoio/gun`
+- what ZEN intends to build as core
 
-### 2. Inherited lineage from `akaoio/gun`
+### 2. Original GUN vs `akaoio/gun`
 
-Những ý sau **đã có nền tảng trong fork `akaoio/gun`**:
+This repo needs to distinguish two different sources of lineage:
 
-- OPFS adapter qua `gun/lib/opfs.js`
-- worker / `globalThis` compatibility trong nhiều `lib/` modules
-- PEN runtime bằng `pen.wasm`
-- base62 pack/unpack cho PEN bytecode soul
-- seed-based keys, authenticators, và các mở rộng crypto khác trong fork
+1. **`amark/gun/`** is Mark Nadal's original GUN.
+2. **`akaoio/gun/`** is the much more advanced `gun` fork.
 
-Điều quan trọng cần nhớ là `akaoio/gun` **không phải chỉ là một bước chuyển tên**. Nó đã là một bản cải tiến mạnh, có tài liệu riêng trong:
+The original GUN established the graph sync lineage:
 
-- `gun/README.md`
-- `gun/docs/`
+- graph-first sync
+- offline-first thinking
+- CRDT / HAM intuition
+- P2P orientation
+- SEA as the historical crypto/auth layer
 
-với các chủ đề như OPFS, authenticators, WebAuthn, seed-based keys, worker compatibility, và PEN.
+But `akaoio/gun` is **not merely a renamed mirror** of that work. It is a separate invention layer that added major capabilities on top of the original system.
 
-### 3. ZEN direction
+### 3. Advancements created in `akaoio/gun`
 
-Những ý sau là **định hướng kiến trúc cho ZEN**:
+The following advancements were created in the `akaoio/gun` fork and are central to what ZEN now carries forward:
+
+#### Crypto and identity
+
+- **Universal base62 key material**
+  - `sea/base62.js`
+  - public keys move from old base64url-with-dot form to clean alphanumeric base62
+  - private keys also move to base62
+  - backward compatibility is preserved while enabling cleaner paths and identifiers
+- **Seed-based deterministic key generation**
+  - documented in `gun/docs/seed-based-keys.md`
+  - implemented in `gun/sea/pair.js`
+  - enables account recovery, deterministic testing, and reproducible identity generation
+- **Additive key derivation**
+  - documented in `gun/docs/additive-derivation.md`
+  - implemented in `gun/sea/pair.js`
+  - enables HD-wallet-style identity trees and pub-only derivation flows
+- **WebAuthn / passkey integration**
+  - documented in `gun/docs/webauthn.md`
+  - includes support for hardware authenticators, biometrics, and passkey-style auth flows
+- **External authenticators**
+  - documented in `gun/docs/external-authenticators.md`
+  - extended in `gun/sea/auth.js`
+  - enables stateless signing flows and integration with custom backends such as HSM/KMS-style systems
+
+#### Policy and execution
+
+- **PEN — Predicate-Embedded Namespace**
+  - documented in `gun/docs/pen.md`
+  - implemented in `gun/lib/pen.js` with `gun/lib/pen.wasm`
+  - tested in `gun/test/pen.js`
+  - introduces a compact bytecode policy/execution VM rather than leaving policy as scattered wrapper logic
+- **Base62 bytecode identity packing**
+  - PEN bytecode compiles to compact base62 soul-friendly strings
+  - this is one of the clearest examples of invention in `akaoio/gun` that ZEN should treat as foundation, not addon
+
+#### Storage and runtime
+
+- **OPFS storage adapter**
+  - documented in `gun/docs/opfs.md`
+  - implemented in `gun/lib/opfs.js`
+  - modern browser persistence for RAD through Origin Private File System
+- **`globalThis` migration across `lib/`**
+  - documented in `gun/docs/globalthis-worker-compat.md`
+  - removes `window` assumptions and makes more of the runtime work inside Web Workers, Service Workers, and broader JS environments
+
+#### Graph and protocol extensions
+
+- **Tilde shard index**
+  - documented in `gun/docs/tilde-shard.md`
+  - uses SEA-enforced rules for sharded public-key discovery
+- **Hashgraph layer draft**
+  - documented in `gun/docs/hashgraph-layer.md`
+  - shows that `akaoio/gun` was already pushing beyond plain inherited GUN behavior into new protocol design space
+
+#### Tooling, build, and test infrastructure
+
+- **Dedicated advanced docs corpus**
+  - `gun/docs/README.md` plus focused docs for each major invention
+  - original `amark/gun/` does not carry an equivalent docs tree
+- **New build pipeline**
+  - `gun/lib/build.js`
+  - package scripts such as `buildGUN`, `buildSEA`, and `buildPEN`
+- **Browser automation coverage**
+  - `gun/playwright.config.js`
+  - browser tests such as `gun/test/browser/gun.spec.js`
+- **Fork-specific examples**
+  - `gun/examples/webauthn.html`
+  - `gun/examples/webauthn.js`
+
+Some of these inventions are documented in `gun/docs/`, but not all of them are obvious there. Important code-level additions also live in:
+
+- `gun/sea/base62.js`
+- `gun/lib/pen.js`
+- `gun/lib/pen.wasm`
+- `gun/lib/build.js`
+- `gun/test/pen.js`
+- `gun/test/browser/gun.spec.js`
+
+### 4. ZEN direction
+
+The following are **architectural directions for ZEN**:
 
 - Zig -> WASM-first compute
-- unified API cho data + crypto + execution
-- `zen.now` candle clock
-- metadata node giữ shape kiểu GUN nhưng state semantics đi theo clock riêng của ZEN
-- PEN trở thành lớp policy/execution trung tâm của toàn hệ
+- a unified API for data + crypto + execution
+- the `zen.now` candle clock
+- node metadata that keeps the GUN-like shape while state semantics follow ZEN's own clock
+- PEN becoming the central policy/execution layer of the whole system
 
-## Vì sao ZEN tồn tại
+## Why ZEN exists
 
-ZEN tồn tại vì GUN và SEA, dù rất mạnh về ý tưởng, đã lộ ra những giới hạn rõ ràng cho mục tiêu production của `akao`.
+ZEN exists because GUN and SEA, while very strong in concept, have shown clear limits for the production goals of `akao`.
 
-### Những vấn đề ZEN muốn xử lý
+### Problems ZEN wants to address
 
-#### 1. CommonJS-first và side effects
+#### 1. CommonJS-first design and side effects
 
-- không thuận với ESM hiện đại
-- phụ thuộc `window`
-- dễ tạo import side-effects
+- not friendly to modern ESM
+- dependent on `window`
+- easy to trigger import side effects
 
-#### 2. Compute bị khóa trong JavaScript
+#### 2. Compute locked inside JavaScript
 
-Điều này không lý tưởng cho:
+This is not ideal for:
 
 - hashing
 - cryptography
 - execution logic
-- policy VM
+- a policy VM
 
-#### 3. Storage chưa phải baseline tối ưu cho hướng local-first mới
+#### 3. Storage is not yet the optimal baseline for the new local-first direction
 
-- GUN cổ điển gắn nhiều với IndexedDB / RAD plugins
-- không phải hướng storage tối ưu nhất cho compute-heavy và WASM-oriented design
+- classic GUN is heavily tied to IndexedDB / RAD plugins
+- that is not necessarily the best storage direction for a compute-heavy and WASM-oriented design
 
-#### 4. Worker story chưa phải trung tâm
+#### 4. The worker story is not yet central
 
-Fork `akaoio/gun` đã cải thiện phần này, nhưng với ZEN thì đây phải là nguyên lý kiến trúc ngay từ đầu.
+The `akaoio/gun` fork has improved this area, but for ZEN this needs to be an architectural principle from the start.
 
-#### 5. SEA không còn là lớp policy cuối cùng
+#### 5. SEA is no longer the final policy layer
 
-SEA cung cấp nhiều thứ hữu ích, nhưng với định hướng hiện tại thì:
+SEA provides many useful things, but under the current direction:
 
 - `SEA.certify`
-- user namespace model
-- các lớp auth/policy cũ
+- the user namespace model
+- the older auth/policy layers
 
-không còn là trung tâm nữa.
+are no longer the center of the system.
 
-Trong `akaoio/gun`, PEN đã đủ mạnh để gánh phần authorization và execution phức tạp hơn. Vì vậy ZEN không xem các lớp trên là first-class feature cần kế thừa.
+Inside `akaoio/gun`, PEN is already strong enough to carry more complex authorization and execution. Because of that, ZEN does not treat those older layers as first-class features that must be preserved.
 
-## ZEN kế thừa gì từ `akaoio/gun`
+## What ZEN carries forward from `akaoio/gun`
 
-ZEN không phủ nhận GUN. ZEN kế thừa những thứ quan trọng nhất từ lineage này:
+ZEN does not reject GUN. ZEN inherits the most important things from that lineage:
 
 - graph-first thinking
-- offline-first sync mindset
+- an offline-first sync mindset
 - CRDT / HAM intuition
 - P2P orientation
-- OPFS reuse qua `gun/lib/opfs.js`
-- worker-compatible direction
-- PEN như bytecode policy/runtime
+- the distinction between original GUN and the invention layer added in `akaoio/gun`
+- OPFS reuse through `gun/lib/opfs.js`
+- a worker-compatible direction
+- PEN as a bytecode policy/runtime
 - base62-friendly bytecode identity packing
+- seed-based keys
+- additive derivation
+- external authenticators
+- WebAuthn-capable identity flows
+- tilde-shard-style identity indexing
 
-Nói ngắn gọn: **ZEN không phá bỏ lineage. ZEN chọn lọc nó.**
+In short: **ZEN does not remain "a Gun fork." ZEN evolves forward from the invention base established in `akaoio/gun`.**
 
-## ZEN sẽ không kế thừa gì
+ZEN still carries the deeper legacy of Mark's original GUN, but it does so through the more advanced akaoio/gun layer rather than by resetting back to `amark/gun`.
 
-Đây là phần cần nói rõ để tránh hiểu nhầm.
+## What ZEN will not inherit
 
-ZEN **không** muốn tiếp tục mang các lớp sau như first-class architecture:
+This section needs to be explicit to avoid misunderstanding.
+
+ZEN does **not** want to continue carrying the following layers as first-class architecture:
 
 - `SEA.certify`
-- user namespace model
-- content-address như một feature layer độc lập
+- the user namespace model
+- content-addressing as an independent feature layer
 - SEA-style prefixed/enveloped crypto formats
-- tư duy auth/session dựa trên wrapper layer thay vì policy layer
+- auth/session thinking built on a wrapper layer rather than a policy layer
 
-Lý do là vì ZEN muốn một hệ thống thống nhất hơn:
+The reason is that ZEN wants a more unified system:
 
-- crypto ở core
-- policy ở PEN
-- execution ở core
-- graph metadata có logic riêng
+- crypto in the core
+- policy in PEN
+- execution in the core
+- graph metadata with its own logic
 
-chứ không chồng nhiều lớp feature lịch sử lên nhau.
+rather than piling historical feature layers on top of one another.
 
-## Định hướng kiến trúc
+## Architectural direction
 
 ### 1. Compute: Zig -> WASM
 
-**Định hướng ZEN:** compute nặng sẽ đi qua Zig và WASM.
+**ZEN direction:** heavy compute should go through Zig and WASM.
 
-Mục tiêu:
+Goals:
 
-- nhanh hơn cho cryptography và hashing
-- phù hợp với bytecode / VM execution
-- portable giữa browser / server / edge
+- faster cryptography and hashing
+- better fit for bytecode / VM execution
+- portability across browser / server / edge
 
 ### 2. Storage: OPFS
 
-**Lineage đã có:** `akaoio/gun` đã có `lib/opfs.js`.
+**Existing lineage:** `akaoio/gun` already has `lib/opfs.js`.
 
-ZEN không cần phát minh lại OPFS. Hướng đúng là:
+ZEN does not need to reinvent OPFS. The right direction is:
 
-- tái sử dụng `gun/lib/opfs.js`
-- tận dụng logic detect / fallback đã có
-- chỉ thay đổi nếu ZEN thật sự cần storage contract mới
+- reuse `gun/lib/opfs.js`
+- leverage the existing detect / fallback logic
+- only change it if ZEN truly needs a new storage contract
 
-Lợi ích:
+Benefits:
 
-- giảm chi phí maintain
-- giữ continuity với lineage
-- tập trung effort vào phần khác biệt thực sự của ZEN
+- lower maintenance cost
+- continuity with the lineage
+- more focus on the areas where ZEN is genuinely different
 
 ### 3. Network
 
-ZEN vẫn nằm trong hướng:
+ZEN still belongs to the world of:
 
 - WebSocket
 - WebRTC mesh
 - decentralized sync
 
-Đây là phần kế thừa tinh thần GUN, không phải phần cần vứt bỏ.
+This is inherited GUN spirit, not something to throw away.
 
 ### 4. CRDT + HAM
 
-ZEN vẫn favor deterministic conflict resolution.
+ZEN still favors deterministic conflict resolution.
 
-Điều quan trọng là:
+What matters is:
 
-- ZEN vẫn giữ trực giác graph conflict kiểu GUN
-- nhưng clock semantics sẽ được thiết kế lại để phù hợp với PEN và candle model
+- ZEN keeps the GUN-style graph conflict intuition
+- but the clock semantics will be redesigned to fit PEN and the candle model
 
-## Metadata và candle clock
+## Metadata and the candle clock
 
-Đây là một trong những điểm phân biệt quan trọng nhất.
+This is one of the most important differentiators.
 
 ### Abstract key naming
 
-ZEN học từ GUN một bài học quan trọng về graph naming:
+ZEN learns an important lesson from GUN about graph naming:
 
-> key không nhất thiết phải là English word dễ đọc, mà có thể là các ký hiệu trừu tượng mang semantics rất nén như `>`, `#`, `.`, `:`, `~`, ...
+> a key does not need to be an easy English word; it can be an abstract symbol carrying dense semantics like `>`, `#`, `.`, `:`, `~`, ...
 
-ZEN favor cách đặt key này và cố giữ chúng **tương đồng với GUN nhất có thể**.
+ZEN favors this style of key naming and tries to keep it **as close to GUN as possible**.
 
-Lý do:
+Why:
 
-- đây là một phần của graph language mà GUN đã hình thành
-- các key ngắn và trừu tượng giúp metadata / wire shape / graph contract gọn hơn
-- continuity với GUN lineage quan trọng hơn việc đổi tên sang các từ tiếng Anh “dễ đọc” nhưng làm lệch semantics gốc
+- it is part of the graph language that GUN already formed
+- short and abstract keys keep metadata / wire shape / graph contracts tighter
+- continuity with GUN lineage matters more than renaming everything into “readable” English words that distort the original semantics
 
 ### Metadata shape
 
-**Định hướng ZEN:** metadata của node **phải giống metadata của node GUN**.
+**ZEN direction:** node metadata **must match GUN node metadata**.
 
-Điều này có nghĩa là ZEN **không** tạo ra một metadata model khác. Graph intuition và node metadata contract vẫn phải giữ theo cách GUN biểu diễn node.
+That means ZEN does **not** create a different metadata model. The graph intuition and node metadata contract should still follow the way GUN represents a node.
 
-Phần khác biệt nằm ở **cách sinh giá trị `state`**, không nằm ở shape metadata.
+The difference lies in **how the `state` value is produced**, not in the metadata shape itself.
 
-`state` trong metadata sẽ **không dùng `Gun.state`**.
+`state` in metadata will **not use `Gun.state`**.
 
 ### `zen.now`
 
-Thay vào đó, `zen.now` phụ thuộc vào param `candle` khi init instance:
+Instead, `zen.now` depends on the `candle` parameter when the instance is initialized:
 
 ```js
 const zen = new Zen({ candle })
 zen.now = Math.floor(Date.now() / candle)
 ```
 
-Nếu không truyền `candle`, thì mặc định:
+If `candle` is not passed, the default is:
 
 ```js
 const zen = new Zen()
 // candle = 1
 ```
 
-Nếu muốn `zen.now` quay về nhịp thời gian bình thường:
+If you want `zen.now` to return to normal time pacing:
 
 ```js
 const zen = new Zen({ candle: 1 })
 ```
 
-### Ý nghĩa của candle model
+### Meaning of the candle model
 
-Đây là tư duy **candle clock** trong PEN:
+This is the **candle clock** way of thinking inside PEN:
 
-- state không còn là millisecond clock kiểu cũ
-- policy, execution, và sync có thể dựa trên cùng một nhịp candle
-- mỗi instance có thể chọn clock granularity riêng
-- ZEN có thể xây một hệ clock riêng thay vì bị trói vào `Gun.state()`
+- state is no longer the old millisecond clock
+- policy, execution, and sync can share the same candle rhythm
+- each instance can choose its own clock granularity
+- ZEN can build its own clock system instead of being locked to `Gun.state()`
 
-## PEN là core
+## PEN is core
 
-PEN không phải addon. PEN là lớp **policy + execution + bytecode identity** trung tâm.
+PEN is not an addon. PEN is the central **policy + execution + bytecode identity** layer.
 
-### Lineage hiện có
+### Existing lineage
 
-Trong `akaoio/gun`, PEN đã có nền tảng thực tế:
+Inside `akaoio/gun`, PEN already has a real foundation:
 
-- runtime bằng `pen.wasm`
+- a runtime via `pen.wasm`
 - base62 packing / unpacking
 - bytecode attached to soul identity
 
-### Định hướng ZEN
+### ZEN direction
 
-ZEN muốn đẩy PEN lên thành core thực thụ:
+ZEN wants to elevate PEN into the actual core:
 
-- không phải feature phụ
-- không phải extension add-on
-- không phải thứ chỉ phục vụ authorization
+- not a side feature
+- not an add-on extension
+- not something that only serves authorization
 
-Mục tiêu cuối cùng là:
+The end goal is:
 
-> mọi dữ liệu trong ZEN đều có thể mang logic thực thi
+> every piece of data in ZEN can carry executable logic
 
 ## Soul model
 
-Khác với cách nghĩ GUN + SEA cổ điển:
+Unlike classic GUN + SEA thinking:
 
-> trong định hướng ZEN, mọi soul đều có thể mang bản chất ZEN / PEN
+> in the ZEN direction, every soul can carry ZEN / PEN nature
 
-Điều này hợp nhất:
+This unifies:
 
 - data
 - logic
 - execution
 
-Tuy vậy, phần này nên được hiểu là **ZEN direction**, không phải tuyên bố rằng repo hiện tại đã hoàn thiện model đó.
+That said, this should be understood as **ZEN direction**, not a claim that the current repo has already completed that model.
 
 ## Crypto foundation
 
-ZEN favor:
+ZEN favors:
 
-> **secp256k1** làm crypto baseline
+> **secp256k1** as the crypto baseline
 
-thay vì P256 như SEA.
+instead of SEA's P256.
 
-### Vì sao
+### Why
 
-- hợp với blockchain / wallet ecosystem
+- better fit for the blockchain / wallet ecosystem
 - deterministic key generation (`seed -> key`)
-- hợp với decentralized identity
-- tooling ecosystem mạnh hơn
+- better fit for decentralized identity
+- a stronger tooling ecosystem
 
 ### Encoding stance
 
-ZEN favor **base62**.
+ZEN favors **base62**.
 
-Đây cũng không phải ý tưởng hoàn toàn mới, vì trong `akaoio/gun`:
+This is also not an entirely new idea, because in `akaoio/gun`:
 
-- PEN bytecode đã dùng base62 packing
-- lineage đã nghiêng về base62-friendly identifiers
+- PEN bytecode already uses base62 packing
+- the lineage already leans toward base62-friendly identifiers
 
-Vì vậy README nên xem đây là **continuity**, không chỉ là sở thích mới của ZEN.
+So this README should treat that as **continuity**, not just a new ZEN preference.
 
 ## Clean JSON crypto
 
-Một rule quan trọng của ZEN:
+One important ZEN rule:
 
 - `sign`
 - `verify`
 - `encrypt`
 - `decrypt`
 
-sẽ làm việc với **JSON thuần**, không ép developer dùng prefix kiểu `SEA` hay envelope format mang dấu ấn lịch sử của SEA.
+should work with **plain JSON**, without forcing developers to use SEA-style prefixes or envelope formats marked by SEA's historical conventions.
 
-Mục tiêu:
+Goals:
 
-- payload sạch hơn
-- dễ reason hơn
-- dễ đi qua network / storage / worker / WASM boundary hơn
+- cleaner payloads
+- easier reasoning
+- easier passage across network / storage / worker / WASM boundaries
 
 ## Unified API direction
 
-Định hướng API của ZEN là hợp nhất data, crypto, và execution trong một interface.
+ZEN's API direction is to unify data, crypto, and execution inside one interface.
 
-Ví dụ ý tưởng:
+Concept example:
 
 ```js
 const zen = new Zen({ candle: 60000 })
@@ -373,111 +463,111 @@ zen.pen({
 })
 ```
 
-Phần này nên được đọc như **API direction**, không phải mô tả đầy đủ implementation hiện tại của `attempt2`.
+This section should be read as **API direction**, not as a full description of the current `attempt2` implementation.
 
-`attempt1` từng có một bản executable nhỏ cho vài surface trong số này, nhưng hướng code hiện tại đã pivot sang fork-first từ `akaoio/gun`.
+`attempt1` once had a small executable for several of these surfaces, but the current code direction has already pivoted to a fork-first base from `akaoio/gun`.
 
-## Vai trò thực tế của ZEN trong akao
+## ZEN's practical role inside akao
 
-ZEN không phải experiment mơ hồ.
+ZEN is not a vague experiment.
 
-Nó được tạo ra để:
+It was created to:
 
-- thay thế GUN trong repo `akao`
-- trở thành nền graph/crypto/execution mới cho hệ sinh thái đó
-- đưa PEN thành policy core thật sự
+- replace GUN in the `akao` repo
+- become the new graph/crypto/execution foundation for that ecosystem
+- make PEN the real policy core
 
-Nói cách khác: **akao là lý do tồn tại của ZEN**.
+In other words: **akao is why ZEN exists**.
 
-## Fork lineage
+## Lineage and divergence
 
-ZEN là successor direction xuất phát từ:
+ZEN is a successor direction emerging from:
 
-> GUN -> `akaoio/gun` -> ZEN
+> Mark's original GUN (`amark/gun`) -> `akaoio/gun` -> ZEN
 
-Nó kế thừa:
+What that means:
 
-- tinh thần graph/offline-first/P2P của GUN
-- các mở rộng thực tế đã có trong `akaoio/gun`
-- hướng đi nơi PEN trở thành nền tảng chính
+1. **`amark/gun`** is the historical origin.
+2. **`akaoio/gun`** is the major invention layer that introduced base62 keys, seed-based keys, additive derivation, WebAuthn, external authenticators, OPFS, `globalThis` worker compatibility, PEN, tilde shard indexing, and stronger build/test/docs infrastructure.
+3. **ZEN** now moves beyond remaining a fork by carrying those inventions forward into a new architecture centered on ZEN's own clock, storage strategy, execution model, and identity direction.
 
-`akaoio/gun` cần được hiểu là một **fork đã được cải tiến rất nhiều**, không chỉ là một bản mirror trung gian. Các tài liệu trong `gun/README.md` và `gun/docs/` là phần quan trọng để hiểu lineage mà ZEN đang tiếp nối.
+So `akaoio/gun` should be understood as **far more than an intermediate mirror**. It is the invention-rich foundation that ZEN now evolves beyond.
 
 ## Testing mindset
 
-Một trong những bài học quan trọng nhất mà ZEN học từ GUN là:
+One of the most important lessons ZEN takes from GUN is:
 
-> **tests là spec**
+> **tests are the spec**
 
-ZEN favor **test-driven programming**:
+ZEN favors **test-driven programming**:
 
-1. viết test trước
-2. để test fail trước, chứng minh rằng test thật sự đang kiểm tra đúng behavior
-3. code được viết sau
-4. red phải chuyển thành green
+1. write the test first
+2. let the test fail first, proving that it is actually checking the intended behavior
+3. write the code after that
+4. turn red into green
 
-Điều này quan trọng vì:
+This matters because:
 
-- test không chỉ để chống regression
-- test là cách mô tả behavior thật sự của hệ thống
-- test fail trước mới chứng minh được rằng test có giá trị
-- implementation phải đi theo spec, không phải spec chạy theo implementation
+- tests are not only for preventing regressions
+- tests are how the real behavior of the system gets described
+- letting a test fail first proves that the test has value
+- implementation must follow the spec, not the other way around
 
-Với ZEN, tư duy đúng là:
+For ZEN, the right mindset is:
 
 - tests go first
 - fail first
 - code later
 - red turns green
 
-Nếu một behavior quan trọng chưa được mô tả bằng test, thì behavior đó chưa thật sự đủ chắc để trở thành nền tảng của hệ.
+If an important behavior is not described by a test, then that behavior is not yet solid enough to become part of the system's foundation.
 
-Ở thời điểm hiện tại, ZEN đã có:
+At the current stage, ZEN already has:
 
-- test system và server runtime được kế thừa từ gun base
-- `npm start` chạy được trên base đó
+- a test system and server runtime inherited from the gun base
+- `npm start` running on top of that base
 
-nhưng vẫn **chưa** có độ sâu test như GUN:
+but it still does **not** yet have the same testing depth as GUN:
 
-- vì chính branch hiện tại về cơ bản vẫn đang là gun tree được đổi base để chuẩn bị cho các chỉnh sửa tiếp theo của zen
+- because the current branch is still, fundamentally, a gun tree rebased as the starting point for the next round of ZEN-specific edits
 
-Ở thời điểm hiện tại, ZEN đã có:
+At the current stage, ZEN already has:
 
-- spec-level test cho core runtime
-- server smoke test cho `npm start`
+- spec-level tests for the core runtime
+- a server smoke test for `npm start`
 
-nhưng vẫn **chưa** có độ sâu test như GUN:
+but it still does **not** yet have the same testing depth as GUN:
 
-- multi-peer distributed tests
-- browser automation suite thật
-- recovery / reload / failure harness ở quy mô lớn
+- real multi-peer distributed tests
+- a real browser automation suite
+- large-scale recovery / reload / failure harnesses
 
-## Triết lý thiết kế
+## Design philosophy
 
-- Không phá bỏ -> kế thừa
-- Không vá lỗi -> tái kiến trúc
-- Test trước -> code sau
-- Fail trước -> rồi mới cho green
-- Không tách data và crypto -> unified
-- Không đặt policy ở wrapper layer -> đưa về core qua PEN
-- Không để clock semantics bị khóa trong mô hình cũ -> xây clock riêng cho ZEN
+- Do not destroy -> inherit
+- Do not patch around problems -> re-architect
+- Test first -> code second
+- Fail first -> then turn green
+- Do not separate data and crypto -> unify them
+- Do not keep policy in a wrapper layer -> move it into the core through PEN
+- Do not lock clock semantics into the old model -> build a clock system for ZEN
 
-## Nên cải thiện README tiếp theo ở đâu
+## Where the README should be improved next
 
-README sau bản này vẫn nên tiếp tục được cải thiện theo hướng:
+After this version, the README should continue improving in the following directions:
 
-1. thêm một section **Current implementation status** khi repo bắt đầu có code thật
-2. thêm sơ đồ lineage `GUN -> akaoio/gun -> ZEN`
-3. thêm bảng “Inherited / Rejected / Planned”
-4. thêm examples cụ thể khi ZEN có API chạy được
-5. giữ mọi claim được gắn nhãn rõ là:
+1. add a **Current implementation status** section once the repo starts carrying more real ZEN-specific code
+2. add a lineage diagram `GUN -> akaoio/gun -> ZEN`
+3. add an “Inherited / Rejected / Planned” table
+4. add concrete examples once ZEN has a runnable API
+5. keep every claim clearly labeled as:
    - current reality
    - inherited lineage
    - design direction
 
-## Kết luận
+## Conclusion
 
-ZEN là một **decentralized graph database thế hệ mới** được tạo ra để đưa lineage của GUN sang một kiến trúc phù hợp hơn với:
+ZEN is a **next-generation decentralized graph database** created to carry the GUN lineage into an architecture better suited for:
 
 - akao
 - secp256k1 identity
@@ -485,4 +575,4 @@ ZEN là một **decentralized graph database thế hệ mới** được tạo r
 - OPFS / worker / WASM direction
 - unified graph + crypto + execution
 
-Nó không phủ nhận GUN. Nó chọn kế thừa cái đúng, bỏ cái dư thừa, và xây tiếp phần còn thiếu.
+It does not reject GUN. It carries forward the original graph lineage, preserves the invention layer created in `akaoio/gun`, and then builds past both into ZEN's own system.

@@ -1,6 +1,12 @@
 import '../../lib/store.js';
 import '../../lib/rfs.js';
-import '../../sea.js';
+import SEA from '../../sea.js';
+import '../../sea/user.js';
+import '../../sea/create.js';
+import '../../sea/auth.js';
+import '../../sea/recall.js';
+import '../../sea/share.js';
+import '../../sea/certify.js';
 import __fs from 'fs';
 import __fsrm from '../../lib/fsrm.js';
 import __gun from '../../gun.js';
@@ -30,7 +36,7 @@ var Gun;
 
   try{ var expect = global.expect = __expect }catch(e){}
 
-  if(!root.Gun.SEA){}
+  if(!root.Gun.SEA){ root.Gun.SEA = SEA }
 }(this));
 
 
@@ -1599,23 +1605,33 @@ describe('SEA', function(){
         expiry: Gun.state() + 5000, // expires in 5 seconds
         block: 'block' // path to block in Alice's graph
       })
+      var auth = function(pair){
+        return new Promise(function(res){
+          user.auth(pair, function(){ res() });
+        });
+      };
+      var put = function(chain, data, opt){
+        return new Promise(function(res){
+          chain.put(data, function(ack){ res(ack || {}) }, opt);
+        });
+      };
 
       // Alice points her block to Dave's graph
-      await user.auth(alice)
+      await auth(alice)
       if (user.is) {
-        await user.get('block').put({'#': '~'+dave.pub+'/block'});
-        await user.leave()
+        await put(user.get('block'), {'#': '~'+dave.pub+'/block'});
+        user.leave()
       }
 
       // Dave logins, he adds Bob to his block, which is connected to the certificate that Alice issued for Bob
-      await user.auth(dave)
+      await auth(dave)
       if (user.is) {
-        await user.get('block').get(bob.pub).put(true)
-        await user.leave()
+        await put(user.get('block').get(bob.pub), true)
+        user.leave()
       }
 
       // Bob logins and tries to hack Alice
-      await user.auth(bob)
+      await auth(bob)
       if (user.is) {
         var data = Gun.state().toString(36)
         gun.get("~" + alice.pub)
@@ -1646,8 +1662,12 @@ describe('SEA', function(){
         var data = "hello world";
         var hash = await SEA.work(data, null, null, {name: "SHA-256"});
         hash = hash.slice(-20);
-        await gun.get('#users').get(hash).put(data);
-        var test = await gun.get('#users').get(hash);
+        await new Promise(function(res){
+          gun.get('#users').get(hash).put(data, function(){ res() });
+        });
+        var test = await new Promise(function(res){
+          gun.get('#users').get(hash).once(function(v){ res(v) });
+        });
         expect(test).to.be(data);
         done();
       });
