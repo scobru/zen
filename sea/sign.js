@@ -1,7 +1,7 @@
 import __root from './root.js';
 import __shim from './shim.js';
 import __settings from './settings.js';
-import __sha256 from './sha256.js';
+import __sign from './secp256k1.sign.js';
 
 let __defaultExport;
 (function(){
@@ -9,12 +9,11 @@ let __defaultExport;
     var SEA = __root;
     var shim = __shim;
     var S = __settings;
-    var sha = __sha256;
     var u;
 
     async function n(r, o, c) {
       try {
-        if(!o.raw){ r = 'SEA' + (await shim.stringify(r)) }
+        if(!o.raw){ r = await shim.stringify(r) }
         if(c){ try{ c(r) }catch(e){} }
         return r;
       } catch(e) { return r }
@@ -29,16 +28,6 @@ let __defaultExport;
       };
       if (!x.s || !x.a || !x.c) throw "WebAuthn signature invalid";
       return n(x, o, c);
-    }
-
-    async function k(p, j, o, c) {
-      var x = S.jwk(p.pub, p.priv);
-      if (!x) throw "Invalid key pair";
-      var h = await sha(j);
-      var s = await (shim.ossl || shim.subtle).importKey('jwk', x, S.ecdsa.pair, false, ['sign'])
-      .then((k) => (shim.ossl || shim.subtle).sign(S.ecdsa.sign, k, new Uint8Array(h)))
-      .catch(() => { throw "SEA signature failed" });
-      return n({m: j, s: shim.Buffer.from(s, 'binary').toString(o.encode || 'base64')}, o, c);
     }
 
     SEA.sign = SEA.sign || (async (data, pair, cb, opt) => { try {
@@ -64,7 +53,7 @@ let __defaultExport;
             r.signature && shim.Buffer.from(r.signature, 'binary').toString(opt.encode || 'base64')}, opt, cb);
       }
 
-      return k(pair, j, opt, cb);
+      return __sign(j, pair, cb, opt);
     } catch(e) {
       SEA.err = e;
       if(SEA.throw){ throw e }

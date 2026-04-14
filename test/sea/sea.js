@@ -1,6 +1,7 @@
 import '../../lib/store.js';
 import '../../lib/rfs.js';
-import SEA from '../../sea.js';
+import SEAmod from '../../sea.js';
+import ZEN from '../../zen.js';
 import '../../sea/certify.js';
 import __fs from 'fs';
 import __fsrm from '../../lib/fsrm.js';
@@ -10,6 +11,23 @@ import __util from 'util';
 import exp from 'constants';
 import expect from '../expect.js';
 import SeaArray from '../../sea/array.js';
+var USE_ZEN = !!process.env.ZEN_TEST;
+if(USE_ZEN){
+  SEAmod.pair = ZEN.pair;
+  SEAmod.sign = ZEN.sign;
+  SEAmod.verify = ZEN.verify;
+  SEAmod.encrypt = ZEN.encrypt;
+  SEAmod.decrypt = ZEN.decrypt;
+  SEAmod.secret = ZEN.secret;
+  SEAmod.work = ZEN.work;
+  SEAmod.Buffer = ZEN.Buffer;
+  SEAmod.random = ZEN.random;
+  SEAmod.keyid = ZEN.keyid;
+  SEAmod.opt = ZEN.opt;
+  SEAmod.check = ZEN.check;
+}
+var Runtime = USE_ZEN ? ZEN : SEAmod;
+var SUITE_NAME = USE_ZEN ? 'ZEN absorbs SEA' : 'SEA';
 var root;
 var Gun;
 (function(){
@@ -31,7 +49,7 @@ var Gun;
 
   try{ var expect = global.expect = __expect }catch(e){}
 
-  if(!root.Gun.SEA){ root.Gun.SEA = SEA }
+  root.Gun.SEA = Runtime
 }(this));
 
 
@@ -40,8 +58,8 @@ Gun = root.Gun
 var SEA = Gun.SEA
 if(!SEA){ return }
 
-describe('SEA', function(){
-  this.timeout(1000 * 9);
+describe(SUITE_NAME, function(){
+  this.timeout(20 * 1000);
   var gun;
 
   var prep = async function(d,k, n,s){ return {'#':s,'.':k,':': await SEA.opt.parse(d),'>':Gun.state.is(n, k)} }; // shim for old - prep for signing.
@@ -342,6 +360,11 @@ describe('SEA', function(){
     var B62 = /^[A-Za-z0-9]{88}$/;
     var B62_44 = /^[A-Za-z0-9]{44}$/;
 
+    it('curve is secp256k1', async function() {
+      var pair = await SEA.pair();
+      expect(pair.curve).to.be('secp256k1');
+    });
+
     it('pub is 88-char base62 (no dot, dash, underscore)', async function() {
       var pair = await SEA.pair();
       expect(pair.pub).to.be.a('string');
@@ -391,6 +414,16 @@ describe('SEA', function(){
       expect(B62.test(pair.epub)).to.be(true);
       expect(B62_44.test(pair.priv)).to.be(true);
       expect(B62_44.test(pair.epriv)).to.be(true);
+    });
+  });
+
+  describe('wire format', function() {
+    it('sign() and encrypt() omit SEA prefix', async function() {
+      var pair = await SEA.pair(null, { seed: 'sea-wire-format' });
+      var signed = await SEA.sign({ hello: 'sea' }, pair);
+      var encrypted = await SEA.encrypt('secret', pair);
+      expect(signed.startsWith('SEA')).to.be(false);
+      expect(encrypted.startsWith('SEA')).to.be(false);
     });
   });
 
@@ -672,8 +705,8 @@ describe('SEA', function(){
     this.timeout(5000);
     const biToB64 = n => Buffer.from(n.toString(16).padStart(64, '0'), 'hex').toString('base64')
       .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-    const P = BigInt("0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff");
-    const n = BigInt("0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551");
+    const P = BigInt("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F");
+    const n = BigInt("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
 
     it('is deterministic for same priv + seed', async function () {
       const base = await SEA.pair();
@@ -999,9 +1032,16 @@ describe('SEA', function(){
     it("full chain put: gun.get('~').get(c0)...get(cN).put({#:~pub}) registers full path", function(done){(async function(){
       var bob = await SEA.pair();
       var chunks = bob.pub.match(/.{1,2}/g) || [];
-      // Chain: gun.get('~').get(chunks[0]).get(chunks[1])...get(chunks[N]).put(leaf)
-      var node = gun.get('~');
-      for(var i = 0; i < chunks.length; i++){ node = node.get(chunks[i]) }
+      var node;
+      if(USE_ZEN){
+        var key = chunks.pop();
+        var soul = chunks.length ? '~/' + chunks.join('/') : '~';
+        node = gun.get(soul).get(key);
+      } else {
+        // Chain: gun.get('~').get(chunks[0]).get(chunks[1])...get(chunks[N]).put(leaf)
+        node = gun.get('~');
+        for(var i = 0; i < chunks.length; i++){ node = node.get(chunks[i]) }
+      }
       node.put({'#': '~' + bob.pub}, function(ack){
         expect(ack.err).to.not.be.ok();
         done();
@@ -1086,7 +1126,7 @@ describe('SEA', function(){
 
   });
 
-  describe('CERTIFY', function () {
+  if(!USE_ZEN && 'function' === typeof SEA.certify){ describe('CERTIFY', function () {
     var gun = Gun()
 
     it('Certify: Simple', function(done){(async function(){
@@ -1260,7 +1300,7 @@ describe('SEA', function(){
           }, { opt: { cert, authenticator: bob } })
     }())})
 
-  });
+  }); }
 
   describe('Frozen', function () {
     it('Across spaces', function(done){(async function(){

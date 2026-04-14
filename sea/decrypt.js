@@ -1,15 +1,10 @@
 import __root from './root.js';
-import __shim from './shim.js';
-import __settings from './settings.js';
-import __aeskey from './aeskey.js';
+import __decrypt from './secp256k1.decrypt.js';
 
 let __defaultExport;
 (function(){
 
     var SEA = __root;
-    var shim = __shim;
-    var S = __settings;
-    var aeskey = __aeskey;
 
     SEA.decrypt = SEA.decrypt || (async (data, pair, cb, opt) => { try {
       opt = opt || {};
@@ -19,26 +14,8 @@ let __defaultExport;
         pair = await SEA.I(null, {what: data, how: 'decrypt', why: opt.why});
         key = pair.epriv || pair;
       }
-      var json = await S.parse(data);
-      var buf, bufiv, bufct; try{
-        buf = shim.Buffer.from(json.s, opt.encode || 'base64');
-        bufiv = shim.Buffer.from(json.iv, opt.encode || 'base64');
-        bufct = shim.Buffer.from(json.ct, opt.encode || 'base64');
-        var ct = await aeskey(key, buf, opt).then((aes) => (/*shim.ossl ||*/ (shim.subtle)).decrypt({  // Keeping aesKey scope as private as possible...
-          name: opt.name || 'AES-GCM', iv: new Uint8Array(bufiv), tagLength: 128
-        }, aes, new Uint8Array(bufct)));
-      }catch(e){
-        if('utf8' === opt.encode){ throw "Could not decrypt" }
-        if(SEA.opt.fallback){
-          opt.encode = 'utf8';
-          return await SEA.decrypt(data, pair, cb, opt);
-        }
-      }
-      var r = await S.parse(new shim.TextDecoder('utf8').decode(ct));
-      if(cb){ try{ cb(r) }catch(e){console.log(e)} }
-      return r;
+      return await __decrypt(data, key, cb, opt);
     } catch(e) { 
-      console.log(e);
       SEA.err = e;
       if(SEA.throw){ throw e }
       if(cb){ cb() }

@@ -1,13 +1,13 @@
-import '../sea/index.js';
 import __gun from '../gun.js';
-import __pen from '../lib/pen.js';
+import __pen from '../src/pen.js';
+import ZEN from '../src/zen/index.js';
 import assert from 'assert';
 'use strict';
 var Gun, SEA, pen;
 
 before(function(done) {
   Gun = __gun;
-  SEA = Gun.SEA;
+  SEA = ZEN;
   pen = __pen;
   pen.ready.then(function() { done(); }).catch(done);
 });

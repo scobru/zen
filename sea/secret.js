@@ -1,38 +1,18 @@
 import __root from './root.js';
-import __shim from './shim.js';
-import __settings from './settings.js';
+import __secret from './secp256k1.secret.js';
 
 let __defaultExport;
 (function(){
 
     var SEA = __root;
-    var shim = __shim;
-    var S = __settings;
     // Derive shared secret from other's pub and my epub/epriv 
     SEA.secret = SEA.secret || (async (key, pair, cb, opt) => { try {
-      var b62 = SEA.base62;
       opt = opt || {};
       if(!pair || !pair.epriv || !pair.epub){
         if(!SEA.I){ throw 'No secret mix.' }
         pair = await SEA.I(null, {what: key, how: 'secret', why: opt.why});
       }
-      var pub = key.epub || key;
-      var epub = pair.epub;
-      var epriv = pair.epriv;
-      var ecdhSubtle = shim.ossl || shim.subtle;
-      var pubKeyData = keysToEcdhJwk(pub);
-      var props = Object.assign({ public: await ecdhSubtle.importKey(...pubKeyData, true, []) },{name: 'ECDH', namedCurve: 'P-256'}); // Thanks to @sirpy !
-      var privKeyData = keysToEcdhJwk(epub, epriv);
-      var derived = await ecdhSubtle.importKey(...privKeyData, false, ['deriveBits']).then(async (privKey) => {
-        // privateKey scope doesn't leak out from here!
-        var derivedBits = await ecdhSubtle.deriveBits(props, privKey, 256);
-        var rawBits = new Uint8Array(derivedBits);
-        var derivedKey = await ecdhSubtle.importKey('raw', rawBits,{ name: 'AES-GCM', length: 256 }, true, [ 'encrypt', 'decrypt' ]);
-        return ecdhSubtle.exportKey('jwk', derivedKey).then(({ k }) => k);
-      })
-      var r = derived;
-      if(cb){ try{ cb(r) }catch(e){console.log(e)} }
-      return r;
+      return await __secret(key, pair, cb, opt);
     } catch(e) {
       console.log(e);
       SEA.err = e;
@@ -40,24 +20,6 @@ let __defaultExport;
       if(cb){ cb() }
       return;
     }});
-
-    // can this be replaced with settings.jwk?
-    var keysToEcdhJwk = (pub, d) => { // d === epriv
-      var b62 = SEA.base62;
-      var xy = b62.pubToJwkXY(pub) // handles old (87) and new (88) format
-      var x = xy.x, y = xy.y
-      // Convert base62 epriv (44-char) back to base64url for WebCrypto JWK importKey
-      var dJwk = d ? ((d.length === 44 && /^[A-Za-z0-9]{44}$/.test(d)) ? b62.b62ToB64(d) : d) : undefined
-      var jwk = dJwk ? { d: dJwk } : {}
-      return [  // Use with spread returned value...
-        'jwk',
-        Object.assign(
-          jwk,
-          { x: x, y: y, kty: 'EC', crv: 'P-256', ext: true }
-        ), // ??? refactor
-        {name: 'ECDH', namedCurve: 'P-256'}
-      ]
-    }
 
     __defaultExport = SEA.secret;
   

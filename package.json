@@ -11,24 +11,31 @@
     "start": "node --prof examples/http.js",
     "debug": "node --prof-process --preprocess -j isolate*.log > v8data.json && rm isolate*.log && echo 'drag & drop ./v8data.json into https://mapbox.github.io/flamebearer/'",
     "https": "HTTPS_KEY=test/https/server.key HTTPS_CERT=test/https/server.crt npm start",
-    "build": "npm run buildGUN",
-    "prepublishOnly": "npm run buildGUN",
+    "build": "npm run buildRelease",
+    "prepublishOnly": "npm run verifyRelease",
     "clean": "node --input-type=module -e \"import fs from 'node:fs'; const drop = ['tmp','radata','data','radatatest','data.json']; for (const d of drop) { fs.rmSync(d,{recursive:true,force:true}); } for (const name of fs.readdirSync('.')) { if (name.startsWith('radatatest-') || name.startsWith('radata-')) { fs.rmSync(name,{recursive:true,force:true}); } }\"",
-    "test": "npm run clean && echo 'Did you run PANIC holy-grail, 1~X, on-recover, etc.?' && mocha --exit test/abc.js test/rad/rad.js test/radix.js test/pen.js test/zen.js",
+    "test": "npm run clean && echo 'Did you run PANIC holy-grail, 1~X, on-recover, etc.?' && mocha --exit test/abc.js test/rad/rad.js test/radix.js test/zen.js",
     "test:browser": "playwright test",
     "test:browser:setup": "playwright install chromium",
-    "testSEA": "npm run clean && mocha test/sea/sea.js",
+    "testSEA": "npm run testZEN",
+    "testZEN": "npm run clean && ZEN_TEST=1 mocha --exit test/zen/instance.js test/zen/secp256k1.js test/sea/sea.js",
     "e2e": "mocha e2e/distributed.js",
     "docker": "hooks/build",
     "minify": "uglifyjs gun.js --module -o gun.min.js -c -m",
     "buildGUN": "node lib/build.js gun && npm run minify",
+    "buildCompat": "npm run buildSEA && npm run buildGUN",
+    "minifyZEN": "uglifyjs zen.js --module -o zen.min.js -c -m",
+    "buildZEN": "npm run buildPEN && node lib/build-zen.js && npm run minifyZEN",
+    "buildRelease": "npm run buildCompat && npm run buildZEN",
     "unbuild": "npm run unbuildGUN",
     "unbuildGUN": "node lib/unbuild.js gun",
     "buildSEA": "node lib/build.js sea",
     "unbuildSEA": "node lib/unbuild.js sea",
     "unbuildMeta": "node lib/unbuild.js lib/meta",
-    "buildPEN": "node --input-type=module -e \"import fs from 'node:fs'; fs.copyFileSync('node_modules/@akaoio/pen/pen.wasm','lib/pen.wasm');\"",
-    "testPEN": "mocha test/pen.js --timeout 10000"
+    "buildPEN": "node lib/build-pen.js",
+    "testPEN": "mocha test/pen.js --timeout 10000",
+    "testRelease": "npm run testPEN && npm run testZEN && npm test",
+    "verifyRelease": "npm run buildRelease && npm run testRelease"
   },
   "repository": {
     "type": "git",
@@ -61,6 +68,17 @@
     "url": "https://github.com/akaoio/zen/issues"
   },
   "homepage": "https://github.com/akaoio/zen#readme",
+  "files": [
+    "*.js",
+    "*.d.ts",
+    "*.md",
+    "LICENSE*",
+    "SECURITY.md",
+    "docs/",
+    "lib/",
+    "sea/",
+    "src/"
+  ],
   "engines": {
     "node": ">=0.8.4"
   },
@@ -74,7 +92,6 @@
     "@peculiar/webcrypto": "^1.5.0"
   },
   "devDependencies": {
-    "@akaoio/pen": "github:akaoio/pen",
     "@playwright/test": "^1.59.1",
     "aws-sdk": "^2.528.0",
     "emailjs": "^2.2.0",

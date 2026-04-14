@@ -2,7 +2,6 @@ import '../lib/yson.js';
 import '../lib/store.js';
 import '../lib/rfs.js';
 import './rad/rad.js';
-import './sea/sea.js';
 import __fs from 'fs';
 import __fsrm from '../lib/fsrm.js';
 import __gun from '../gun.js';
@@ -24,8 +23,9 @@ describe('Gun', function(){
 		} else {
             root.Gun = __gun;
             root.Gun.TESTING = true;
-        }
+		}
 	}(this));
+	var Gun = root.Gun;
 	//Gun.log.squelch = true;
 	var gleak = {globals: {}, check: function(){ // via tobyho
 	  var leaked = []

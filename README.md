@@ -138,6 +138,7 @@ The following advancements were created in the `akaoio/gun` fork and are central
 - **New build pipeline**
   - `gun/lib/build.js`
   - package scripts such as `buildGUN`, `buildSEA`, and `buildPEN`
+  - ZEN now carries local PEN Zig sources in `src/zen/pen.zig` + `src/zen/wasm.zig`
 - **Browser automation coverage**
   - `gun/playwright.config.js`
   - browser tests such as `gun/test/browser/gun.spec.js`
@@ -150,6 +151,8 @@ Some of these inventions are documented in `gun/docs/`, but not all of them are 
 - `gun/sea/base62.js`
 - `gun/lib/pen.js`
 - `gun/lib/pen.wasm`
+- `zen/src/zen/pen.zig`
+- `zen/src/zen/wasm.zig`
 - `gun/lib/build.js`
 - `gun/test/pen.js`
 - `gun/test/browser/gun.spec.js`

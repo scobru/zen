@@ -1,7 +1,7 @@
 import __root from './root.js';
 import __shim from './shim.js';
 import __settings from './settings.js';
-import __sha256 from './sha256.js';
+import __verify from './secp256k1.verify.js';
 
 let __defaultExport;
 (function(){
@@ -9,7 +9,6 @@ let __defaultExport;
     var SEA = __root;
     var shim = __shim;
     var S = __settings;
-    var sha = __sha256;
     var u;
 
     async function w(j, k, s) {
@@ -39,68 +38,43 @@ let __defaultExport;
       return (shim.ossl || shim.subtle).verify({ name: 'ECDSA', hash: {name: 'SHA-256'} }, k, r, d);
     }
 
-    async function v(j, k, s, h) {
-      return (shim.ossl || shim.subtle).verify(
-        {name: 'ECDSA', hash: {name: 'SHA-256'}}, 
-        k, s, new Uint8Array(h)
-      );
-    }
-
     SEA.verify = SEA.verify || (async (d, p, cb, o) => { try {
       var j = await S.parse(d);
       if(false === p) return cb ? cb(await S.parse(j.m)) : await S.parse(j.m);
 
       o = o || {};
-      var pub = p.pub || p;
-      var b62 = SEA.base62;
-      var xy = b62.pubToJwkXY(pub);
-      var x = xy.x, y = xy.y;
 
       try {
-        var k = await (shim.ossl || shim.subtle).importKey('jwk', {
-            kty: 'EC', crv: 'P-256', x, y, ext: true, key_ops: ['verify']
-        }, {name: 'ECDSA', namedCurve: 'P-256'}, false, ['verify']);
-
-        var h = await sha(j.m);
-        var s = new Uint8Array(shim.Buffer.from(j.s || '', o.encode || 'base64'));
-
-        var c = j.a && j.c ? await w(j, k, s) : await v(j, k, s, h);
-
-        if(!c) throw "Signature did not match";
-
-        // Parse the message content
-        var r = await S.parse(j.m);
-
-        // Handle encrypted data consistently
-        // SEA encrypted data can be in two formats:
-        // 1. A string starting with 'SEA' followed by JSON (e.g., 'SEA{"ct":"...","iv":"...","s":"..."}')
-        // 2. An object with ct, iv, and s properties
-
-        // Case 1: Original message was already in SEA string format
-        if(typeof j.m === 'string' && j.m.startsWith('SEA{')) {
-          if(cb){ try{ cb(j.m) }catch(e){} }
-          return j.m;
+        if(j && j.a && j.c){
+          var pub = p.pub || p;
+          var b62 = SEA.base62;
+          var xy = b62.pubToJwkXY(pub);
+          var x = xy.x, y = xy.y;
+          var k = await (shim.ossl || shim.subtle).importKey('jwk', {
+              kty: 'EC', crv: 'P-256', x, y, ext: true, key_ops: ['verify']
+          }, {name: 'ECDSA', namedCurve: 'P-256'}, false, ['verify']);
+          var s = new Uint8Array(shim.Buffer.from(j.s || '', o.encode || 'base64'));
+          var c = await w(j, k, s);
+          if(!c) throw "Signature did not match";
+          var raw = await S.parse(j.m);
+          if(cb){ try{ cb(raw) }catch(e){} }
+          return raw;
         }
-
-        // Case 2: Result is an encrypted data object
-        // This ensures consistent formatting of encrypted data as SEA strings
-        if(r && typeof r === 'object' && 
-           typeof r.ct === 'string' && 
-           typeof r.iv === 'string' && 
-           typeof r.s === 'string') {
-          // Format as standard SEA encrypted string
-          var seaStr = 'SEA' + JSON.stringify(r);
-          if(cb){ try{ cb(seaStr) }catch(e){} }
-          return seaStr;
+        var verified = await __verify(d, p, null, o);
+        var signedMessage = j && j.m;
+        if(typeof signedMessage === 'string') {
+          var parsed = await S.parse(signedMessage);
+          if(parsed && typeof parsed === 'object' &&
+             typeof parsed.ct === 'string' &&
+             typeof parsed.iv === 'string' &&
+             typeof parsed.s === 'string') {
+            if(cb){ try{ cb(signedMessage) }catch(e){} }
+            return signedMessage;
+          }
         }
-
-        // Default case: Return parsed result as is
-        if(cb){ try{ cb(r) }catch(e){} }
-        return r;
+        if(cb){ try{ cb(verified) }catch(e){} }
+        return verified;
       } catch(e) {
-        if(SEA.opt.fallback){
-            return await SEA.opt.fall_verify(d, p, cb, o);
-        }
         if(cb){ cb() }
         return;
       }
@@ -113,50 +87,7 @@ let __defaultExport;
 
     __defaultExport = SEA.verify;
 
-    var knownKeys = {};
-    SEA.opt.slow_leak = pair => {
-      if (knownKeys[pair]) return knownKeys[pair];
-      var jwk = S.jwk(pair);
-      knownKeys[pair] = (shim.ossl || shim.subtle).importKey("jwk", jwk, {name: 'ECDSA', namedCurve: 'P-256'}, false, ["verify"]);
-      return knownKeys[pair];
-    };
-
-    SEA.opt.fall_verify = async function(data, pair, cb, opt, f){
-      if(f === SEA.opt.fallback){ throw "Signature did not match" }
-      var tmp = data||'';
-      data = SEA.opt.unpack(data) || data;
-      var json = await S.parse(data), key = await SEA.opt.slow_leak(pair.pub || pair);
-      var hash = (!f || f <= SEA.opt.fallback)? 
-        shim.Buffer.from(await shim.subtle.digest({name: 'SHA-256'}, 
-          new shim.TextEncoder().encode(await S.parse(json.m)))) : await sha(json.m);
-
-      try {
-        var buf = shim.Buffer.from(json.s, opt.encode || 'base64');
-        var sig = new Uint8Array(buf);
-        var check = await (shim.ossl || shim.subtle).verify(
-          {name: 'ECDSA', hash: {name: 'SHA-256'}}, 
-          key, sig, new Uint8Array(hash)
-        );
-        if(!check) throw "";
-      } catch(e) {
-        try {
-          buf = shim.Buffer.from(json.s, 'utf8');
-          sig = new Uint8Array(buf);
-          check = await (shim.ossl || shim.subtle).verify(
-            {name: 'ECDSA', hash: {name: 'SHA-256'}}, 
-            key, sig, new Uint8Array(hash)
-          );
-          if(!check) throw "";
-        } catch(e){ throw "Signature did not match." }
-      }
-
-      var r = check ? await S.parse(json.m) : u;
-      SEA.opt.fall_soul = tmp['#']; SEA.opt.fall_key = tmp['.'];
-      SEA.opt.fall_val = data; SEA.opt.fall_state = tmp['>'];
-      if(cb){ try{ cb(r) }catch(e){console.log(e)} }
-      return r;
-    }
-    SEA.opt.fallback = 2;
+    SEA.opt.fallback = 0;
   
 }());
 export default __defaultExport;
