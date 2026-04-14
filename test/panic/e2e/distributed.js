@@ -1,0 +1,104 @@
+import __index from '../index.js';
+import __panic_server from 'panic-server';
+import __http from 'http';
+import __path from 'path';
+import __fs from 'fs';
+import __selenium_webdriver from 'selenium-webdriver';
+import './holy/grail.js';
+import { fileURLToPath } from 'node:url';
+import { dirname as __dirnameOf } from 'node:path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = __dirnameOf(__filename);
+
+describe('PANIC!', function(){
+	this.timeout(1000 * 100);
+
+	var Gun = __index;
+	var gun = Gun();
+
+	var panic = __panic_server;
+
+	var server = __http.createServer(function(req, res){
+		var path = __path;
+		if (req.url === '/') {
+			req.url = '/panic.html';
+		}
+		if(gun.wsp.server(req, res)){ 
+			return; // filters gun requests!
+		}
+		__fs.createReadStream(path.join(__dirname, req.url))
+		.on('error',function(){}).pipe(res); // stream
+	});
+
+	panic.server(server);
+	gun.wsp(server);
+	server.listen(8765);
+
+	var clients = panic.clients;
+
+	var wd = __selenium_webdriver;
+	var ff1 = new wd.Builder()
+		.forBrowser('firefox').build()
+		.get('http://localhost:8765/panic.html');
+	var ff2 = new wd.Builder()
+		.forBrowser('firefox').build()
+		.get('http://localhost:8765/panic.html');
+
+	function min(n, done, list){
+		list = list || clients;
+		function ready() {
+			if (list.length >= n) {
+				done();
+				list.removeListener('add', ready);
+				return true;
+			}
+		}
+		if (!ready()) {
+			list.on('add', ready);
+		}
+	}
+
+	function gunify(done, ctx){
+		var s = document.createElement('script');
+		s.src = 'gun.js';
+		s.onload = done;
+		s.onerror = ctx.fail;
+		document.body.appendChild(s);
+	}
+
+	describe('Should sync', function(){
+
+		var alice = clients.pluck(1);
+		var bob = clients.excluding(alice).pluck(1);
+
+		before(function(done){
+			min(2, done, clients);
+		});
+
+		it('browsers', function(done){
+
+			alice.run(function(){
+				var sync = gun.get('sync');
+				sync.put({hello: 'world'})
+			}).then(function(){
+				return bob.run(function(done, ctx){
+					var sync = gun.get('sync');
+					sync.on(function(val){
+						if(val.hello === 'world'){
+							done();
+						} else {
+							ctx.fail("Wrong data");
+						}
+					});
+				});
+			}).then(function(){
+				done();
+			}).catch(function(e){
+				done(new Error(e.message));
+			});
+
+		});
+		
+	});
+
+});

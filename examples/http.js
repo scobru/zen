@@ -1,0 +1,54 @@
+import '../lib/crashed.js';
+import cluster from 'cluster';
+import fs from 'fs';
+import os from 'os';
+import http from 'http';
+import https from 'https';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+import GUN from '../index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const isMain = !!process.argv[1] && __filename === process.argv[1];
+
+let gun;
+
+if (isMain && cluster.isPrimary) {
+  cluster.setupPrimary({ exec: __filename });
+  cluster.fork();
+  cluster.on('exit', () => {
+    cluster.fork();
+  });
+} else if (isMain) {
+  const env = process.env;
+  const opt = {
+    port: env.PORT || process.argv[2] || 8765,
+    peers: (env.PEERS && env.PEERS.split(',')) || [],
+  };
+
+  if (fs.existsSync((opt.home = os.homedir()) + '/cert.pem')) {
+    env.HTTPS_KEY = env.HTTPS_KEY || opt.home + '/key.pem';
+    env.HTTPS_CERT = env.HTTPS_CERT || opt.home + '/cert.pem';
+  }
+
+  if (env.HTTPS_KEY) {
+    opt.port = 443;
+    opt.key = fs.readFileSync(env.HTTPS_KEY);
+    opt.cert = fs.readFileSync(env.HTTPS_CERT);
+    opt.server = https.createServer(opt, GUN.serve(__dirname));
+    http
+      .createServer((req, res) => {
+        res.writeHead(301, { Location: 'https://' + req.headers.host + req.url });
+        res.end();
+      })
+      .listen(80);
+  } else {
+    opt.server = http.createServer(GUN.serve(__dirname));
+  }
+
+  gun = GUN({ web: opt.server.listen(opt.port), peers: opt.peers });
+  console.log('Relay peer started on port ' + opt.port + ' with /gun');
+}
+
+export default gun;

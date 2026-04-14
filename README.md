@@ -25,7 +25,30 @@ Nếu bạn mới đọc repo này, đây là điều quan trọng nhất cần 
 
 ### 1. Current repo reality
 
-Repo `zen/` hiện tại vẫn đang ở giai đoạn rất sớm. README này chủ yếu mô tả:
+Repo `zen/` hiện tại đã pivot sang branch `attempt2`.
+
+Điều đó có nghĩa là:
+
+- codebase hiện tại **không còn** là runtime scratch-build của `attempt1`
+- codebase hiện tại là **tree fork từ `akaoio/gun`**
+- docs cấp `zen` như `README.md`, `docs/`, và `PLAN.md` được giữ lại để mô tả direction
+- `npm start` hiện đang chạy theo base runtime của gun tree
+- `npm test` hiện cũng đang chạy theo test system của gun tree
+
+Nói cách khác, current reality bây giờ là:
+
+> **ZEN docs + gun-based implementation base**
+
+chứ chưa phải một codebase nơi mọi ZEN direction đã được re-applied đầy đủ lên fork mới.
+
+Điều cũng phải nói rõ:
+
+- `attempt1` được xem là hướng implementation bị bỏ
+- `attempt2` là base mới đúng hơn vì bắt đầu từ lineage đã chạy thật
+- repo hiện đã có server/runtime/test harness mạnh hơn trước vì kế thừa trực tiếp từ gun
+- nhưng README này vẫn chứa nhiều phần nói về **ZEN direction**, không nên đọc nó như thể toàn bộ direction đó đã được hiện thực hết trong branch hiện tại
+
+README này vẫn mô tả:
 
 - mục tiêu của project
 - các nguyên tắc kiến trúc
@@ -333,19 +356,26 @@ Ví dụ ý tưởng:
 ```js
 const zen = new Zen({ candle: 60000 })
 
-zen.get(key)
-zen.put(data)
+zen.get(key).put(data)
+zen.get(key).set(otherSoul)
+zen.get(key).once()
 
-zen.hash(data)
+zen.work(data)
 
 const pair = zen.pair()
 const sig = zen.sign(data, pair)
 zen.verify(data, sig, pair.pub)
 
-zen(penObject)
+zen.pen({
+  put(ctx){
+    return { value: ctx.value }
+  }
+})
 ```
 
-Phần này nên được đọc như **API direction**, không phải khẳng định rằng toàn bộ API này đã được hiện thực đầy đủ trong repo `zen/` hôm nay.
+Phần này nên được đọc như **API direction**, không phải mô tả đầy đủ implementation hiện tại của `attempt2`.
+
+`attempt1` từng có một bản executable nhỏ cho vài surface trong số này, nhưng hướng code hiện tại đã pivot sang fork-first từ `akaoio/gun`.
 
 ## Vai trò thực tế của ZEN trong akao
 
@@ -401,6 +431,26 @@ Với ZEN, tư duy đúng là:
 - red turns green
 
 Nếu một behavior quan trọng chưa được mô tả bằng test, thì behavior đó chưa thật sự đủ chắc để trở thành nền tảng của hệ.
+
+Ở thời điểm hiện tại, ZEN đã có:
+
+- test system và server runtime được kế thừa từ gun base
+- `npm start` chạy được trên base đó
+
+nhưng vẫn **chưa** có độ sâu test như GUN:
+
+- vì chính branch hiện tại về cơ bản vẫn đang là gun tree được đổi base để chuẩn bị cho các chỉnh sửa tiếp theo của zen
+
+Ở thời điểm hiện tại, ZEN đã có:
+
+- spec-level test cho core runtime
+- server smoke test cho `npm start`
+
+nhưng vẫn **chưa** có độ sâu test như GUN:
+
+- multi-peer distributed tests
+- browser automation suite thật
+- recovery / reload / failure harness ở quy mô lớn
 
 ## Triết lý thiết kế
 
