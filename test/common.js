@@ -4066,6 +4066,7 @@ describe('ZEN', function(){
 
 		it('Check that events are called with multiple instances', function(done){
                    var gunA = Gun( { file : "tmp/A.json" } );
+                   var gunB = Gun( { file : "tmp/B.json" });
                    var gunC = Gun( { file : "tmp/C.json" });
 
 			var check = {};
