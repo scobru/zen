@@ -39,7 +39,7 @@ describe('testZEN', function() {
     [
       'get', 'put', 'once', 'map', 'set', 'back', 'opt',
       'pair', 'sign', 'verify', 'encrypt', 'decrypt',
-      'secret', 'work', 'pen', 'candle',
+      'secret', 'hash', 'pen', 'candle',
       'pack', 'unpack', 'run'
     ].forEach(function(name) {
       assert.strictEqual(typeof zen[name], 'function', name);
@@ -120,11 +120,11 @@ describe('testZEN', function() {
     assert.strictEqual(decrypted, 'shared data');
   });
 
-  it('runs deterministic work and PEN pack/unpack through ZEN instance methods', async function() {
+  it('runs deterministic hash and PEN pack/unpack through ZEN instance methods', async function() {
     var zen = makeZEN('pen');
     var pair = await zen.pair();
-    var proof1 = await zen.work('hello zen', pair);
-    var proof2 = await zen.work('hello zen', pair);
+    var proof1 = await zen.hash('hello zen', pair);
+    var proof2 = await zen.hash('hello zen', pair);
     var soul = zen.pen({ key: 'fixed' });
     var raw = Uint8Array.from([1, 2, 3, 4]);
     var packed = zen.pack(raw);
@@ -134,5 +134,14 @@ describe('testZEN', function() {
     assert.strictEqual(typeof soul, 'string');
     assert.strictEqual(soul.startsWith('$'), true);
     assert.deepStrictEqual(Array.from(unpacked), Array.from(raw));
+  });
+
+  it('exposes hash() and supports keccak256', async function() {
+    var zen = makeZEN('hash');
+    var shaViaHash = await zen.hash('hello zen', null, null, { name: 'SHA-256', encode: 'hex' });
+    var keccak = await zen.hash('', null, null, { name: 'keccak256', encode: 'hex' });
+    assert.strictEqual(typeof zen.work, 'undefined');
+    assert.strictEqual(keccak, 'c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470');
+    assert.strictEqual(shaViaHash.length, 64);
   });
 });

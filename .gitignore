@@ -14,10 +14,6 @@ isolate*.log
 .esm-cache
 .sessionStorage
 .localStorage
-/types/**/*.ts
-!/types/**/*.d.ts
-!/types/**/*.test-d.ts
-/gun.ts
 temp/
 tmp/
 .well-known/

@@ -759,7 +759,7 @@ describe('SEA + PEN integration', function() {
 
   // ── PoW ─────────────────────────────────────────────────────────────────────
 
-  it('pow difficulty:1 — SEA.work produces hex hash starting with enough zeros ~50% of time → verify loop', function(done) {
+  it('pow difficulty:1 — SEA.hash produces hex hash starting with enough zeros ~50% of time → verify loop', function(done) {
     this.timeout(30000);
     var difficulty = 1;
     var soul = SEA.pen({ pow: { field: 1, difficulty: difficulty } });
@@ -774,7 +774,7 @@ describe('SEA + PEN integration', function() {
       attempt++;
       if (attempt > 200) { return done(new Error('could not find PoW solution in 200 tries')); }
       var val = 'order_data_nonce' + nonce;
-      SEA.work(val, null, function(hash) {
+      SEA.hash(val, null, function(hash) {
         if (hash && hash.slice(0, difficulty) === '0'.repeat(difficulty)) {
           // penStage would accept this
           assert.ok(hash.startsWith('0'), 'hash satisfies difficulty:1');
@@ -855,7 +855,7 @@ describe('SEA + PEN integration', function() {
     });
   });
 
-  it('pow unit:"a" difficulty:1 — SEA.work hash must start with "a"', function(done) {
+  it('pow unit:"a" difficulty:1 — SEA.hash must start with "a"', function(done) {
     this.timeout(30000);
     var unit = 'a';
     var difficulty = 1;
@@ -871,7 +871,7 @@ describe('SEA + PEN integration', function() {
       tries++;
       if (tries > 500) return done(new Error('could not find PoW solution in 500 tries'));
       var val = 'test_data_nonce' + n;
-      SEA.work(val, null, function(hash) {
+      SEA.hash(val, null, function(hash) {
         if (hash && hash.slice(0, prefix.length) === prefix) {
           assert.ok(hash.startsWith(prefix), 'hash satisfies unit.repeat(difficulty)');
           assert.ok(pen.run(bc, ['k', val, soul, 0, Date.now(), '']), 'predicate passes (PASS, no constraint)');
@@ -882,7 +882,7 @@ describe('SEA + PEN integration', function() {
     seek(0);
   });
 
-  it('order namespace: SEA.work PoW + candle — hostile nonce cannot fake PoW', function(done) {
+  it('order namespace: SEA.hash PoW + candle — hostile nonce cannot fake PoW', function(done) {
     this.timeout(30000);
     var now = Date.now();
     var size = 300000;
@@ -905,7 +905,7 @@ describe('SEA + PEN integration', function() {
       tries++;
       if (tries > 200) return done(new Error('too many PoW tries'));
       var val = 'amount:100,nonce:' + n;
-      SEA.work(val, null, function(hash) {
+      SEA.hash(val, null, function(hash) {
         if (hash && hash[0] === '0') {
           // predicate passes (no val-type constraint here, just pow policy)
           assert.strictEqual(pen.run(bc, [key, val, soul, 0, now, '']), true, 'PoW solution accepted by predicate');

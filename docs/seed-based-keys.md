@@ -192,8 +192,8 @@ const verified = await SEA.verify(signature, pair.pub);
 const encrypted = await SEA.encrypt("secret message", pair);
 const decrypted = await SEA.decrypt(encrypted, pair);
 
-// Work (hashing)
-const proof = await SEA.work("my work", pair);
+// Hashing
+const proof = await SEA.hash("my hash", pair);
 
 // All operations work identically to random-generated keys
 ```

@@ -238,9 +238,7 @@ async function randomScalar() {
 }
 
 async function normalizeMessage(data) {
-  if (typeof data === 'string') {
-    return settings.check(data) ? data : await settings.parse(data);
-  }
+  if (typeof data === 'string') { return await settings.parse(data); }
   return data;
 }
 

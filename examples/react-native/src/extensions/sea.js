@@ -1,1 +1,1 @@
-export { default } from '../../../../sea/index.js';
+export { default } from '../../../../src/sea/index.js';

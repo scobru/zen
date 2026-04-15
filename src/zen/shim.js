@@ -1,7 +1,6 @@
 import BufferApi from './buffer.js';
 import CryptoMod from 'crypto';
 import WebCryptoMod from '@peculiar/webcrypto';
-import TextEncodingMod from '../../lib/text-encoding/index.js';
 
 const globalScope = (typeof globalThis !== 'undefined') ? globalThis : (typeof global !== 'undefined' ? global : (typeof window !== 'undefined' ? window : {}));
 const api = { Buffer: globalScope.Buffer || BufferApi };
@@ -36,11 +35,6 @@ if (globalScope.crypto) {
 
 if (!api.TextEncoder) { api.TextEncoder = globalScope.TextEncoder; }
 if (!api.TextDecoder) { api.TextDecoder = globalScope.TextDecoder; }
-if (!api.TextEncoder || !api.TextDecoder) {
-  const { TextEncoder, TextDecoder } = TextEncodingMod;
-  api.TextEncoder = api.TextEncoder || TextEncoder;
-  api.TextDecoder = api.TextDecoder || TextDecoder;
-}
 
 if (!api.crypto) {
   const crypto = CryptoMod;

@@ -339,7 +339,7 @@ Luồng thực thi trong `penStage`:
 1. `pen.unpack(soul.slice(1))` → bytecode
 2. `pen.scanpolicy(bytecode)` → `{ sign, cert, open, pow, params }` (tail bytes sau tree root)
 3. `pen.run(bytecode, regs)` → boolean (predicate)
-4. Nếu `policy.pow`: async `SEA.work(R[pow.field])`, kiểm tra hex prefix
+4. Nếu `policy.pow`: async `SEA.hash(R[pow.field])`, kiểm tra hex prefix
 5. `applypolicy(policy, ctx, reject)` → forward hoặc verify signature
 
 ### 4.3 `SEA.pen(spec)` — high-level compiler
@@ -487,7 +487,7 @@ Cách implement trong PEN: host extension opcode `0xC4` = POW — vì SHA256 là
 SEA.pen({ pow: { field: 1, difficulty: 3 } })
 // pow.field là register index: 0=key, 1=val, 2=soul, 4=now, 5=pub
 // → bytecode: 0xC4 [u8 field_reg] [u8 difficulty]  (appended after expression root)
-// → penStage: async SEA.work(R[field]) → verify hex prefix "000..."
+// → penStage: async SEA.hash(R[field]) → verify hex prefix "000..."
 ```
 
 ---
@@ -647,7 +647,7 @@ function penStage(ctx, next, reject) {
 
     // 5. Enforce policy (async for PoW)
     if (policy.pow) {
-      SEA.work(regs[policy.pow.field], null, function(hash) {
+      SEA.hash(regs[policy.pow.field], null, function(hash) {
         var prefix = new Array(policy.pow.difficulty + 1).join('0');
         if ((hash || '').indexOf(prefix) !== 0) return reject('PEN: PoW insufficient');
         applypolicy(policy, ctx, reject);
@@ -737,7 +737,7 @@ gun.get(orderSoul).get({ '>': candle + '_ETH_USDT_buy', '<': candle + '_ETH_USDT
 |---|------|---------|------------|
 | 1 | `lib/pen.js` | WASM loader (`pen.ready`/`pen.run`/`pen.bc`) + compiler (`pen.pack`/`pen.unpack`) | ✅ |
 | 2 | `lib/pen.js` | `pen.scanpolicy` (treeskip-based) + `penStage` + `applypolicy` | ✅ |
-| 3 | `sea/index.js` | `SEA.check.use(penStage)`, routing `'$' === soul[0]` | ✅ |
+| 3 | `src/sea/index.js` | `SEA.check.use(penStage)`, routing `'$' === soul[0]` | ✅ |
 | 4 | `sea.js` | Rebuild: `npm run buildSEA` | ✅ |
 | 5 | `test/pen.js` | 52 tests: ISA, LET, candle, policy, adversarial | ✅ |
 
@@ -752,7 +752,7 @@ gun.get(orderSoul).get({ '>': candle + '_ETH_USDT_buy', '<': candle + '_ETH_USDT
 akaoio/gun (hiện tại)
   lib/pen.js          ← WASM loader + compiler + penStage (1 file)
   lib/pen.wasm        ← Zig-compiled WASM, 26KB, zero GUN imports
-  sea/index.js        ← integration (SEA.check.use(penStage))
+  src/sea/index.js    ← integration (SEA.check.use(penStage))
 
 akaoio/pen (tương lai, planned)
   pen.wasm            ← same WASM

@@ -2,7 +2,7 @@ import '../../lib/store.js';
 import '../../lib/rfs.js';
 import SEAmod from '../../sea.js';
 import ZEN from '../../zen.js';
-import '../../sea/certify.js';
+import '../../src/sea/certify.js';
 import __fs from 'fs';
 import __fsrm from '../../lib/fsrm.js';
 import __gun from '../../gun.js';
@@ -10,7 +10,7 @@ import __expect from '../expect.js';
 import __util from 'util';
 import exp from 'constants';
 import expect from '../expect.js';
-import SeaArray from '../../sea/array.js';
+import SeaArray from '../../src/sea/array.js';
 var USE_ZEN = !!process.env.ZEN_TEST;
 if(USE_ZEN){
   SEAmod.pair = ZEN.pair;
@@ -19,7 +19,7 @@ if(USE_ZEN){
   SEAmod.encrypt = ZEN.encrypt;
   SEAmod.decrypt = ZEN.decrypt;
   SEAmod.secret = ZEN.secret;
-  SEAmod.work = ZEN.work;
+  SEAmod.hash = ZEN.hash;
   SEAmod.Buffer = ZEN.Buffer;
   SEAmod.random = ZEN.random;
   SEAmod.keyid = ZEN.keyid;
@@ -88,8 +88,8 @@ describe(SUITE_NAME, function(){
       SEA.verify(data, pair.pub, function(msg){
       SEA.decrypt(msg, pair, function(dec){
       expect(dec).to.be('hello self');
-      SEA.work(dec, pair, function(proof){
-      SEA.work('hello self', pair, function(check){
+      SEA.hash(dec, pair, function(proof){
+      SEA.hash('hello self', pair, function(check){
       expect(proof).to.be(check);
       SEA.pair(function(alice){
       SEA.pair(function(bob){
@@ -119,7 +119,7 @@ describe(SUITE_NAME, function(){
       });});});});});});});});
     })
 
-    it('work() base64url no slash', function(done){
+    it('hash() base64url no slash', function(done){
       this.timeout(60 * 1000);
       (async function(){
         function randStr(len){
@@ -130,20 +130,28 @@ describe(SUITE_NAME, function(){
           }
           return out;
         }
-        function workAsync(data){
+        function hashAsync(data){
           return new Promise(function(res){
-            SEA.work(data, null, function(r){ res(r) }, {name: 'SHA-256'});
+            SEA.hash(data, null, function(r){ res(r) }, {name: 'SHA-256'});
           });
         }
         for(var i = 0; i < 1000; i++){
           var s = randStr(32);
-          var r = await workAsync(s);
+          var r = await hashAsync(s);
           if(r.indexOf('/') >= 0){
-            throw new Error('Found "/" in work() output at index '+i+': '+r+' (input: '+s+')');
+            throw new Error('Found "/" in hash() output at index '+i+': '+r+' (input: '+s+')');
           }
         }
         done();
-      })().catch(function(err){ done(err || new Error('work() base64url test failed')); });
+      })().catch(function(err){ done(err || new Error('hash() base64url test failed')); });
+    })
+
+    it('hash() supports keccak256', function(done){
+      (async function(){
+        var byHash = await SEA.hash('', null, null, {name: 'keccak256', encode: 'hex'});
+        expect(byHash).to.be('c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470');
+        done();
+      })().catch(function(err){ done(err || new Error('hash() keccak256 test failed')); });
     })
 
     it('btoa/atob utf8 roundtrip', function(done){
@@ -296,7 +304,7 @@ describe(SUITE_NAME, function(){
         for (var i = 0; i < view1.length; i++) {
           view1[i] = i;
         }
-        var hash1 = await SEA.work(buff1, "salt");
+        var hash1 = await SEA.hash(buff1, "salt");
 
         // Create another deterministic ArrayBuffer (buffer 2)
         var buff2 = new ArrayBuffer(16);
@@ -304,7 +312,7 @@ describe(SUITE_NAME, function(){
         for (var i = 0; i < view2.length; i++) {
           view2[i] = i + 16;
         }
-        var hash2 = await SEA.work(buff2, "salt");
+        var hash2 = await SEA.hash(buff2, "salt");
 
         // Ensure the hashes are strings and different from each other
         expect(typeof hash1 === "string" && typeof hash2 === "string").to.be(true);
@@ -482,8 +490,8 @@ describe(SUITE_NAME, function(){
       expect(msg).to.be(enc);
       var dec = await SEA.decrypt(msg, pair1);
       expect(dec).to.be('hello self');
-      var proof = await SEA.work(dec, pair1);
-      var check = await SEA.work('hello self', pair1);
+      var proof = await SEA.hash(dec, pair1);
+      var check = await SEA.hash('hello self', pair1);
       expect(proof).to.be(check);
     });
 
@@ -552,8 +560,8 @@ describe(SUITE_NAME, function(){
       expect(msg).to.be(enc);
       var dec = await SEA.decrypt(msg, bufPair1);
       expect(dec).to.be('hello self');
-      var proof = await SEA.work(dec, bufPair1);
-      var check = await SEA.work('hello self', bufPair1);
+      var proof = await SEA.hash(dec, bufPair1);
+      var check = await SEA.hash('hello self', bufPair1);
       expect(proof).to.be(check);
     });
     
@@ -570,8 +578,8 @@ describe(SUITE_NAME, function(){
       expect(msg).to.be(enc);
       var dec = await SEA.decrypt(msg, test2);
       expect(dec).to.be('hello self');
-      var proof = await SEA.work(dec, test2);
-      var check = await SEA.work('hello self', test2);
+      var proof = await SEA.hash(dec, test2);
+      var check = await SEA.hash('hello self', test2);
       expect(proof).to.be(check);
       expect(test2.pub).to.be(test1.pub);
       const test3 = await SEA.pair(null, { epriv: test2.epriv });
@@ -693,9 +701,9 @@ describe(SUITE_NAME, function(){
       
       expect(wfDecrypted).to.be(workflowMessage);
       
-      // Test with SEA.work
-      const proof1 = await SEA.work(workflowMessage, workflowPair);
-      const proof2 = await SEA.work(workflowMessage, workflowPair);
+      // Test with SEA.hash
+      const proof1 = await SEA.hash(workflowMessage, workflowPair);
+      const proof2 = await SEA.hash(workflowMessage, workflowPair);
       
       expect(proof1).to.be(proof2);
     });
@@ -1185,7 +1193,7 @@ describe(SUITE_NAME, function(){
       var cert = await SEA.certify(bob, {"*": "private"}, alice)
 
       var data = Gun.state().toString(36)
-      var fullHash = await SEA.work(data, null, null, {name: 'SHA-256'})
+      var fullHash = await SEA.hash(data, null, null, {name: 'SHA-256'})
       var hash = fullHash.slice(-20)
 
       gun.get("~" + alice.pub)
@@ -1312,7 +1320,7 @@ describe(SUITE_NAME, function(){
       });
 
       var data = "hello world";
-      var hash = await SEA.work(data, null, null, {name: "SHA-256"});
+      var hash = await SEA.hash(data, null, null, {name: "SHA-256"});
       hash = hash.slice(-20);
       await new Promise(function(res){
         gun.get('#users').get(hash).put(data, function(){ res() });

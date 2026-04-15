@@ -77,7 +77,6 @@
     "SECURITY.md",
     "docs/",
     "lib/",
-    "sea/",
     "src/"
   ],
   "engines": {

@@ -56,4 +56,9 @@ describe('ZEN secp256k1', function() {
     assert.strictEqual(typeof toBob, 'string');
     assert.strictEqual(toBob.length, 44);
   });
+
+  it('hashes with keccak256', async function() {
+    var byHash = await ZEN.hash('hello', null, null, { name: 'keccak256', encode: 'hex' });
+    assert.strictEqual(byHash, '1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8');
+  });
 });

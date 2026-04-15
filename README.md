@@ -80,7 +80,7 @@ The following advancements were created in the `akaoio/gun` fork and are central
 #### Crypto and identity
 
 - **Universal base62 key material**
-  - `sea/base62.js`
+  - `src/sea/base62.js`
   - public keys move from old base64url-with-dot form to clean alphanumeric base62
   - private keys also move to base62
   - backward compatibility is preserved while enabling cleaner paths and identifiers
@@ -453,7 +453,7 @@ zen.get(key).put(data)
 zen.get(key).set(otherSoul)
 zen.get(key).once()
 
-zen.work(data)
+zen.hash(data)
 
 const pair = zen.pair()
 const sig = zen.sign(data, pair)

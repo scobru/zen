@@ -33,7 +33,7 @@ GUN is built as a modular system with the following structure:
 
 ### Key Libraries
 - `axe.js` - Automatic peering and DHT clustering
-- `sea/` - Cryptographic operations and user authentication
+- `src/sea/` - Cryptographic operations and user authentication
 - `lib/webrtc.js` - WebRTC peer connections
 
 ## Development Commands

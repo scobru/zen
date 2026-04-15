@@ -8,7 +8,7 @@ import encrypt from './encrypt.js';
 import decrypt from './decrypt.js';
 import secret from './secret.js';
 import shim from './shim.js';
-import work from './work.js';
+import hash from './hash.js';
 import keyid from './keyid.js';
 import security from './runtime.js';
 import graph from './graph.js';
@@ -40,7 +40,7 @@ var SECP256K1 = {
   encrypt: encrypt,
   decrypt: decrypt,
   secret: secret,
-  work: work
+  hash: hash
 };
 
 function mirrorStatics(target, source) {
@@ -129,7 +129,7 @@ class ZEN {
   static encrypt(...args) { return encrypt(...args) }
   static decrypt(...args) { return decrypt(...args) }
   static secret(...args) { return secret(...args) }
-  static work(...args) { return work(...args) }
+  static hash(...args) { return hash(...args) }
 
   get _graph() {
     if (!this._graphInstance) {
@@ -155,7 +155,7 @@ class ZEN {
   encrypt(...args) { return this.constructor.encrypt(...args) }
   decrypt(...args) { return this.constructor.decrypt(...args) }
   secret(...args) { return this.constructor.secret(...args) }
-  work(...args) { return this.constructor.work(...args) }
+  hash(...args) { return this.constructor.hash(...args) }
 
   get(...args) { return this._graph.get(...args) }
   put(...args) { return this._graph.put(...args) }

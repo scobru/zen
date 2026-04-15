@@ -7,7 +7,7 @@ const __penWasmURL = new URL('./pen.wasm', import.meta.url);
 
   var Gun  = (typeof globalThis !== 'undefined' && globalThis.Gun) || GunMod;
   if (Gun && !Gun.ZENSecurity && SecurityMod) { Gun.ZENSecurity = SecurityMod; }
-  var runtime = (Gun && (Gun.ZENSecurity || Gun.SEA)) || SecurityMod;
+  var runtime = (Gun && Gun.ZENSecurity) || SecurityMod;
 
   // ── WASM init ───────────────────────────────────────────────────────────────
 
@@ -440,7 +440,7 @@ const __penWasmURL = new URL('./pen.wasm', import.meta.url);
 
       if (policy.pow) {
         var field = regs[policy.pow.field] || '';
-        return runtime.work(field, null, function(hash) {
+        return runtime.hash(field, null, function(hash) {
           var punit = policy.pow.unit || '0';
           var pdiff = (policy.pow.difficulty != null) ? policy.pow.difficulty : 1;
           var prefix = punit.repeat(pdiff);

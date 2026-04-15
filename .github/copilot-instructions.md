@@ -89,7 +89,7 @@ Located in `/sea`, extends GUN with cryptographic operations:
 - `SEA.sign/verify()` - Message signatures
 - `SEA.encrypt/decrypt()` - AES-GCM encryption
 - **WebCrypto required** - HTTPS mandatory in browsers
-- Verification runs on HAM diffs (`check()` in `sea/index.js`)
+- Verification runs on HAM diffs (`check()` in `src/sea/index.js`)
 
 ### 5. Radix Storage Format
 `radisk.js` uses Radix trees for efficient disk I/O:

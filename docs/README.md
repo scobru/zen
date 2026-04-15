@@ -91,7 +91,7 @@ possible base62 strings. Future plans: Zig port, separate `akaoio/pen` repo.
 
 ```
 Tầng 2: Application (akao/shop) — order/trade schemas using sea.pen()
-Tầng 1: GUN-PEN Bridge (sea/pen.js) — register conventions, policy opcodes, sea.pen() compiler
+Tầng 1: GUN-PEN Bridge (`src/sea/index.js`) — register conventions, policy opcodes, sea.pen() compiler
 Tầng 0: PEN Core (lib/pen.js) — pure VM, no GUN, no timestamps, no network
 ```
 
