@@ -134,5 +134,5 @@ Gun.chain.off = function(){
 	return gun;
 }
 var empty = {}, noop = function(){}, u;
-	
+
 }());

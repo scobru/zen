@@ -1,6 +1,6 @@
 import __sea from './sea.js';
 import __settings from './settings.js';
-import __gun from '../gun.js';
+var __gun = (typeof GUN !== 'undefined') ? GUN : ((typeof Gun !== 'undefined') ? Gun : ((typeof require !== 'undefined') ? USE('../gun.js') : undefined));
 (function(){
 
     var SEA = __sea, S = __settings, noop = function() {}, u;
@@ -495,5 +495,5 @@ import __gun from '../gun.js';
     SEA.opt.shuffle_attack = 1546329600000; // Jan 1, 2019
     var fl = Math.floor; // TODO: Still need to fix inconsistent state issue.
     // TODO: Potential bug? If pub/priv key starts with `-`? IDK how possible.
-  
+
 }());

@@ -1,8 +1,5 @@
 import __root from './root.js';
 import __buffer from './buffer.js';
-import __crypto from 'crypto';
-import __webcrypto from '@peculiar/webcrypto';
-import __text_encoding from '../lib/text-encoding/index.js';
 
 let __defaultExport;
 (function(){
@@ -37,29 +34,8 @@ let __defaultExport;
     }
     if(!api.TextEncoder){ api.TextEncoder = globalScope.TextEncoder }
     if(!api.TextDecoder){ api.TextDecoder = globalScope.TextDecoder }
-    if(!api.TextDecoder)
-    {
-      const { TextEncoder, TextDecoder } = __text_encoding;
-      api.TextDecoder = TextDecoder;
-      api.TextEncoder = TextEncoder;
-    }
-    if(!api.crypto)
-    {
-      try
-      {
-      var crypto = __crypto;
-      Object.assign(api, {
-        crypto,
-        random: (len) => api.Buffer.from(crypto.randomBytes(len))
-      });      
-      const { Crypto: WebCrypto } = __webcrypto;
-      api.ossl = api.subtle = new WebCrypto({directory: 'ossl'}).subtle // ECDH
-    }
-    catch(e){
-      console.log("Please `npm install @peculiar/webcrypto` or add it to your package.json !");
-    }}
 
     __defaultExport = api
-  
+
 }());
 export default __defaultExport;

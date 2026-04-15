@@ -26,6 +26,6 @@ let __defaultExport;
     }});
 
     __defaultExport = SEA.encrypt;
-  
+
 }());
 export default __defaultExport;

@@ -60,6 +60,6 @@ let __defaultExport;
 
     SEA.opt = s;
     __defaultExport = s
-  
+
 }());
 export default __defaultExport;

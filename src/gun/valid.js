@@ -15,6 +15,6 @@ __defaultExport = function(v){
 	("number" === typeof v && v != Infinity && v != -Infinity && v === v) ||
 	(!!v && "string" == typeof v["#"] && Object.keys(v).length === 1 && v["#"]);
 }
-	
+
 }());
 export default __defaultExport;

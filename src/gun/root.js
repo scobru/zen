@@ -125,7 +125,7 @@ let __defaultExport;
         function ham(val, key, soul, state, msg){
             var ctx = msg._||'', root = ctx.root, graph = root.graph, lot, tmp;
             var vertex = graph[soul] || empty, was = state_is(vertex, key, 1), known = vertex[key];
-            
+
             var DBG = ctx.DBG; if(tmp = console.STAT){ if(!graph[soul] || !known){ tmp.has = (tmp.has || 0) + 1 } }
 
             var now = State(), u;

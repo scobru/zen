@@ -15,6 +15,6 @@ let __defaultExport;
     }});
 
     __defaultExport = SEA.pair;
-  
+
 }());
 export default __defaultExport;

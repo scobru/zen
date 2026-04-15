@@ -19,6 +19,6 @@ let __defaultExport;
       return await shim.subtle.importKey('jwk', jwkKey, {name:'AES-GCM'}, false, ['encrypt', 'decrypt'])
     }
     __defaultExport = importGen;
-  
+
 }());
 export default __defaultExport;

@@ -13,5 +13,5 @@ import __root from './root.js';
         location.protocol = 'https:'; // WebCrypto does NOT work without HTTPS!
       }
     } }catch(e){}
-  
+
 }());

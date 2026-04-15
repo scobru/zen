@@ -1,4 +1,7 @@
 
+
+
+
   const MOD = { exports: {} };
 function USE(arg, req){
     return req? USE[R(arg)] : arg.slice? USE[R(arg)] : function(mod, path){
@@ -10,5 +13,4 @@ function USE(arg, req){
     }
   }
   var MODULE = MOD
-  export default MOD.exports;
-  
+export default MOD.exports;

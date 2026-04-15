@@ -1,6 +1,4 @@
 import BufferApi from './buffer.js';
-import CryptoMod from 'crypto';
-import WebCryptoMod from '@peculiar/webcrypto';
 
 const globalScope = (typeof globalThis !== 'undefined') ? globalThis : (typeof global !== 'undefined' ? global : (typeof window !== 'undefined' ? window : {}));
 const api = { Buffer: globalScope.Buffer || BufferApi };
@@ -25,23 +23,13 @@ api.stringify = function(value, replacer, space) {
   });
 };
 
-if (globalScope.crypto) {
-  api.crypto = globalScope.crypto;
-  api.subtle = (api.crypto || empty).subtle || (api.crypto || empty).webkitSubtle;
-  api.random = function(len) {
-    return api.Buffer.from(api.crypto.getRandomValues(new Uint8Array(api.Buffer.alloc(len))));
-  };
-}
-
 if (!api.TextEncoder) { api.TextEncoder = globalScope.TextEncoder; }
 if (!api.TextDecoder) { api.TextDecoder = globalScope.TextDecoder; }
 
-if (!api.crypto) {
-  const crypto = CryptoMod;
-  api.crypto = crypto;
-  api.random = function(len) { return api.Buffer.from(crypto.randomBytes(len)); };
-  const { Crypto: WebCrypto } = WebCryptoMod;
-  api.ossl = api.subtle = new WebCrypto({ directory: 'ossl' }).subtle;
-}
+api.crypto = globalScope.crypto;
+api.subtle = (globalScope.crypto || empty).subtle || (globalScope.crypto || empty).webkitSubtle;
+api.random = function(len) {
+  return api.Buffer.from(api.crypto.getRandomValues(new Uint8Array(api.Buffer.alloc(len))));
+};
 
 export default api;

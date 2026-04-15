@@ -22,5 +22,5 @@ Gun.chain.set = function(item, cb, opt){
 	})
 	return item;
 }
-	
+
 }());

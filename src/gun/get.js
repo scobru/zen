@@ -167,5 +167,5 @@ function rid(at){
 	return;
 }
 var empty = {}, valid = Gun.valid, u;
-	
+
 }());

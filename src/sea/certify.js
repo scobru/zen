@@ -72,6 +72,6 @@ let __defaultExport;
     }});
 
     __defaultExport = SEA.certify;
-  
+
 }());
 export default __defaultExport;

@@ -43,5 +43,5 @@ function map(msg){ this.to.next(msg);
 	Gun.on.link(msg, cat);
 }
 var noop = function(){}, event = {stun: noop, off: noop}, u;
-	
+
 }());

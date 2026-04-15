@@ -1,5 +1,3 @@
-;(function(){
-
 // Shim for generic javascript utilities.
 String.random = function(l, c){
 	var s = '';
@@ -90,6 +88,4 @@ Object.keys = Object.keys || function(o){
 	  	if(u === r){ T(t); return }
 	  } e && e(r);
 	}())})();
-}());
-	
 }());

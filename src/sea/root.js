@@ -16,6 +16,6 @@ let __defaultExport;
 
     try{ if(u+'' !== typeof MODULE){ MODULE.exports = SEA } }catch(e){}
     __defaultExport = SEA;
-  
+
 }());
 export default __defaultExport;

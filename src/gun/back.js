@@ -39,5 +39,5 @@ Gun.chain.back = function(n, opt){ var tmp;
 	return this;
 }
 var empty = {}, u;
-	
+
 }());

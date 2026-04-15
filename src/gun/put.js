@@ -139,7 +139,7 @@ function get(as){
 		as.via = at.root.$.get(((as.data||'')._||'')['#'] || at.$.back('opt.uuid')())
 	}
 	as.via.put(as.data, as.ack, as);
-	
+
 
 	return;
 	if(at.get && at.back.soul){
@@ -154,5 +154,5 @@ function check(d, tmp){ return ((d && (tmp = d.constructor) && tmp.name) || type
 
 var u, empty = {}, noop = function(){}, turn = setTimeout.turn, valid = Gun.valid, state_ify = Gun.state.ify;
 var iife = function(fn,as){fn.call(as||empty)}
-	
+
 }());

@@ -23,6 +23,6 @@ let __defaultExport;
     }});
 
     __defaultExport = SEA.decrypt;
-  
+
 }());
 export default __defaultExport;

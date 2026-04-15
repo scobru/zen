@@ -88,6 +88,6 @@ let __defaultExport;
     __defaultExport = SEA.verify;
 
     SEA.opt.fallback = 0;
-  
+
 }());
 export default __defaultExport;

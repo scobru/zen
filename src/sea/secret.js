@@ -22,6 +22,6 @@ let __defaultExport;
     }});
 
     __defaultExport = SEA.secret;
-  
+
 }());
 export default __defaultExport;

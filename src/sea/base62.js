@@ -113,6 +113,6 @@ let __defaultExport;
     var b62 = { biToB62: biToB62, b62ToBI: b62ToBI, b64ToB62: b64ToB62, b62ToB64: b62ToB64, pubToJwkXY: pubToJwkXY, bufToB62: bufToB62, PUB_LEN: PUB_LEN };
     SEA.base62 = b62;
     __defaultExport = b62;
-  
+
 }());
 export default __defaultExport;

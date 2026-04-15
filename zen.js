@@ -8,6 +8,9 @@ __def('./gun.js', function(module, __exp){
 
     /* UNBUILD */
 
+
+
+
     const MOD = { exports: {} };
   function USE(arg, req){
       return req? USE[R(arg)] : arg.slice? USE[R(arg)] : function(mod, path){
@@ -2232,160 +2235,139 @@ __def('./gun.js', function(module, __exp){
 });
 
 __def('./src/zen/base64.js', function(module, __exp){
-  var __buffer = (typeof require !== 'undefined') ? require('buffer') : undefined;
+  // Patch root.btoa/root.atob to use URL-safe base64 (no +//, no padding).
+  // Native btoa/atob are available in all modern browsers and Node.js 16+.
   (function(){
-
-      var u, root = (typeof globalThis !== "undefined") ? globalThis : (typeof global !== "undefined" ? global : (typeof window !== "undefined" ? window : this));
-      var native = {}
-      native.btoa = (u+'' != typeof root.btoa) && root.btoa && root.btoa.bind(root);
-      native.atob = (u+'' != typeof root.atob) && root.atob && root.atob.bind(root);
-      if(u+'' == typeof Buffer){
-        if(u+'' != typeof require){
-          try{ root.Buffer = __buffer.Buffer }catch(e){ console.log("Please `npm install buffer` or add it to your package.json !") }
-        }
-      }
-      if(u+'' != typeof Buffer){
-        root.btoa = function(data){ return Buffer.from(data, "binary").toString("base64").replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');};
-        root.atob = function(data){
-          var tmp = data.replace(/-/g, '+').replace(/_/g, '/')
-          while(tmp.length % 4){ tmp += '=' }
-          return Buffer.from(tmp, "base64").toString("binary");
-        };
-        return;
-      }
-      if(native.btoa){
-        root.btoa = function(data){ return native.btoa(data).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, ''); };
-      }
-      if(native.atob){
-        root.atob = function(data){
-          var tmp = data.replace(/-/g, '+').replace(/_/g, '/')
-          while(tmp.length % 4){ tmp += '=' }
-          return native.atob(tmp);
-        };
-      }
-    
+    var root = (typeof globalThis !== 'undefined') ? globalThis
+      : (typeof global !== 'undefined' ? global
+      : (typeof window !== 'undefined' ? window : this));
+    var nativeBtoa = root.btoa && root.btoa.bind(root);
+    var nativeAtob = root.atob && root.atob.bind(root);
+    if (nativeBtoa) {
+      root.btoa = function(data) {
+        return nativeBtoa(data).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+      };
+    }
+    if (nativeAtob) {
+      root.atob = function(data) {
+        var tmp = data.replace(/-/g, '+').replace(/_/g, '/');
+        while (tmp.length % 4) { tmp += '='; }
+        return nativeAtob(tmp);
+      };
+    }
   }());
 });
 
 __def('./src/zen/array.js', function(module, __exp){
   __req('./src/zen/base64.js');
-  let __defaultExport;
-  (function(){
-    // This is Array extended to have .toString(['utf8'|'hex'|'base64'])
-    function SeaArray() {}
-    Object.assign(SeaArray, { from: Array.from })
-    SeaArray.prototype = Object.create(Array.prototype)
-    SeaArray.prototype.toString = function(enc, start, end) { enc = enc || 'utf8'; start = start || 0;
-      const length = this.length
-      if (enc === 'hex') {
-        const buf = new Uint8Array(this)
-        return [ ...Array(((end && (end + 1)) || length) - start).keys()]
-        .map((i) => buf[ i + start ].toString(16).padStart(2, '0')).join('')
-      }
-      if (enc === 'utf8') {
-        return Array.from(
-          { length: (end || length) - start },
-          (_, i) => String.fromCharCode(this[ i + start])
-        ).join('')
-      }
-      if (enc === 'base64') {
-        return btoa(this)
-      }
+  // This is Array extended to have .toString(['utf8'|'hex'|'base64'])
+  function SeaArray() {}
+  Object.assign(SeaArray, { from: Array.from })
+  SeaArray.prototype = Object.create(Array.prototype)
+  SeaArray.prototype.toString = function(enc, start, end) { enc = enc || 'utf8'; start = start || 0;
+    const length = this.length
+    if (enc === 'hex') {
+      const buf = new Uint8Array(this)
+      return [ ...Array(((end && (end + 1)) || length) - start).keys()]
+      .map((i) => buf[ i + start ].toString(16).padStart(2, '0')).join('')
     }
-    __defaultExport = SeaArray;
-  }());
-  __exp.default = __defaultExport;
+    if (enc === 'utf8') {
+      return Array.from(
+        { length: (end || length) - start },
+        (_, i) => String.fromCharCode(this[ i + start])
+      ).join('')
+    }
+    if (enc === 'base64') {
+      return btoa(this)
+    }
+  }
+
+  __exp.default = SeaArray;
 });
 
 __def('./src/zen/buffer.js', function(module, __exp){
   __req('./src/zen/base64.js');
   var __array = __req('./src/zen/array.js').default;
-  let __defaultExport;
-  (function(){
-    // This is Buffer implementation used in SEA. Functionality is mostly
-    // compatible with NodeJS 'safe-buffer' and is used for encoding conversions
-    // between binary and 'hex' | 'utf8' | 'base64'
-    // See documentation and validation for safe implementation in:
-    // https://github.com/feross/safe-buffer#update
-    var SeaArray = __array;
-    function SafeBuffer(...props) {
-      console.warn('new SafeBuffer() is depreciated, please use SafeBuffer.from()')
-      return SafeBuffer.from(...props)
-    }
-    SafeBuffer.prototype = Object.create(Array.prototype)
-    Object.assign(SafeBuffer, {
-      // (data, enc) where typeof data === 'string' then enc === 'utf8'|'hex'|'base64'
-      from() {
-        if (!Object.keys(arguments).length || arguments[0]==null) {
-          throw new TypeError('First argument must be a string, Buffer, ArrayBuffer, Array, or array-like object.')
-        }
-        const input = arguments[0]
-        let buf
-        if (typeof input === 'string') {
-          const enc = arguments[1] || 'utf8'
-          if (enc === 'hex') {
-            const bytes = input.match(/([\da-fA-F]{2})/g)
-            .map((byte) => parseInt(byte, 16))
-            if (!bytes || !bytes.length) {
-              throw new TypeError('Invalid first argument for type \'hex\'.')
-            }
-            buf = SeaArray.from(bytes)
-          } else if (enc === 'utf8' || 'binary' === enc) { // EDIT BY MARK: I think this is safe, tested it against a couple "binary" strings. This lets SafeBuffer match NodeJS Buffer behavior more where it safely btoas regular strings.
-            const length = input.length
-            const words = new Uint16Array(length)
-            Array.from({ length: length }, (_, i) => words[i] = input.charCodeAt(i))
-            buf = SeaArray.from(words)
-          } else if (enc === 'base64') {
-            const dec = atob(input)
-            const length = dec.length
-            const bytes = new Uint8Array(length)
-            Array.from({ length: length }, (_, i) => bytes[i] = dec.charCodeAt(i))
-            buf = SeaArray.from(bytes)
-          } else if (enc === 'binary') { // deprecated by above comment
-            buf = SeaArray.from(input) // some btoas were mishandled.
-          } else {
-            console.info('SafeBuffer.from unknown encoding: '+enc)
-          }
-          return buf
-        }
-        const byteLength = input.byteLength // what is going on here? FOR MARTTI
-        const length = input.byteLength ? input.byteLength : input.length
-        if (length) {
-          let buf
-          if (input instanceof ArrayBuffer) {
-            buf = new Uint8Array(input)
-          }
-          return SeaArray.from(buf || input)
-        }
-      },
-      // This is 'safe-buffer.alloc' sans encoding support
-      alloc(length, fill = 0 /*, enc*/ ) {
-        return SeaArray.from(new Uint8Array(Array.from({ length: length }, () => fill)))
-      },
-      // This is normal UNSAFE 'buffer.alloc' or 'new Buffer(length)' - don't use!
-      allocUnsafe(length) {
-        return SeaArray.from(new Uint8Array(Array.from({ length : length })))
-      },
-      // This puts together array of array like members
-      concat(arr) { // octet array
-        if (!Array.isArray(arr)) {
-          throw new TypeError('First argument must be Array containing ArrayBuffer or Uint8Array instances.')
-        }
-        return SeaArray.from(arr.reduce((ret, item) => ret.concat(Array.from(item)), []))
+  // This is Buffer implementation used in SEA. Functionality is mostly
+  // compatible with NodeJS 'safe-buffer' and is used for encoding conversions
+  // between binary and 'hex' | 'utf8' | 'base64'
+  // See documentation and validation for safe implementation in:
+  // https://github.com/feross/safe-buffer#update
+  var SeaArray = __array;
+  function SafeBuffer(...props) {
+    console.warn('new SafeBuffer() is depreciated, please use SafeBuffer.from()')
+    return SafeBuffer.from(...props)
+  }
+  SafeBuffer.prototype = Object.create(Array.prototype)
+  Object.assign(SafeBuffer, {
+    // (data, enc) where typeof data === 'string' then enc === 'utf8'|'hex'|'base64'
+    from() {
+      if (!Object.keys(arguments).length || arguments[0]==null) {
+        throw new TypeError('First argument must be a string, Buffer, ArrayBuffer, Array, or array-like object.')
       }
-    })
-    SafeBuffer.prototype.from = SafeBuffer.from
-    SafeBuffer.prototype.toString = SeaArray.prototype.toString
+      const input = arguments[0]
+      let buf
+      if (typeof input === 'string') {
+        const enc = arguments[1] || 'utf8'
+        if (enc === 'hex') {
+          const bytes = input.match(/([\da-fA-F]{2})/g)
+          .map((byte) => parseInt(byte, 16))
+          if (!bytes || !bytes.length) {
+            throw new TypeError('Invalid first argument for type \'hex\'.')
+          }
+          buf = SeaArray.from(bytes)
+        } else if (enc === 'utf8' || 'binary' === enc) { // EDIT BY MARK: I think this is safe, tested it against a couple "binary" strings. This lets SafeBuffer match NodeJS Buffer behavior more where it safely btoas regular strings.
+          const length = input.length
+          const words = new Uint16Array(length)
+          Array.from({ length: length }, (_, i) => words[i] = input.charCodeAt(i))
+          buf = SeaArray.from(words)
+        } else if (enc === 'base64') {
+          const dec = atob(input)
+          const length = dec.length
+          const bytes = new Uint8Array(length)
+          Array.from({ length: length }, (_, i) => bytes[i] = dec.charCodeAt(i))
+          buf = SeaArray.from(bytes)
+        } else if (enc === 'binary') { // deprecated by above comment
+          buf = SeaArray.from(input) // some btoas were mishandled.
+        } else {
+          console.info('SafeBuffer.from unknown encoding: '+enc)
+        }
+        return buf
+      }
+      const byteLength = input.byteLength // what is going on here? FOR MARTTI
+      const length = input.byteLength ? input.byteLength : input.length
+      if (length) {
+        let buf
+        if (input instanceof ArrayBuffer) {
+          buf = new Uint8Array(input)
+        }
+        return SeaArray.from(buf || input)
+      }
+    },
+    // This is 'safe-buffer.alloc' sans encoding support
+    alloc(length, fill = 0 /*, enc*/ ) {
+      return SeaArray.from(new Uint8Array(Array.from({ length: length }, () => fill)))
+    },
+    // This is normal UNSAFE 'buffer.alloc' or 'new Buffer(length)' - don't use!
+    allocUnsafe(length) {
+      return SeaArray.from(new Uint8Array(Array.from({ length : length })))
+    },
+    // This puts together array of array like members
+    concat(arr) { // octet array
+      if (!Array.isArray(arr)) {
+        throw new TypeError('First argument must be Array containing ArrayBuffer or Uint8Array instances.')
+      }
+      return SeaArray.from(arr.reduce((ret, item) => ret.concat(Array.from(item)), []))
+    }
+  })
+  SafeBuffer.prototype.from = SafeBuffer.from
+  SafeBuffer.prototype.toString = SeaArray.prototype.toString
 
-    __defaultExport = SafeBuffer;
-  }());
-  __exp.default = __defaultExport;
+  __exp.default = SafeBuffer;
 });
 
 __def('./src/zen/shim.js', function(module, __exp){
   var BufferApi = __req('./src/zen/buffer.js').default;
-  var CryptoMod = (typeof require !== 'undefined') ? require('crypto') : undefined;
-  var WebCryptoMod = (typeof require !== 'undefined') ? require('@peculiar/webcrypto') : undefined;
   const globalScope = (typeof globalThis !== 'undefined') ? globalThis : (typeof global !== 'undefined' ? global : (typeof window !== 'undefined' ? window : {}));
   const api = { Buffer: globalScope.Buffer || BufferApi };
   const empty = {};
@@ -2409,24 +2391,14 @@ __def('./src/zen/shim.js', function(module, __exp){
     });
   };
 
-  if (globalScope.crypto) {
-    api.crypto = globalScope.crypto;
-    api.subtle = (api.crypto || empty).subtle || (api.crypto || empty).webkitSubtle;
-    api.random = function(len) {
-      return api.Buffer.from(api.crypto.getRandomValues(new Uint8Array(api.Buffer.alloc(len))));
-    };
-  }
-
   if (!api.TextEncoder) { api.TextEncoder = globalScope.TextEncoder; }
   if (!api.TextDecoder) { api.TextDecoder = globalScope.TextDecoder; }
 
-  if (!api.crypto) {
-    const crypto = CryptoMod;
-    api.crypto = crypto;
-    api.random = function(len) { return api.Buffer.from(crypto.randomBytes(len)); };
-    const { Crypto: WebCrypto } = WebCryptoMod;
-    api.ossl = api.subtle = new WebCrypto({ directory: 'ossl' }).subtle;
-  }
+  api.crypto = globalScope.crypto;
+  api.subtle = (globalScope.crypto || empty).subtle || (globalScope.crypto || empty).webkitSubtle;
+  api.random = function(len) {
+    return api.Buffer.from(api.crypto.getRandomValues(new Uint8Array(api.Buffer.alloc(len))));
+  };
 
   __exp.default = api;
 });
@@ -4556,6 +4528,14 @@ __def('./src/zen/runtime.js', function(module, __exp){
 
 __def('./src/zen/graph.js', function(module, __exp){
   var GUN = __req('./gun.js').default;
+  if (!GUN.chain.then) {
+    GUN.chain.then = function(cb, opt) {
+      var gun = this;
+      var p = new Promise(function(res) { gun.once(res, opt); });
+      return cb ? p.then(cb) : p;
+    };
+  }
+
   const graph = {
     core: GUN,
     chain: GUN.chain,

@@ -251,5 +251,5 @@ function ack(msg, ev){
 
 var empty = {}, u, text_rand = String.random, valid = Gun.valid, obj_has = function(o, k){ return o && Object.prototype.hasOwnProperty.call(o, k) }, state = Gun.state, state_is = state.is, state_ify = state.ify;
 function sget(root, soul){ root._sl = 1; var g = root.$.get(soul); root._sl = 0; return g }
-	
+
 }());

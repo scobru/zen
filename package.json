@@ -91,9 +91,6 @@
     "formidable": "^3.5.4",
     "ws": "^7.5.10"
   },
-  "optionalDependencies": {
-    "@peculiar/webcrypto": "^1.5.0"
-  },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
     "ip": "^1.1.5",

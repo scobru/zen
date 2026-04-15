@@ -1,4 +1,4 @@
-import __gun from '../gun.js';
+var __gun = (typeof GUN !== 'undefined') ? GUN : ((typeof Gun !== 'undefined') ? Gun : ((typeof require !== 'undefined') ? USE('../gun.js') : undefined));
 
 (function(){
 
@@ -9,5 +9,5 @@ import __gun from '../gun.js';
       }));
       return cb? p.then(cb) : p;
     }
-  
+
 }());

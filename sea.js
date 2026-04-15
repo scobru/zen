@@ -3,6 +3,9 @@ let __bundleExport;
 
   /* UNBUILD */
 
+
+
+
   const MOD = { exports: {} };
 function USE(arg, req){
     return req? USE[R(arg)] : arg.slice? USE[R(arg)] : function(mod, path){
@@ -61,39 +64,20 @@ function USE(arg, req){
   })(USE, './https');
 
   ;USE(function(module){
-    var __buffer = (typeof require !== 'undefined') ? USE('buffer') : undefined;
-    (function(){
-
-        var u, root = (typeof globalThis !== "undefined") ? globalThis : (typeof global !== "undefined" ? global : (typeof window !== "undefined" ? window : this));
-        var native = {}
-        native.btoa = (u+'' != typeof root.btoa) && root.btoa && root.btoa.bind(root);
-        native.atob = (u+'' != typeof root.atob) && root.atob && root.atob.bind(root);
-        if(u+'' == typeof Buffer){
-          if(u+'' != typeof require){
-            try{ root.Buffer = __buffer.Buffer }catch(e){ console.log("Please `npm install buffer` or add it to your package.json !") }
-          }
-        }
-        if(u+'' != typeof Buffer){
-          root.btoa = function(data){ return Buffer.from(data, "binary").toString("base64").replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');};
-          root.atob = function(data){
-            var tmp = data.replace(/-/g, '+').replace(/_/g, '/')
-            while(tmp.length % 4){ tmp += '=' }
-            return Buffer.from(tmp, "base64").toString("binary");
-          };
-          return;
-        }
-        if(native.btoa){
-          root.btoa = function(data){ return native.btoa(data).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, ''); };
-        }
-        if(native.atob){
-          root.atob = function(data){
-            var tmp = data.replace(/-/g, '+').replace(/_/g, '/')
-            while(tmp.length % 4){ tmp += '=' }
-            return native.atob(tmp);
-          };
-        }
-
-    }());
+    var u, root = (typeof globalThis !== "undefined") ? globalThis : (typeof global !== "undefined" ? global : (typeof window !== "undefined" ? window : this));
+    var native = {}
+    native.btoa = (u+'' != typeof root.btoa) && root.btoa && root.btoa.bind(root);
+    native.atob = (u+'' != typeof root.atob) && root.atob && root.atob.bind(root);
+    if(native.btoa){
+      root.btoa = function(data){ return native.btoa(data).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, ''); };
+    }
+    if(native.atob){
+      root.atob = function(data){
+        var tmp = data.replace(/-/g, '+').replace(/_/g, '/')
+        while(tmp.length % 4){ tmp += '=' }
+        return native.atob(tmp);
+      };
+    }
   })(USE, './base64');
 
   ;USE(function(module){
@@ -216,9 +200,6 @@ function USE(arg, req){
   ;USE(function(module){
     var __root = USE('./root.js', 1);
     var __buffer = USE('./buffer.js', 1);
-    var __crypto = (typeof require !== 'undefined') ? USE('crypto') : undefined;
-    var __webcrypto = (typeof require !== 'undefined') ? USE('@peculiar/webcrypto') : undefined;
-    var __text_encoding = (typeof require !== 'undefined') ? USE('../lib/text-encoding/index.js') : undefined;
 
     let __defaultExport;
     (function(){
@@ -253,27 +234,6 @@ function USE(arg, req){
         }
         if(!api.TextEncoder){ api.TextEncoder = globalScope.TextEncoder }
         if(!api.TextDecoder){ api.TextDecoder = globalScope.TextDecoder }
-        if(!api.TextDecoder)
-        {
-          const { TextEncoder, TextDecoder } = __text_encoding;
-          api.TextDecoder = TextDecoder;
-          api.TextEncoder = TextEncoder;
-        }
-        if(!api.crypto)
-        {
-          try
-          {
-          var crypto = __crypto;
-          Object.assign(api, {
-            crypto,
-            random: (len) => api.Buffer.from(crypto.randomBytes(len))
-          });      
-          const { Crypto: WebCrypto } = __webcrypto;
-          api.ossl = api.subtle = new WebCrypto({directory: 'ossl'}).subtle // ECDH
-        }
-        catch(e){
-          console.log("Please `npm install @peculiar/webcrypto` or add it to your package.json !");
-        }}
 
         __defaultExport = api
 

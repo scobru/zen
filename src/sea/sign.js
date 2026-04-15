@@ -62,6 +62,6 @@ let __defaultExport;
     }});
 
     __defaultExport = SEA.sign;
-  
+
 }());
 export default __defaultExport;

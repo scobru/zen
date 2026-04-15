@@ -1,5 +1,3 @@
-;(function(){
-
 if(typeof Gun === 'undefined'){ return }
 
 var noop = function(){}, store, u;
@@ -72,5 +70,3 @@ Gun.on('create', function lg(root){
 	}
 
 });
-	
-}());

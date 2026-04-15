@@ -35,6 +35,6 @@ __defaultExport = function onto(tag, arg, as){
 	if((tag = tag.to) && u !== arg){ tag.next(arg) }
 	return tag;
 };
-	
+
 }());
 export default __defaultExport;

@@ -60,5 +60,5 @@ Gun.on('opt', function(root){
 	var doc = (''+u !== typeof document) && document;
 });
 var noop = function(){}, u;
-	
+
 }());
