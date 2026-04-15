@@ -25,7 +25,7 @@ var config = {
 	notrad: false,
 	route: {
 		'/': __dirname + '/index.html',
-		'/gun.js': __dirname + '/../../gun.js',
+		'/zen.js': __dirname + '/../../gun.js',
 		'/jquery.js': __dirname + '/../../examples/jquery.js'
 	}
 };

@@ -21,7 +21,7 @@ var config = {
 	wait: 1,
 	route: {
 		'/': __dirname + '/index.html',
-		'/gun.js': __dirname + '/../../gun.js',
+		'/zen.js': __dirname + '/../../gun.js',
 		'/sea.js': __dirname + '/../../sea.js',
 		'/jquery.js': __dirname + '/../../examples/jquery.js'
 	}

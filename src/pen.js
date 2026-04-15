@@ -1,13 +1,13 @@
-import GunMod from '../gun.js';
+import ZenMod from '../zen.js';
 import SecurityMod from './zen/security.js';
 
 let __defaultExport;
 const __penWasmURL = new URL('./pen.wasm', import.meta.url);
 (function(){
 
-  var Gun  = (typeof globalThis !== 'undefined' && globalThis.Gun) || GunMod;
-  if (Gun && !Gun.ZENSecurity && SecurityMod) { Gun.ZENSecurity = SecurityMod; }
-  var runtime = (Gun && Gun.ZENSecurity) || SecurityMod;
+  var Zen = ZenMod;
+  if (Zen && !Zen.ZENSecurity && SecurityMod) { Zen.ZENSecurity = SecurityMod; }
+  var runtime = (Zen && Zen.ZENSecurity) || SecurityMod;
 
   // ── WASM init ───────────────────────────────────────────────────────────────
 
@@ -651,9 +651,7 @@ const __penWasmURL = new URL('./pen.wasm', import.meta.url);
   pen.candle = function(opts) {
     return runtime.candle(opts);
   };
-
-  if (typeof globalThis !== 'undefined') { globalThis.pen = globalThis.pen || pen; }
-  try { __defaultExport = pen; } catch(e) {}
+try { __defaultExport = pen; } catch(e) {}
 
 }());
 export default __defaultExport;

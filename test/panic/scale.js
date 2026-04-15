@@ -21,7 +21,7 @@ var config = {
 	wait: 1,
 	route: {
 		'/': __dirname + '/index.html',
-		'/gun.js': __dirname + '/../../gun.js',
+		'/zen.js': __dirname + '/../../gun.js',
 		'/jquery.js': __dirname + '/../../examples/jquery.js',
 		'/sea.js': __dirname + '/../../sea.js'
 	}
@@ -87,9 +87,9 @@ describe("Stress test GUN with SEA users causing PANIC!", function(){
 					test.done();
 				}, function(file){
 					file = file.toString();
-					if(0 >= file.indexOf('<script src="/gun.js"></script>')){ return }
-					file = file.replace('<script src="/gun.js"></script>',
-							"<script src='"+purl+"/panic.js'></script><script>panic.server('"+purl+"')</script><script src='/gun.js'></script><script>localStorage.clear();sessionStorage.clear();</script>");
+					if(0 >= file.indexOf('<script src="/zen.js"></script>')){ return }
+					file = file.replace('<script src="/zen.js"></script>',
+							"<script src='"+purl+"/panic.js'></script><script>panic.server('"+purl+"')</script><script src='/zen.js'></script><script>localStorage.clear();sessionStorage.clear();</script>");
 					return file;
 				});
 			}, {i: i += 1, config: config})); 

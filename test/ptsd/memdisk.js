@@ -1,4 +1,11 @@
-import Gun from '../../gun.js';
+import __ZEN from '../../zen.js';
+var __gun = (function(){
+  var W = function(o){return new __ZEN(o)};
+  Object.setPrototypeOf(W, __ZEN);
+  W.prototype = __ZEN.prototype;
+  return W;
+}());
+var Gun = __gun;
 import '../../lib/memdisk.js';
 var gun = Gun();
 var TOTAL = 10000000;

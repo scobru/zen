@@ -816,8 +816,8 @@ __def('./gun.js', function(module, __exp){
   		    Gun.log = function(){ return (!Gun.log.off && C.log.apply(C, arguments)), [].slice.call(arguments).join(' ') };
   		    Gun.log.once = function(w,s,o){ return (o = Gun.log.once)[w] = o[w] || 0, o[w]++ || Gun.log(s) };
 
-  		    ((typeof globalThis !== "undefined" && typeof window === "undefined" && typeof WorkerGlobalScope !== "undefined") ? ((globalThis.GUN = globalThis.Gun = Gun).window = globalThis) : (typeof window !== "undefined" ? ((window.GUN = window.Gun = Gun).window = window) : undefined));
-  		    ((globalThis.GUN = globalThis.Gun = Gun).globalThis = globalThis);
+  		    ((typeof globalThis !== "undefined" && typeof window === "undefined" && typeof WorkerGlobalScope !== "undefined") ? (Gun.window = globalThis) : (typeof window !== "undefined" ? (Gun.window = window) : undefined));
+  		    Gun.globalThis = globalThis;
   		    try{ if(typeof MODULE !== "undefined"){ MODULE.exports = Gun } }catch(e){}
   		    __defaultExport = Gun;
 
@@ -3449,7 +3449,7 @@ __def('./src/zen/security.js', function(module, __exp){
   var sign = __req('./src/zen/sign.js').default;
   var settings = __req('./src/zen/settings.js').default;
   var u;
-  var Gun = (typeof globalThis !== 'undefined' && globalThis.Gun) || GUN;
+  var Gun = GUN;
 
   // --------------- pack / unpack ---------------
 
@@ -3880,7 +3880,7 @@ __def('./src/pen.js', function(module, __exp){
   const __penWasmURL = new URL('./pen.wasm', import.meta.url);
   (function(){
 
-    var Gun  = (typeof globalThis !== 'undefined' && globalThis.Gun) || GunMod;
+    var Gun = GunMod;
     if (Gun && !Gun.ZENSecurity && SecurityMod) { Gun.ZENSecurity = SecurityMod; }
     var runtime = (Gun && Gun.ZENSecurity) || SecurityMod;
 

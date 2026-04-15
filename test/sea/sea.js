@@ -1,11 +1,16 @@
+import ZEN from '../../zen.js';
 import '../../lib/store.js';
 import '../../lib/rfs.js';
 import SEAmod from '../../sea.js';
-import ZEN from '../../zen.js';
 import '../../src/sea/certify.js';
 import __fs from 'fs';
 import __fsrm from '../../lib/fsrm.js';
-import __gun from '../../gun.js';
+var __gun = (function(){
+  var W = function(o){return new ZEN(o)};
+  Object.setPrototypeOf(W, ZEN);
+  W.prototype = ZEN.prototype;
+  return W;
+}());
 import __expect from '../expect.js';
 import __util from 'util';
 import exp from 'constants';

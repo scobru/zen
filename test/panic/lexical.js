@@ -16,7 +16,7 @@ var config = {
   browsers: 1,
   route: {
     '/': __dirname + '/index.html',
-    '/gun.js': __dirname + '/../../gun.js',
+    '/zen.js': __dirname + '/../../gun.js',
     '/gun/lib/radix.js': __dirname + '/../../lib/radix.js',
     '/gun/lib/radisk.js': __dirname + '/../../lib/radisk.js',
     '/gun/lib/store.js': __dirname + '/../../lib/store.js',

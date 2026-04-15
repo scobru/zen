@@ -1,4 +1,10 @@
-import __gun from '../gun.js';
+import __ZEN from '../zen.js';
+var __gun = (function(){
+  var W = function(o){return new __ZEN(o)};
+  Object.setPrototypeOf(W, __ZEN);
+  W.prototype = __ZEN.prototype;
+  return W;
+}());
 import __pen from '../src/pen.js';
 import ZEN from '../src/zen/index.js';
 import assert from 'assert';

@@ -9,7 +9,7 @@ var root = path.resolve(__dirname, '../..');
 
 var files = {
   '/': path.join(__dirname, 'fixtures', 'index.html'),
-  '/gun.js': path.join(root, 'gun.js'),
+  '/zen.js': path.join(root, 'gun.js'),
   '/sea.js': path.join(root, 'sea.js'),
   '/lib/opfs.js': path.join(root, 'lib', 'opfs.js'),
   '/lib/radix.js': path.join(root, 'lib', 'radix.js'),

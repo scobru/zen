@@ -1,8 +1,14 @@
+import __ZEN from '../../zen.js';
 import '../../lib/store.js';
 import '../../lib/rfs.js';
 import __fs from 'fs';
 import __fsrm from '../../lib/fsrm.js';
-import __gun from '../../gun.js';
+var __gun = (function(){
+  var W = function(o){return new __ZEN(o)};
+  Object.setPrototypeOf(W, __ZEN);
+  W.prototype = __ZEN.prototype;
+  return W;
+}());
 import __expect from '../expect.js';
 import __radix from '../../lib/radix.js';
 import __radisk from '../../lib/radisk.js';

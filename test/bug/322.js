@@ -1,11 +1,17 @@
+import __ZEN from '../../zen.js';
 import '../../lib/store.js';
 import '../../lib/rfs.js';
 import __fs from 'fs';
 import __fsrm from '../../lib/fsrm.js';
 import __expect from '../expect.js';
-import __gun from '../../gun.js';
+var __gun = (function(){
+  var W = function(o){return new __ZEN(o)};
+  Object.setPrototypeOf(W, __ZEN);
+  W.prototype = __ZEN.prototype;
+  return W;
+}());
 import __serve from '../../lib/serve.js';
-describe('Gun', function(){
+describe('ZEN', function(){
 	var root;
 	(function(){
 		var env;

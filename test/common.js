@@ -1,11 +1,22 @@
 import '../lib/yson.js';
+import __ZEN from '../zen.js';
 import '../lib/store.js';
 import '../lib/rfs.js';
 import './rad/rad.js';
 import __fs from 'fs';
 import __fsrm from '../lib/fsrm.js';
-import __gun from '../gun.js';
-describe('Gun', function(){
+var __gun = (function(){
+  var W = function(o){return new __ZEN(o)};
+  Object.setPrototypeOf(W, __ZEN);
+  W.prototype = __ZEN.prototype;
+  Object.defineProperty(W.prototype, '_', {
+    get: function(){ return this._graph._; },
+    configurable: true
+  });
+  W.is = function($){ return $ instanceof __ZEN; };
+  return W;
+}());
+describe('ZEN', function(){
 	var root;
 	(function(){
 		var env;
@@ -26,6 +37,7 @@ describe('Gun', function(){
 		}
 	}(this));
 	var Gun = root.Gun;
+	Gun.is = function($){ return $ instanceof __ZEN; };
 	//Gun.log.squelch = true;
 	var gleak = {globals: {}, check: function(){ // via tobyho
 	  var leaked = []
@@ -3544,13 +3556,13 @@ describe('Gun', function(){
 					this.to.next(msg);
 					var onGun = ctx;
 					var tmp = {}; Object.keys(msg).forEach(function(k){ tmp[k] = msg[k] }); delete tmp.out; delete tmp._; msg = tmp; // copy message.
-					if(onGun.$ === b) {
+					if(onGun.$ === b || onGun.$ === (b && b._graph)) {
 						if(d){
 							//console.log("b can send to d....", JSON.parse(JSON.stringify(msg)));
 							msg.$ = d;
 							d.on("in", msg);
 						}
-					} else if(onGun.$ === d){
+					} else if(onGun.$ === d || onGun.$ === (d && d._graph)){
 						//console.log("d sends to b....", JSON.parse(JSON.stringify(msg)));
 						msg.$ = b;
 						b.on("in", msg);

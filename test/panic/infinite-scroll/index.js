@@ -21,7 +21,7 @@ var config = {
 		'/ScrollWindow.js': __dirname + '/../../../examples/infinite-scroll/ScrollWindow.js',
 		'/index.js': __dirname + '/../../../examples/infinite-scroll/index.js',
 		'/style.css': __dirname + '/../../../examples/infinite-scroll/style.css',
-		'/gun.js': __dirname + '/../../../gun.js',
+		'/zen.js': __dirname + '/../../../gun.js',
 		'/jquery.js': __dirname + '/../../../examples/jquery.js'
 	}
 };

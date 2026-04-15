@@ -13,7 +13,7 @@ const __dirname = __dirnameOf(__filename);
 var config = { IP: __ip.address(), port: 8765, servers: 1, browsers:4, i:0,
 	route: {
 		'/': __dirname + '/index.html',
-		'/gun.js': __dirname + '/../../../gun.js',
+		'/zen.js': __dirname + '/../../../gun.js',
 		'/gun/axe.js': __dirname + '/../../../axe.js',
 		'/jquery.js': __dirname + '/../../../examples/jquery.js'
 	}
