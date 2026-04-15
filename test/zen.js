@@ -20,8 +20,8 @@ describe('ZEN', function() {
     assert.strictEqual(typeof soul, 'string');
     assert.ok(soul.startsWith('$'));
     assert.strictEqual(zen.pen({ key: 'fixed' }), soul);
-    assert.strictEqual(typeof ZEN.certify, 'undefined');
-    assert.strictEqual(typeof zen.certify, 'undefined');
+    assert.strictEqual(typeof ZEN.certify, 'function');
+    assert.strictEqual(typeof zen.certify, 'function');
   });
 
   it('merges graph crypto and pen statics onto ZEN', function() {
