@@ -1,5 +1,4 @@
 import __buffer from 'buffer';
-import { TextEncoder, TextDecoder } from 'text-encoding';
 import { fileURLToPath } from 'node:url';
 import { dirname as __dirnameOf } from 'node:path';
 const __filename = fileURLToPath(import.meta.url);

@@ -15,8 +15,7 @@
     "react": "16.6.1",
     "react-native": "0.57.5",
     "react-native-webview-bridge": "^0.40.1",
-    "serialize-error": "^3.0.0",
-    "text-encoding": "^0.7.0"
+    "serialize-error": "^3.0.0"
   },
   "devDependencies": {
     "babel-jest": "23.6.0",
