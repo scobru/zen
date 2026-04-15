@@ -1,0 +1,499 @@
+import assert from 'assert';
+import ZEN from '../../zen.js';
+
+function makeGun() {
+  return new ZEN({ peers: [] });
+}
+
+// ─── Utility ─────────────────────────────────────────────────────────────────
+describe('ZEN crypto — quickstart', function() {
+  this.timeout(20 * 1000);
+
+  it('pair → encrypt → sign → verify → decrypt → hash roundtrip', async function() {
+    var pair = await ZEN.pair();
+    var enc  = await ZEN.encrypt('hello self', pair);
+    var sig  = await ZEN.sign(enc, pair);
+    var msg  = await ZEN.verify(sig, pair.pub);
+    var dec  = await ZEN.decrypt(msg, pair);
+    assert.strictEqual(dec, 'hello self');
+    var proof = await ZEN.hash(dec, pair);
+    var check = await ZEN.hash('hello self', pair);
+    assert.strictEqual(proof, check);
+  });
+
+  it('shared secret exchange', async function() {
+    var alice = await ZEN.pair();
+    var bob   = await ZEN.pair();
+    var aes   = await ZEN.secret(bob.epub, alice);
+    var enc   = await ZEN.encrypt('shared data', aes);
+    var aes2  = await ZEN.secret(alice.epub, bob);
+    var dec   = await ZEN.decrypt(enc, aes2);
+    assert.strictEqual(dec, 'shared data');
+  });
+});
+
+describe('ZEN crypto — tamper / wrong key', function() {
+  this.timeout(20 * 1000);
+
+  it('verifying with wrong pub returns undefined', async function() {
+    var alice = await ZEN.pair();
+    var bob   = await ZEN.pair();
+    var sig   = await ZEN.sign('asdf', alice);
+    var bad   = await ZEN.verify(sig, bob.pub).catch(function() { return undefined; });
+    assert.strictEqual(bad, undefined);
+  });
+
+  it('verifying tampered payload rejects', async function() {
+    var pair    = await ZEN.pair();
+    var sig     = await ZEN.sign('original', pair);
+    var tampered = JSON.parse(sig);
+    tampered.m = 'tampered';
+    await assert.rejects(ZEN.verify(JSON.stringify(tampered), pair.pub));
+  });
+
+  it('decrypting with wrong pair returns undefined', async function() {
+    var alice = await ZEN.pair();
+    var bob   = await ZEN.pair();
+    var enc   = await ZEN.encrypt('secret', alice);
+    var bad   = await ZEN.decrypt(enc, bob).catch(function() { return undefined; });
+    assert.strictEqual(bad, undefined);
+  });
+});
+
+describe('ZEN crypto — sign/verify JS types', function() {
+  this.timeout(20 * 1000);
+
+  var cases = [null, true, false, 0, 1, 1.01, '', 'a', [], [1], {}, { a: 1 }];
+
+  cases.forEach(function(val) {
+    it('roundtrips ' + JSON.stringify(val), async function() {
+      var pair = await ZEN.pair();
+      var sig  = await ZEN.sign(val, pair);
+      var out  = await ZEN.verify(sig, pair.pub);
+      assert.deepStrictEqual(out, val);
+    });
+  });
+
+  it('roundtrips stringified JSON back to object', async function() {
+    var pair = await ZEN.pair();
+    var sig  = await ZEN.sign(JSON.stringify({ a: 1 }), pair);
+    var out  = await ZEN.verify(sig, pair.pub);
+    assert.deepStrictEqual(out, { a: 1 });
+  });
+});
+
+describe('ZEN crypto — encrypt/decrypt JS types', function() {
+  this.timeout(20 * 1000);
+
+  var cases = [null, true, false, 0, 1, 1.01, '', 'a', [], [1], {}, { a: 1 }];
+
+  cases.forEach(function(val) {
+    it('roundtrips ' + JSON.stringify(val), async function() {
+      var pair = await ZEN.pair();
+      var enc  = await ZEN.encrypt(val, pair);
+      var dec  = await ZEN.decrypt(enc, pair);
+      assert.deepStrictEqual(dec, val);
+    });
+  });
+
+  it('roundtrips stringified JSON back to object', async function() {
+    var pair = await ZEN.pair();
+    var enc  = await ZEN.encrypt(JSON.stringify({ a: 1 }), pair);
+    var dec  = await ZEN.decrypt(enc, pair);
+    assert.deepStrictEqual(dec, { a: 1 });
+  });
+});
+
+describe('ZEN crypto — hash', function() {
+  this.timeout(20 * 1000);
+
+  it('hash() output contains no "/" (base64url)', async function() {
+    function hashAsync(data) {
+      return new Promise(function(res) { ZEN.hash(data, null, function(r) { res(r) }, { name: 'SHA-256' }); });
+    }
+    var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    for (var i = 0; i < 1000; i++) {
+      var s = Array.from({ length: 32 }, function() { return chars[Math.floor(Math.random() * chars.length)]; }).join('');
+      var r = await hashAsync(s);
+      assert(!r.includes('/'), 'Found "/" in hash output: ' + r);
+    }
+  });
+
+  it('hash() supports keccak256', async function() {
+    var h = await ZEN.hash('', null, null, { name: 'keccak256', encode: 'hex' });
+    assert.strictEqual(h, 'c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470');
+  });
+
+  it('hash() handles ArrayBuffer input', async function() {
+    var b1 = new Uint8Array(16); for (var i = 0; i < 16; i++) b1[i] = i;
+    var b2 = new Uint8Array(16); for (var i = 0; i < 16; i++) b2[i] = i + 16;
+    var h1 = await ZEN.hash(b1.buffer, 'salt');
+    var h2 = await ZEN.hash(b2.buffer, 'salt');
+    assert.strictEqual(typeof h1, 'string');
+    assert.strictEqual(typeof h2, 'string');
+    assert.notStrictEqual(h1, h2);
+  });
+
+  it('hash() is deterministic for same input', async function() {
+    var pair = await ZEN.pair();
+    var h1 = await ZEN.hash('hello', pair);
+    var h2 = await ZEN.hash('hello', pair);
+    assert.strictEqual(h1, h2);
+  });
+});
+
+describe('ZEN crypto — btoa/atob utf8 roundtrip', function() {
+  it('handles multibyte chars via TextEncoder/TextDecoder', function() {
+    var samples = ['Tiếng Việt có dấu: ắềôữ đặng', '中文測試：漢字とかな', 'Emoji 😀🔥✨'];
+    var enc = new TextEncoder();
+    var dec = new TextDecoder('utf-8');
+    samples.forEach(function(s) {
+      var bytes = enc.encode(s);
+      var bin = Array.from(bytes, function(b) { return String.fromCharCode(b); }).join('');
+      var b64 = btoa(bin);
+      var round = dec.decode(new Uint8Array(Array.from(atob(b64), function(c) { return c.charCodeAt(0); })));
+      assert.strictEqual(round, s);
+    });
+  });
+});
+
+describe('ZEN crypto — double sign', function() {
+  this.timeout(10 * 1000);
+
+  it('signing an already-signed value is idempotent', async function() {
+    var pair = await ZEN.pair();
+    var sig  = await ZEN.sign('hello world', pair);
+    var dup  = await ZEN.sign(sig, pair);
+    assert.strictEqual(dup, sig);
+  });
+
+  it('different pair produces different signature', async function() {
+    var alice = await ZEN.pair();
+    var bob   = await ZEN.pair();
+    var sig   = await ZEN.sign('hello', alice);
+    var dup   = await ZEN.sign(sig, bob);
+    assert.notStrictEqual(dup, sig);
+  });
+});
+
+describe('ZEN crypto — pair() key format', function() {
+  this.timeout(10 * 1000);
+
+  var B62   = /^[A-Za-z0-9]{88}$/;
+  var B62_44 = /^[A-Za-z0-9]{44}$/;
+
+  it('curve is secp256k1', async function() {
+    var p = await ZEN.pair();
+    assert.strictEqual(p.curve, 'secp256k1');
+  });
+
+  it('pub is 88-char base62', async function() {
+    var p = await ZEN.pair();
+    assert.match(p.pub, B62);
+  });
+
+  it('epub is 88-char base62', async function() {
+    var p = await ZEN.pair();
+    assert.match(p.epub, B62);
+  });
+
+  it('priv is 44-char base62', async function() {
+    var p = await ZEN.pair();
+    assert.match(p.priv, B62_44);
+  });
+
+  it('epriv is 44-char base62', async function() {
+    var p = await ZEN.pair();
+    assert.match(p.epriv, B62_44);
+  });
+
+  it('pub and epub differ (ECDSA vs ECDH)', async function() {
+    var p = await ZEN.pair();
+    assert.notStrictEqual(p.pub, p.epub);
+  });
+
+  it('format holds across multiple pairs', async function() {
+    var pairs = await Promise.all([ZEN.pair(), ZEN.pair(), ZEN.pair()]);
+    pairs.forEach(function(p) {
+      assert.match(p.pub, B62);
+      assert.match(p.epub, B62);
+      assert.match(p.priv, B62_44);
+      assert.match(p.epriv, B62_44);
+    });
+  });
+
+  it('seed-based pair has same format', async function() {
+    var p = await ZEN.pair(null, { seed: 'test-seed-format' });
+    assert.match(p.pub, B62);
+    assert.match(p.epub, B62);
+    assert.match(p.priv, B62_44);
+    assert.match(p.epriv, B62_44);
+  });
+});
+
+describe('ZEN crypto — wire format (no SEA prefix)', function() {
+  it('sign() and encrypt() omit SEA prefix', async function() {
+    var pair = await ZEN.pair(null, { seed: 'zen-wire-format' });
+    var sig  = await ZEN.sign({ hello: 'zen' }, pair);
+    var enc  = await ZEN.encrypt('secret', pair);
+    assert.strictEqual(sig.startsWith('SEA'), false);
+    assert.strictEqual(enc.startsWith('SEA'), false);
+  });
+});
+
+describe('ZEN crypto — seed-based key generation', function() {
+  this.timeout(10 * 1000);
+
+  it('same seed → same pair', async function() {
+    var p1 = await ZEN.pair(null, { seed: 'my secret seed' });
+    var p2 = await ZEN.pair(null, { seed: 'my secret seed' });
+    assert.strictEqual(p1.priv, p2.priv);
+    assert.strictEqual(p1.pub,  p2.pub);
+    assert.strictEqual(p1.epriv, p2.epriv);
+    assert.strictEqual(p1.epub,  p2.epub);
+  });
+
+  it('different seed → different pair', async function() {
+    var p1 = await ZEN.pair(null, { seed: 'seed-a' });
+    var p2 = await ZEN.pair(null, { seed: 'seed-b' });
+    assert.notStrictEqual(p1.pub, p2.pub);
+  });
+
+  it('ArrayBuffer seed deterministic', async function() {
+    var enc = new TextEncoder();
+    var b1  = enc.encode('my secret seed').buffer;
+    var b2  = enc.encode('my secret seed').buffer;
+    var b3  = enc.encode('other seed').buffer;
+    var p1  = await ZEN.pair(null, { seed: b1 });
+    var p2  = await ZEN.pair(null, { seed: b2 });
+    var p3  = await ZEN.pair(null, { seed: b3 });
+    assert.strictEqual(p1.pub, p2.pub);
+    assert.notStrictEqual(p1.pub, p3.pub);
+  });
+
+  it('pair from priv restores pub', async function() {
+    var base  = await ZEN.pair(null, { seed: 'priv-restore' });
+    var rebuilt = await ZEN.pair(null, { priv: base.priv });
+    assert.strictEqual(rebuilt.priv, base.priv);
+    assert.strictEqual(rebuilt.pub,  base.pub);
+  });
+
+  it('pair from epriv restores epub', async function() {
+    var base  = await ZEN.pair(null, { seed: 'epriv-restore' });
+    var rebuilt = await ZEN.pair(null, { epriv: base.epriv });
+    assert.strictEqual(rebuilt.epriv, base.epriv);
+    assert.strictEqual(rebuilt.epub,  base.epub);
+  });
+
+  it('seed types: empty, numeric, special chars, unicode all produce valid pairs', async function() {
+    var seeds = ['', '12345', '!@#$%^&*()', 'a'.repeat(1000), '😀🔑🔒👍'];
+    var pairs = await Promise.all(seeds.map(function(s) { return ZEN.pair(null, { seed: s }); }));
+    pairs.forEach(function(p) {
+      assert.strictEqual(typeof p.pub, 'string');
+      assert.ok(p.pub.length > 0);
+    });
+    var pubs = new Set(pairs.map(function(p) { return p.pub; }));
+    assert.strictEqual(pubs.size, pairs.length);
+  });
+
+  it('full workflow with seeded pair', async function() {
+    var pair = await ZEN.pair(null, { seed: 'workflow-seed' });
+    var enc  = await ZEN.encrypt('hello self', pair);
+    var sig  = await ZEN.sign(enc, pair);
+    var msg  = await ZEN.verify(sig, pair.pub);
+    var dec  = await ZEN.decrypt(msg, pair);
+    assert.strictEqual(dec, 'hello self');
+    var h1   = await ZEN.hash(dec, pair);
+    var h2   = await ZEN.hash('hello self', pair);
+    assert.strictEqual(h1, h2);
+  });
+});
+
+describe('ZEN crypto — derive (additive)', function() {
+  this.timeout(10 * 1000);
+
+  it('deterministic for same priv + seed', async function() {
+    var base = await ZEN.pair();
+    var d1   = await ZEN.pair(null, { priv: base.priv, seed: 'derive-det' });
+    var d2   = await ZEN.pair(null, { priv: base.priv, seed: 'derive-det' });
+    assert.strictEqual(d1.priv, d2.priv);
+    assert.strictEqual(d1.pub,  d2.pub);
+  });
+
+  it('Bob (priv+seed) and Alice (pub+seed) produce same derived pub', async function() {
+    var base  = await ZEN.pair();
+    var bob   = await ZEN.pair(null, { priv: base.priv, seed: 'derive-sign' });
+    var alice = await ZEN.pair(null, { pub:  base.pub,  seed: 'derive-sign' });
+    assert.strictEqual(bob.pub, alice.pub);
+  });
+
+  it('Bob (epriv+seed) and Alice (epub+seed) produce same derived epub', async function() {
+    var base  = await ZEN.pair();
+    var bob   = await ZEN.pair(null, { epriv: base.epriv, seed: 'derive-enc' });
+    var alice = await ZEN.pair(null, { epub:  base.epub,  seed: 'derive-enc' });
+    assert.strictEqual(bob.epub, alice.epub);
+  });
+
+  it('partial output: priv+seed gives priv+pub only (no epub)', async function() {
+    var base = await ZEN.pair();
+    var d    = await ZEN.pair(null, { priv: base.priv, seed: 'derive-partial' });
+    assert.ok(d.priv);
+    assert.ok(d.pub);
+    assert.ok(!d.epriv);
+    assert.ok(!d.epub);
+  });
+
+  it('partial output: pub+seed gives pub only', async function() {
+    var base = await ZEN.pair();
+    var d    = await ZEN.pair(null, { pub: base.pub, seed: 'derive-pub-partial' });
+    assert.ok(d.pub);
+    assert.ok(!d.priv);
+    assert.ok(!d.epriv);
+    assert.ok(!d.epub);
+  });
+
+  it('rejects invalid pub format', async function() {
+    await assert.rejects(ZEN.pair(null, { pub: 'invalid', seed: 'derive-invalid' }));
+  });
+
+  it('rejects pub not on curve', async function() {
+    await assert.rejects(ZEN.pair(null, { pub: 'AA.AA', seed: 'derive-off-curve' }));
+  });
+
+  it('rejects priv out of range', async function() {
+    var n    = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
+    var priv = Buffer.from(n.toString(16).padStart(64, '0'), 'hex').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    await assert.rejects(ZEN.pair(null, { priv, seed: 'derive-priv-oor' }));
+  });
+});
+
+describe('ZEN user graph — authenticator', function() {
+  this.timeout(20 * 1000);
+
+  it('put to user graph without being authenticated (provide pair)', function(done) {
+    var gun = makeGun();
+    (async function() {
+      var bob = await ZEN.pair();
+      gun.get('~' + bob.pub).get('test').put('this is Bob', function(ack) {
+        assert.ok(!ack.err);
+        gun.get('~' + bob.pub).get('test').once(function(data) {
+          assert.strictEqual(data, 'this is Bob');
+          done();
+        });
+      }, { opt: { authenticator: bob } });
+    })().catch(done);
+  });
+
+  it('put deep path with authenticator', function(done) {
+    var gun = makeGun();
+    (async function() {
+      var bob = await ZEN.pair();
+      var enc = await ZEN.encrypt('secret', bob);
+      gun.get('~' + bob.pub).get('a').get('b').put(enc, function(ack) {
+        if (ack && ack.err) { return done(new Error('put failed: ' + ack.err)); }
+        gun.get('~' + bob.pub).get('a').get('b').once(function(data) {
+          try { assert.strictEqual(data, enc); done(); } catch(e) { done(e); }
+        });
+      }, { opt: { authenticator: bob } });
+    })().catch(done);
+  });
+
+  it('does not leak authenticator on out', function(done) {
+    var gun = makeGun();
+    (async function() {
+      var bob = await ZEN.pair();
+      gun.on('out', function(msg) {
+        if (msg.put) {
+          try {
+            assert.ok(!Object.prototype.propertyIsEnumerable.call(msg._ || {}, 'sea'));
+            assert.ok(!((msg.opt || {}).authenticator));
+          } catch(e) { done(e); return; }
+        }
+        this.to.next(msg);
+      });
+      gun.get('~' + bob.pub).get('a').get('b').put('x', function(ack) {
+        if (ack && ack.err) { return done(new Error('put failed: ' + ack.err)); }
+        done();
+      }, { opt: { authenticator: bob } });
+    })().catch(done);
+  });
+
+  it('rejects write without authenticator', function(done) {
+    var gun = makeGun();
+    (async function() {
+      var bob = await ZEN.pair();
+      gun.get('~' + bob.pub).get('test').put('no auth', function(ack) {
+        assert.ok(ack.err);
+        done();
+      });
+    })().catch(done);
+  });
+});
+
+describe('ZEN user graph — shard intermediate', function() {
+  this.timeout(20 * 1000);
+
+  it('accepts valid shard intermediate', function(done) {
+    var gun = makeGun();
+    (async function() {
+      var bob = await ZEN.pair();
+      var key = bob.pub.slice(0, 2);
+      var expected = '~/' + key;
+      gun.get('~').get(key).put({ '#': expected }, function(ack) {
+        assert.ok(!ack.err);
+        done();
+      }, { opt: { authenticator: bob } });
+    })().catch(done);
+  });
+
+  it('rejects shard intermediate when link target mismatches', function(done) {
+    var gun = makeGun();
+    (async function() {
+      var bob = await ZEN.pair();
+      var key = bob.pub.slice(0, 2);
+      gun.get('~').get(key).put({ '#': '~/zz' }, function(ack) {
+        assert.ok(ack.err);
+        done();
+      }, { opt: { authenticator: bob } });
+    })().catch(done);
+  });
+
+  it('rejects shard intermediate without authenticator', function(done) {
+    var gun = makeGun();
+    (async function() {
+      var bob = await ZEN.pair();
+      var key = bob.pub.slice(0, 2);
+      gun.get('~').get(key).put({ '#': '~/' + key }, function(ack) {
+        assert.ok(ack.err);
+        done();
+      });
+    })().catch(done);
+  });
+
+  it('rejects shard path with double slash', function(done) {
+    var gun = makeGun();
+    gun.get('~/ab//cd').get('ef').put({ '#': '~/ab//cd/ef' }, function(ack) {
+      assert.ok(ack.err);
+      done();
+    });
+  });
+
+  it('rejects shard with invalid key length', function(done) {
+    var gun = makeGun();
+    gun.get('~').get('abc').put({ '#': '~/abc' }, function(ack) {
+      assert.ok(ack.err);
+      done();
+    });
+  });
+
+  it('rejects hash mismatch inside user graph', function(done) {
+    var gun = makeGun();
+    (async function() {
+      var bob = await ZEN.pair();
+      gun.get('~' + bob.pub).get('payload#deadbeef').put('hello world', function(ack) {
+        assert.ok(ack.err);
+        done();
+      }, { opt: { authenticator: bob } });
+    })().catch(done);
+  });
+});

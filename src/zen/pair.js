@@ -1,27 +1,20 @@
-import core from './secp256k1.js';
+import crv from './crv.js';
+import applyFormat from './format.js';
 
-async function deriveScalar(seed, label, attempt) {
-  return core.hashToScalar(seed, label + (attempt ? attempt : ''));
-}
-
-async function derivePrivWithRetry(priv, seed, label) {
-  for (let attempt = 0; attempt < 100; attempt++) {
-    const offset = await deriveScalar(seed, label, attempt);
-    const derivedPriv = core.mod(priv + offset, core.N);
-    if (derivedPriv !== 0n) {
-      return derivedPriv;
-    }
+async function derivepriv(c, priv, seed, label) {
+  for (let i = 0; i < 100; i++) {
+    const off = await c.hashToScalar(seed, label + (i ? i : ''));
+    const d = c.mod(priv + off, c.N);
+    if (d !== 0n) { return d; }
   }
   throw new Error('Failed to derive non-zero private key');
 }
 
-async function derivePubWithRetry(point, seed, label) {
-  for (let attempt = 0; attempt < 100; attempt++) {
-    const offset = await deriveScalar(seed, label, attempt);
-    const derivedPub = core.pointAdd(point, core.pointMultiply(offset, core.G));
-    if (derivedPub) {
-      return derivedPub;
-    }
+async function derivepub(c, pt, seed, label) {
+  for (let i = 0; i < 100; i++) {
+    const off = await c.hashToScalar(seed, label + (i ? i : ''));
+    const d = c.pointAdd(pt, c.pointMultiply(off, c.G));
+    if (d) { return d; }
   }
   throw new Error('Failed to derive valid public key');
 }
@@ -29,53 +22,53 @@ async function derivePubWithRetry(point, seed, label) {
 async function pair(cb, opt) {
   try {
     opt = opt || {};
-    const out = { curve: core.curve };
+    const curveName = opt.curve || 'secp256k1';
+    const c = crv(curveName);
+    if (opt.curve && c.curve !== curveName && curveName !== 'secp256r1') { throw new Error('Unknown curve: ' + curveName); }
+    const format = opt.format || 'zen';
+    // Use c.curve as the canonical name for deterministic labels so that
+    // aliases (secp256r1 → p256) produce the same key from the same seed.
+    const labelCurve = c.curve;
+
+    let spriv = null, spub = null, epriv = null, epub = null;
 
     if (opt.seed && (opt.priv || opt.epriv || opt.pub || opt.epub)) {
+      // Additive derivation from existing key + seed
       if (opt.priv) {
-        const signPriv = await derivePrivWithRetry(core.parseScalar(opt.priv, 'Signing key'), opt.seed, 'ZEN.DERIVE|sign|');
-        out.priv = core.scalarToString(signPriv);
-        out.pub = core.pointToPub(core.publicFromPrivate(signPriv));
+        spriv = await derivepriv(c, c.parseScalar(opt.priv, 'Signing key'), opt.seed, 'ZEN.DERIVE|sign|');
+        spub = c.publicFromPrivate(spriv);
       }
       if (opt.epriv) {
-        const encPriv = await derivePrivWithRetry(core.parseScalar(opt.epriv, 'Encryption key'), opt.seed, 'ZEN.DERIVE|encrypt|');
-        out.epriv = core.scalarToString(encPriv);
-        out.epub = core.pointToPub(core.publicFromPrivate(encPriv));
+        epriv = await derivepriv(c, c.parseScalar(opt.epriv, 'Encryption key'), opt.seed, 'ZEN.DERIVE|encrypt|');
+        epub = c.publicFromPrivate(epriv);
       }
       if (opt.pub) {
-        const signPub = await derivePubWithRetry(core.parsePub(opt.pub), opt.seed, 'ZEN.DERIVE|sign|');
-        out.pub = core.pointToPub(signPub);
+        spub = await derivepub(c, c.parsePub(opt.pub), opt.seed, 'ZEN.DERIVE|sign|');
       }
       if (opt.epub) {
-        const encPub = await derivePubWithRetry(core.parsePub(opt.epub), opt.seed, 'ZEN.DERIVE|encrypt|');
-        out.epub = core.pointToPub(encPub);
+        epub = await derivepub(c, c.parsePub(opt.epub), opt.seed, 'ZEN.DERIVE|encrypt|');
       }
-      if (cb) { try { cb(out); } catch (e) { console.log(e); } }
-      return out;
+    } else {
+      // Generate fresh or restore from private / seed
+      spriv = opt.priv  ? c.parseScalar(opt.priv,  'Signing key')    : null;
+      epriv  = opt.epriv ? c.parseScalar(opt.epriv, 'Encryption key') : null;
+
+      // Seed labels use canonical c.curve so aliases (secp256r1 ≡ p256) share the same key.
+      // For secp256k1: 'ZEN|secp256k1|sign|' matches the original hardcoded value — backward compat.
+      if (!spriv && opt.seed) { spriv = await c.hashToScalar(opt.seed, 'ZEN|' + labelCurve + '|sign|'); }
+      if (!spriv  && opt.seed) { spriv = await c.hashToScalar(opt.seed, 'ZEN|' + labelCurve + '|sign|'); }
+      if (!epriv  && opt.seed) { epriv = await c.hashToScalar(opt.seed, 'ZEN|' + labelCurve + '|encrypt|'); }
+      if (!spriv  && !opt.pub)  { spriv = await c.randomScalar(); }
+      if (!epriv  && !opt.epub) { epriv = await c.randomScalar(); }
+
+      if (spriv) { spub = c.publicFromPrivate(spriv); }
+      else if (opt.pub)  { spub = c.parsePub(opt.pub); }
+
+      if (epriv)  { epub = c.publicFromPrivate(epriv); }
+      else if (opt.epub) { epub = c.parsePub(opt.epub); }
     }
 
-    let signPriv = opt.priv ? core.parseScalar(opt.priv, 'Signing key') : null;
-    let encPriv = opt.epriv ? core.parseScalar(opt.epriv, 'Encryption key') : null;
-
-    if (!signPriv && opt.seed) { signPriv = await core.hashToScalar(opt.seed, 'ZEN|secp256k1|sign|'); }
-    if (!encPriv && opt.seed) { encPriv = await core.hashToScalar(opt.seed, 'ZEN|secp256k1|encrypt|'); }
-    if (!signPriv && !opt.pub) { signPriv = await core.randomScalar(); }
-    if (!encPriv && !opt.epub) { encPriv = await core.randomScalar(); }
-
-    if (signPriv) {
-      out.priv = core.scalarToString(signPriv);
-      out.pub = core.pointToPub(core.publicFromPrivate(signPriv));
-    } else if (opt.pub) {
-      out.pub = core.pointToPub(core.parsePub(opt.pub));
-    }
-
-    if (encPriv) {
-      out.epriv = core.scalarToString(encPriv);
-      out.epub = core.pointToPub(core.publicFromPrivate(encPriv));
-    } else if (opt.epub) {
-      out.epub = core.pointToPub(core.parsePub(opt.epub));
-    }
-
+    const out = await applyFormat(format, labelCurve, c, { signPriv: spriv, signPub: spub, encPriv: epriv, encPub: epub });
     if (cb) { try { cb(out); } catch (e) { console.log(e); } }
     return out;
   } catch (e) {

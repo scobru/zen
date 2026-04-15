@@ -1,9 +1,9 @@
 import core from './secp256k1.js';
 
-async function decrypt(data, pairLike, cb, opt) {
+async function decrypt(data, pair, cb, opt) {
   try {
     opt = opt || {};
-    const key = (pairLike || opt).epriv || pairLike;
+    const key = (pair || opt).epriv || pair;
     if (!key) { throw new Error('No decryption key.'); }
     const parsed = await core.settings.parse(data);
     const salt = core.shim.Buffer.from(parsed.s, opt.encode || 'base64');

@@ -4,7 +4,7 @@ import sha256 from './sha256.js';
 import keccak256 from './keccak256.js';
 import base62 from './base62.js';
 
-function normalizeHashName(name) {
+function normhash(name) {
   const raw = (name || '').toString();
   const slim = raw.toLowerCase().replace(/[\s_-]/g, '');
   if (!slim) { return ''; }
@@ -16,26 +16,24 @@ function normalizeHashName(name) {
   return raw;
 }
 
-function isHashName(name) {
-  const normalized = normalizeHashName(name);
-  return normalized === 'KECCAK-256' || normalized.indexOf('SHA-') === 0;
+function ishash(name) {
+  const n = normhash(name);
+  return n === 'KECCAK-256' || n.indexOf('SHA-') === 0;
 }
 
-function encodeBuffer(data, encoding) {
-  if (encoding === 'base62') { return base62.bufToB62(data); }
-  if (encoding === 'base64') { return shim.Buffer.from(data).toString('base64'); }
-  return shim.Buffer.from(data).toString(encoding);
+function encbuf(data, enc) {
+  if (enc === 'base62') { return base62.bufToB62(data); }
+  if (enc === 'base64') { return shim.Buffer.from(data).toString('base64'); }
+  return shim.Buffer.from(data).toString(enc);
 }
 
 async function digest(data, name) {
-  const normalized = normalizeHashName(name);
-  if (normalized === 'KECCAK-256') {
-    return keccak256(data);
-  }
-  return sha256(data, normalized || undefined);
+  const n = normhash(name);
+  if (n === 'KECCAK-256') { return keccak256(data); }
+  return sha256(data, n || undefined);
 }
 
-export { normalizeHashName };
+export { normhash };
 
 export default async function hash(data, pair, cb, opt) {
   try {
@@ -53,9 +51,9 @@ export default async function hash(data, pair, cb, opt) {
     }
     data = (typeof data === 'string') ? data : await shim.stringify(data);
 
-    if (isHashName(opt.name)) {
+    if (ishash(opt.name)) {
       let hashed = shim.Buffer.from(await digest(data, opt.name), 'binary');
-      hashed = encodeBuffer(hashed, enc);
+      hashed = encbuf(hashed, enc);
       if (cb) { try { cb(hashed); } catch (e) { console.log(e); } }
       return hashed;
     }
@@ -73,7 +71,7 @@ export default async function hash(data, pair, cb, opt) {
     }, key, opt.length || (settings.pbkdf2.ks * 8));
     data = shim.random(data.length);
     let out = shim.Buffer.from(bits, 'binary');
-    out = encodeBuffer(out, enc);
+    out = encbuf(out, enc);
     if (cb) { try { cb(out); } catch (e) { console.log(e); } }
     return out;
   } catch (e) {

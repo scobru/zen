@@ -1,9 +1,9 @@
 import core from './secp256k1.js';
 
-async function encrypt(data, pairLike, cb, opt) {
+async function encrypt(data, pair, cb, opt) {
   try {
     opt = opt || {};
-    const key = (pairLike || opt).epriv || pairLike;
+    const key = (pair || opt).epriv || pair;
     if (data === undefined) { throw new Error('`undefined` not allowed.'); }
     if (!key) { throw new Error('No encryption key.'); }
     const message = typeof data === 'string' ? data : await core.shim.stringify(data);

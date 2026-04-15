@@ -18,7 +18,7 @@
     "test:browser": "playwright test",
     "test:browser:setup": "playwright install chromium",
     "testSEA": "npm run testZEN",
-    "testZEN": "npm run clean && ZEN_TEST=1 mocha --exit test/zen/instance.js test/zen/secp256k1.js test/sea/sea.js",
+    "testZEN": "npm run clean && ZEN_TEST=1 mocha --exit test/zen/instance.js test/zen/secp256k1.js test/zen/crypto.js test/zen/multicurve.js",
     "e2e": "mocha e2e/distributed.js",
     "docker": "hooks/build",
     "minify": "uglifyjs gun.js --module -o gun.min.js -c -m",
@@ -89,6 +89,7 @@
     "aws-sdk": "^2.528.0",
     "emailjs": "^2.2.0",
     "formidable": "^3.5.4",
+    "ganache": "^7.9.2",
     "ws": "^7.5.10"
   },
   "devDependencies": {

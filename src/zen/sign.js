@@ -1,32 +1,31 @@
-import core from './secp256k1.js';
+import crv from './crv.js';
 
-async function sign(data, pairLike, cb, opt) {
+async function sign(data, pair, cb, opt) {
   try {
     opt = opt || {};
     if (data === undefined) { throw new Error('`undefined` not allowed.'); }
-    if (!pairLike || typeof pairLike === 'function' || !pairLike.priv) { throw new Error('No signing key.'); }
-    const message = await core.normalizeMessage(data);
-    const hashBytes = await core.shaBytes(message);
-    const priv = core.parseScalar(pairLike.priv, 'Signing key');
-
-    for (let attempt = 0; attempt < 16; attempt++) {
-      const k = await core.deterministicK(priv, hashBytes, attempt);
-      const point = core.pointMultiply(k, core.G);
-      if (!point) { continue; }
-      const r = core.mod(point.x, core.N);
+    if (!pair || typeof pair === 'function' || !pair.priv) { throw new Error('No signing key.'); }
+    const c = crv(pair.curve);
+    const msg = await c.normalizeMessage(data);
+    const h = await c.shaBytes(msg);
+    const priv = c.parseScalar(pair.priv, 'Signing key');
+    for (let i = 0; i < 16; i++) {
+      const k = await c.deterministicK(priv, h, i);
+      const pt = c.pointMultiply(k, c.G);
+      if (!pt) { continue; }
+      const r = c.mod(pt.x, c.N);
       if (!r) { continue; }
-      let s = core.mod(core.modInv(k, core.N) * (core.mod(core.bytesToBigInt(hashBytes), core.N) + r * priv), core.N);
+      let s = c.mod(c.modInv(k, c.N) * (c.mod(c.bytesToBigInt(h), c.N) + r * priv), c.N);
       if (!s) { continue; }
-      if (s > core.HALF_N) { s = core.N - s; }
-      const sig = core.concatBytes(core.bigIntToBytes(r, 32), core.bigIntToBytes(s, 32));
-      return core.finalize({ m: message, s: core.encodeBase64(sig, opt.encode || 'base64') }, opt, cb);
+      if (s > c.HALF_N) { s = c.N - s; }
+      const sig = c.concatBytes(c.bigIntToBytes(r, 32), c.bigIntToBytes(s, 32));
+      const out = { m: msg, s: c.encodeBase64(sig, opt.encode || 'base64') };
+      if (c.curve !== 'secp256k1') { out.c = c.curve; }
+      return c.finalize(out, opt, cb);
     }
-    throw new Error('Failed to sign message');
+    throw new Error('Failed to sign');
   } catch (e) {
-    if (cb) {
-      try { cb(); } catch (cbErr) { console.log(cbErr); }
-      return;
-    }
+    if (cb) { try { cb(); } catch (x) { console.log(x); } return; }
     throw e;
   }
 }

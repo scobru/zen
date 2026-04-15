@@ -1,23 +1,21 @@
-import core from './secp256k1.js';
+import crv from './crv.js';
 
-async function secret(key, pairLike, cb, opt) {
+async function secret(epub, pair, cb, opt) {
   try {
     opt = opt || {};
-    if (!pairLike || !pairLike.epriv) { throw new Error('No secret mix.'); }
-    const peer = key && key.epub ? key.epub : key;
-    const point = core.parsePub(peer);
-    const priv = core.parseScalar(pairLike.epriv, 'Encryption key');
-    const shared = core.pointMultiply(priv, point);
+    if (!pair || !pair.epriv) { throw new Error('No secret mix.'); }
+    const c = crv(pair.curve);
+    const peer = epub && epub.epub ? epub.epub : epub;
+    const pt  = c.parsePub(peer);
+    const priv = c.parseScalar(pair.epriv, 'Encryption key');
+    const shared = c.pointMultiply(priv, pt);
     if (!shared) { throw new Error('Could not derive shared secret'); }
-    const digest = await core.shaBytes(core.compactPoint(shared));
-    const out = core.base62.bufToB62(digest);
+    const h = await c.shaBytes(c.compactPoint(shared));
+    const out = c.base62.bufToB62(h);
     if (cb) { try { cb(out); } catch (e) { console.log(e); } }
     return out;
   } catch (e) {
-    if (cb) {
-      try { cb(); } catch (cbErr) { console.log(cbErr); }
-      return;
-    }
+    if (cb) { try { cb(); } catch (x) { console.log(x); } return; }
     throw e;
   }
 }
