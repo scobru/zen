@@ -3549,8 +3549,8 @@ describe('ZEN', function(){
 
 		it('Check multi instance message passing', function(done){
 			// NOTICE: The behavior of this test changed from v0.2020.520 to version after.
-			try{ __fs.unlinkSync('bdata') }catch(e){}
-			try{ __fs.unlinkSync('ddata') }catch(e){}
+			try{ __fs.unlinkSync('tmp/bdata') }catch(e){}
+			try{ __fs.unlinkSync('tmp/ddata') }catch(e){}
 			Gun.on('opt', function(ctx){
 				ctx.on('out', function(msg){
 					this.to.next(msg);
@@ -3570,13 +3570,13 @@ describe('ZEN', function(){
 				});
 			});
 
-			var b = Gun({file: "bdata"});
+			var b = Gun({file: "tmp/bdata"});
 			var d = null;
 
 			var bb = b.get("key");
 			bb.put({msg: "hello"});
 				
-			d = Gun({file: "ddata"});
+			d = Gun({file: "tmp/ddata"});
 			var db = d.get("key");
 			db.map().on(function(val,field){
 				expect(val).to.be('hello');
@@ -4065,9 +4065,8 @@ describe('ZEN', function(){
 		}); */
 
 		it('Check that events are called with multiple instances', function(done){
-			var gunA = Gun( { file : "A.json" } );
-			var gunB = Gun( { file : "B.json" });
-			var gunC = Gun( { file : "C.json" });
+                   var gunA = Gun( { file : "tmp/A.json" } );
+                   var gunC = Gun( { file : "tmp/C.json" });
 
 			var check = {};
 
