@@ -3449,7 +3449,7 @@ __def('./src/zen/security.js', function(module, __exp){
   var sign = __req('./src/zen/sign.js').default;
   var settings = __req('./src/zen/settings.js').default;
   var u;
-  var Gun = GUN;
+  var Gun = (typeof globalThis !== 'undefined' && globalThis.Gun) || GUN;
 
   // --------------- pack / unpack ---------------
 
@@ -4526,9 +4526,7 @@ __def('./src/pen.js', function(module, __exp){
     pen.candle = function(opts) {
       return runtime.candle(opts);
     };
-
-    if (typeof globalThis !== 'undefined') { globalThis.pen = globalThis.pen || pen; }
-    try { __defaultExport = pen; } catch(e) {}
+  try { __defaultExport = pen; } catch(e) {}
 
   }());
   __exp.default = __defaultExport;
