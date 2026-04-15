@@ -45,7 +45,7 @@ describe('testZEN', function() {
       assert.strictEqual(typeof zen[name], 'function', name);
     });
     assert.strictEqual(zen.SECP256K1.curve, 'secp256k1');
-    assert.strictEqual(typeof zen.certify, 'undefined');
+    assert.strictEqual(typeof zen.certify, 'function');
   });
 
   it('writes and reads nested graph data through a ZEN instance', async function() {

@@ -9,6 +9,7 @@ import decrypt from './decrypt.js';
 import secret from './secret.js';
 import shim from './shim.js';
 import hash from './hash.js';
+import certify from './certify.js';
 import keyid from './keyid.js';
 import security from './runtime.js';
 import graph from './graph.js';
@@ -16,7 +17,7 @@ import graph from './graph.js';
 var hasOwn = Object.prototype.hasOwnProperty;
 var STATIC_SKIP = { length: 1, name: 1, prototype: 1 };
 var CHAIN_SKIP = { constructor: 1 };
-var ZEN_SKIP = { certify: 1 };
+var ZEN_SKIP = {};
 async function finalizeSigned(result, opt, cb) {
   try {
     if (!(opt || {}).raw) {
@@ -40,7 +41,8 @@ var SECP256K1 = {
   encrypt: encrypt,
   decrypt: decrypt,
   secret: secret,
-  hash: hash
+  hash: hash,
+  certify: certify
 };
 
 function mirrorStatics(target, source) {
@@ -130,6 +132,7 @@ class ZEN {
   static decrypt(...args) { return decrypt(...args) }
   static secret(...args) { return secret(...args) }
   static hash(...args) { return hash(...args) }
+  static certify(...args) { return certify(...args) }
 
   get _graph() {
     if (!this._graphInstance) {
@@ -156,6 +159,7 @@ class ZEN {
   decrypt(...args) { return this.constructor.decrypt(...args) }
   secret(...args) { return this.constructor.secret(...args) }
   hash(...args) { return this.constructor.hash(...args) }
+  certify(...args) { return this.constructor.certify(...args) }
 
   get(...args) { return this._graph.get(...args) }
   put(...args) { return this._graph.put(...args) }

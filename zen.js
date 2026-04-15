@@ -4982,6 +4982,101 @@ __def('./src/zen/secret.js', function(module, __exp){
   __exp.secret = secret;
 });
 
+__def('./src/zen/certify.js', function(module, __exp){
+  var sign = __req('./src/zen/sign.js').default;
+  /*
+    The Certify Protocol was made out of love by a Vietnamese code enthusiast.
+    Vietnamese people around the world deserve respect!
+    IMPORTANT: A Certificate is like a Signature. No one knows who (authority)
+    created/signed a cert until you put it into their graph.
+  */
+
+  // RAD/LEX object key detection
+  var RAD = ['+', '#', '.', '=', '*', '>', '<'];
+  function israd(obj) {
+    if (!obj || typeof obj !== 'object') { return false; }
+    for (var i = 0; i < RAD.length; i++) { if (RAD[i] in obj) { return true; } }
+    return false;
+  }
+
+  // Normalize certificants → '*' | pub_string | [pub_string, ...]
+  function normcerts(raw) {
+    if (!raw) { return null; }
+    if (typeof raw === 'string') {
+      return raw.indexOf('*') > -1 ? '*' : raw;
+    }
+    if (!Array.isArray(raw) && typeof raw === 'object' && raw.pub) {
+      return raw.pub;
+    }
+    if (Array.isArray(raw)) {
+      if (raw.indexOf('*') > -1) { return '*'; }
+      // single element short-circuit
+      if (raw.length === 1 && raw[0]) {
+        var x = raw[0];
+        if (typeof x === 'string') { return x; }
+        if (typeof x === 'object' && x.pub) { return x.pub; }
+        return null;
+      }
+      var list = [];
+      raw.forEach(function(x) {
+        if (typeof x === 'string') { list.push(x); }
+        else if (x && typeof x === 'object' && x.pub) { list.push(x.pub); }
+      });
+      return list.length > 0 ? list : null;
+    }
+    return null;
+  }
+
+  async function certify(certs, pol, auth, cb, opt) {
+    try {
+      opt = opt || {};
+      pol = pol || {};
+
+      var c = normcerts(certs);
+      if (!c) { console.log('No certificant found.'); return; }
+
+      var r = (pol.read) ? pol.read : null;
+      var w = (pol.write) ? pol.write
+            : (typeof pol === 'string' || Array.isArray(pol) || israd(pol)) ? pol
+            : null;
+
+      if (!r && !w) { console.log('No policy found.'); return; }
+
+      var expiry = (opt.expiry !== undefined && opt.expiry !== null)
+        ? parseFloat(opt.expiry) : null;
+
+      var blk = opt.block || opt.blacklist || opt.ban || {};
+      var rb = (blk.read && (typeof blk.read === 'string' || (blk.read || {})['#']))
+        ? blk.read : null;
+      var wb = typeof blk === 'string' ? blk
+        : (blk.write && (typeof blk.write === 'string' || (blk.write || {})['#']))
+          ? blk.write : null;
+
+      var data = JSON.stringify(Object.assign(
+        { c: c },
+        expiry ? { e: expiry } : {},
+        r ? { r: r } : {},
+        w ? { w: w } : {},
+        rb ? { rb: rb } : {},
+        wb ? { wb: wb } : {}
+      ));
+
+      var cert = await sign(data, auth, null, { raw: 1 });
+      var out = opt.raw ? cert : JSON.stringify(cert);
+      if (cb) { try { cb(out); } catch (e) { console.log(e); } }
+      return out;
+    } catch (e) {
+      if (cb) { try { cb(); } catch (x) { console.log(x); } return; }
+      throw e;
+    }
+  }
+
+
+  __exp.default = certify;
+
+  __exp.certify = certify;
+});
+
 __def('./src/zen/keyid.js', function(module, __exp){
   var shim = __req('./src/zen/shim.js').default;
   var base62 = __req('./src/zen/base62.js').default;
@@ -5055,13 +5150,14 @@ __def('./src/zen/index.js', function(module, __exp){
   var secret = __req('./src/zen/secret.js').default;
   var shim = __req('./src/zen/shim.js').default;
   var hash = __req('./src/zen/hash.js').default;
+  var certify = __req('./src/zen/certify.js').default;
   var keyid = __req('./src/zen/keyid.js').default;
   var security = __req('./src/zen/runtime.js').default;
   var graph = __req('./src/zen/graph.js').default;
   var hasOwn = Object.prototype.hasOwnProperty;
   var STATIC_SKIP = { length: 1, name: 1, prototype: 1 };
   var CHAIN_SKIP = { constructor: 1 };
-  var ZEN_SKIP = { certify: 1 };
+  var ZEN_SKIP = {};
   async function finalizeSigned(result, opt, cb) {
     try {
       if (!(opt || {}).raw) {
@@ -5085,7 +5181,8 @@ __def('./src/zen/index.js', function(module, __exp){
     encrypt: encrypt,
     decrypt: decrypt,
     secret: secret,
-    hash: hash
+    hash: hash,
+    certify: certify
   };
 
   function mirrorStatics(target, source) {
@@ -5175,6 +5272,7 @@ __def('./src/zen/index.js', function(module, __exp){
     static decrypt(...args) { return decrypt(...args) }
     static secret(...args) { return secret(...args) }
     static hash(...args) { return hash(...args) }
+    static certify(...args) { return certify(...args) }
 
     get _graph() {
       if (!this._graphInstance) {
@@ -5201,6 +5299,7 @@ __def('./src/zen/index.js', function(module, __exp){
     decrypt(...args) { return this.constructor.decrypt(...args) }
     secret(...args) { return this.constructor.secret(...args) }
     hash(...args) { return this.constructor.hash(...args) }
+    certify(...args) { return this.constructor.certify(...args) }
 
     get(...args) { return this._graph.get(...args) }
     put(...args) { return this._graph.put(...args) }
