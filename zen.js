@@ -7,11 +7,7 @@ __def('./gun.js', function(module, __exp){
   ;(function(){
 
     /* UNBUILD */
-
-
-
-
-    const MOD = { exports: {} };
+  const MOD = { exports: {} };
   function USE(arg, req){
       return req? USE[R(arg)] : arg.slice? USE[R(arg)] : function(mod, path){
         arg(mod = {exports: {}});
