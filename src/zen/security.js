@@ -1,11 +1,11 @@
-import GUN from '../../gun.js';
+import ZEN from './root.js';
 import verify from './verify.js';
 import hash from './hash.js';
 import sign from './sign.js';
 import settings from './settings.js';
 
 var u;
-var Gun = (typeof globalThis !== 'undefined' && globalThis.Gun) || GUN;
+var Gun = ZEN;
 
 // --------------- pack / unpack ---------------
 

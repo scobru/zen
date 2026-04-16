@@ -1,21 +1,32 @@
-import GUN from '../../gun.js';
+import './book.js';
+import './chain.js';
+import './back.js';
+import './put.js';
+import './get.js';
+import './on.js';
+import './map.js';
+import './set.js';
+import './mesh.js';
+import './websocket.js';
+import './localStorage.js';
+import ZEN from './root.js';
 
-if (!GUN.chain.then) {
-  GUN.chain.then = function(cb, opt) {
-    var gun = this;
-    var p = new Promise(function(res) { gun.once(res, opt); });
+if (!ZEN.chain.then) {
+  ZEN.chain.then = function(cb, opt) {
+    var zen = this;
+    var p = new Promise(function(res) { zen.once(res, opt); });
     return cb ? p.then(cb) : p;
   };
 }
 
 const graph = {
-  core: GUN,
-  chain: GUN.chain,
+  core: ZEN,
+  chain: ZEN.chain,
   create(opt = {}) {
-    return GUN(opt);
+    return ZEN(opt);
   },
   is(value) {
-    return GUN.is(value);
+    return ZEN.is(value);
   }
 };
 

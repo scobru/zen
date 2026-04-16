@@ -309,8 +309,8 @@ let __defaultExport;
     Zen.log = function(){ return (!Zen.log.off && C.log.apply(C, arguments)), [].slice.call(arguments).join(' ') };
     Zen.log.once = function(w,s,o){ return (o = Zen.log.once)[w] = o[w] || 0, o[w]++ || Zen.log(s) };
 
-    ((typeof globalThis !== "undefined" && typeof window === "undefined" && typeof WorkerGlobalScope !== "undefined") ? ((globalThis.ZEN = globalThis.Zen = Zen).window = globalThis) : (typeof window !== "undefined" ? ((window.ZEN = window.Zen = Zen).window = window) : undefined));
-    ((globalThis.ZEN = globalThis.Zen = Zen).globalThis = globalThis);
+    ((typeof globalThis !== "undefined" && typeof window === "undefined" && typeof WorkerGlobalScope !== "undefined") ? ((globalThis.Zen = Zen).window = globalThis) : (typeof window !== "undefined" ? ((window.Zen = Zen).window = window) : undefined));
+    ((globalThis.Zen = Zen).globalThis = globalThis);
     try{ if(typeof MODULE !== "undefined"){ MODULE.exports = Zen } }catch(e){}
     __defaultExport = Zen;
 

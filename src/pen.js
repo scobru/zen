@@ -1,13 +1,10 @@
-import GunMod from '../gun.js';
 import SecurityMod from './zen/security.js';
 
 let __defaultExport;
 const __penWasmURL = new URL('./pen.wasm', import.meta.url);
 (function(){
 
-  var Gun = GunMod;
-  if (Gun && !Gun.ZENSecurity && SecurityMod) { Gun.ZENSecurity = SecurityMod; }
-  var runtime = (Gun && Gun.ZENSecurity) || SecurityMod;
+  var runtime = SecurityMod;
 
   // ── WASM init ───────────────────────────────────────────────────────────────
 
