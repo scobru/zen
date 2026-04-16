@@ -1,308 +1,275 @@
 # ZEN — Zen Entropy Network
 
-**ZEN** là một **graph database offline-first, phi tập trung, tích hợp mật mã đa curve** — được xây để thay thế GUN trong hệ sinh thái akao.
+**ZEN** is an **offline-first graph database and cryptographic runtime** built from the `amark/gun -> akaoio/gun -> ZEN` lineage.
 
-ZEN không phải là fork. ZEN là hướng tiến hóa tiếp theo:
+ZEN is no longer "GUN plus wrappers". It is now a **ZEN-first codebase**:
 
-> `amark/gun` → `akaoio/gun` → **ZEN**
-
----
-
-## Trạng thái hiện tại
-
-ZEN đang chạy thật. Các thành phần sau đây đã xây xong và có test coverage:
-
-| Thành phần | Trạng thái |
-|---|---|
-| Graph sync (CRDT / HAM) | ✅ kế thừa từ akaoio/gun, hoạt động |
-| secp256k1 — pair, sign, verify, encrypt, decrypt, secret | ✅ hoàn chỉnh |
-| P-256 — pair, sign, verify, ECDH | ✅ hoàn chỉnh |
-| EVM format — checksummed address, 0x priv, uncompressed epub | ✅ |
-| BTC format — P2PKH Base58Check, WIF, compressed epub | ✅ |
-| SHA-256, keccak256, RIPEMD-160 | ✅ pure JS, không dependency |
-| Certify protocol | ✅ port từ SEA.certify, tích hợp ZEN |
-| OPFS storage adapter | ✅ kế thừa từ akaoio/gun |
-| RAD / Radisk / Radix storage | ✅ hoạt động, đã migrate sang zen.js |
-| WebSocket transport + relay server | ✅ zen-http.js |
-| PEN — bytecode policy VM (Zig → WASM) | 🔄 WASM đã biên dịch, integration tiếp tục |
-| `lib/*.js` → migrate từ gun.js sang zen.js | ✅ 51 files, globalThis.GUN removed |
-
-Test suite: **145 passing, 0 failing** (April 2026).
+- **`src/zen/`** is the active runtime source tree.
+- **`zen.js` / `zen.min.js`** are the main build artifacts.
+- the old parallel **`src/gun/`** and **`src/sea/`** trees have been removed from the active repo
+- the public entry is **ZEN-only**
+- the relay/server path is centered on **`lib/server.js`**
 
 ---
 
-## Tại sao ZEN tồn tại
+## Current status
 
-GUN và SEA có nền tảng rất mạnh về mặt khái niệm. Nhưng với mục tiêu production của akao, chúng có giới hạn rõ ràng:
+ZEN has already moved well beyond yesterday's shape.
 
-1. **CommonJS và side effects**: không friendly với ESM, phụ thuộc `window`, dễ trigger import side effects.
-2. **globalThis exposure**: `globalThis.GUN` là attack surface — ai kiểm soát `globalThis` có thể inject dữ liệu bẩn vào graph.
-3. **Single-curve SEA**: SEA hardcode P-256. ZEN cần đa curve — secp256k1 cho blockchain/wallet, P-256 cho WebAuthn/Passkey/iOS Secure Enclave.
-4. **SEA.certify, user namespace**: các layer này không còn là trung tâm. Policy thuộc về PEN.
-5. **Compute locked in JS**: hash, crypto, VM execution — ZEN hướng tới Zig → WASM.
+| Area | Status |
+| --- | --- |
+| Graph runtime (HAM/CRDT, chain API, peers, storage) | Active in `src/zen/` |
+| Public runtime surface | `ZEN` only |
+| secp256k1 crypto | Implemented |
+| P-256 / secp256r1 crypto | Implemented |
+| EVM and BTC key formats | Implemented |
+| PEN / policy VM | Implemented with Zig -> WASM build pipeline |
+| OPFS support | Integrated |
+| RAD / Radisk / Radix | Integrated |
+| WebSocket transport | Integrated |
+| Internal WebSocket server adapter | Replaced `ws` dependency |
+| Vanilla HTTP form/body parsing | Replaced `formidable` dependency |
+| Internal S3 client | Replaced `aws-sdk` dependency |
+
+Current test baseline:
+
+- `npm test` -> **145 passing, 10 pending**
+- `npm run testZEN` -> green
+- `npm run testPEN` -> green
+
+---
+
+## What changed
+
+ZEN is now a **fork-first successor**, not a greenfield experiment and not a thin rebrand.
+
+### Before
+
+- parallel `gun` / `sea` / `zen` identity
+- legacy wrappers and compatibility layers
+- extra dependency weight (`ws`, `formidable`, `aws-sdk`)
+- noisy test harness output
+- lingering architecture drift such as duplicate server identity
+
+### Now
+
+- **single active runtime identity: ZEN**
+- `src/zen/` is the source of truth
+- public entry exports **ZEN**
+- `gun.js` / `sea.js` are no longer the center of the repo
+- noisy test harness output has been cleaned up
+- transport/storage helpers were simplified and purified
+- several legacy IIFE-style wrappers were removed or rewritten safely
+
+---
+
+## Why ZEN exists
+
+ZEN keeps the strong graph and sync ideas from the GUN family, but pushes them toward a cleaner, more production-focused architecture:
+
+1. **ZEN-first runtime identity** instead of multi-entry confusion.
+2. **ESM-oriented structure** instead of old CommonJS-era habits.
+3. **Multi-curve crypto** instead of a narrow single-curve worldview.
+4. **Policy as a first-class runtime concern** through PEN.
+5. **Smaller dependency surface** with more internal control over critical adapters.
+
+---
+
+## Install
+
+```bash
+npm install
+```
 
 ---
 
 ## Quick start
 
 ```js
-import ZEN from 'zen'
+import ZEN from '@akaoio/zen';
 
-// Graph (offline-first, P2P sync)
-const zen = new ZEN({ file: 'mydata' })
-zen.get('user').put({ name: 'Alice' })
-zen.get('user').once(console.log)
+const zen = new ZEN({ file: 'data' });
 
-// Crypto
-const pair = await ZEN.pair()
-const sig  = await ZEN.sign('hello', pair)
-const ok   = await ZEN.verify(sig, pair.pub)
-
-// Multi-curve
-const evmPair = await ZEN.pair(null, { format: 'evm' })
-// evmPair.pub  = '0xAbCd...' (EIP-55 checksum address)
-// evmPair.priv = '0x<64hex>'
-
-const btcPair = await ZEN.pair(null, { format: 'btc' })
-// btcPair.pub  = '1Abc...' (P2PKH Base58Check)
-// btcPair.priv = 'K...' or 'L...' (WIF compressed)
-
-const p256Pair = await ZEN.pair(null, { curve: 'p256' })
-// dùng cho WebAuthn, iOS Secure Enclave, TLS
-
-// Hash
-const h = await ZEN.hash('hello')               // SHA-256, base62
-const k = await ZEN.hash('hello', { name: 'keccak256' }) // keccak256, hex
+zen.get('user').put({ name: 'Alice' });
+zen.get('user').once(console.log);
 ```
 
----
-
-## API
-
-### Graph API
+### Crypto
 
 ```js
-const zen = new ZEN(opt)
-
-zen.get(key)          // truy cập node
-zen.put(data)         // ghi dữ liệu
-zen.on(cb)            // subscribe real-time
-zen.once(cb)          // đọc một lần
-zen.map()             // iterate collection
-zen.set(data)         // thêm vào set
-zen.back(n)           // trở về chain cha
+const pair = await ZEN.pair();
+const signed = await ZEN.sign('hello', pair);
+const verified = await ZEN.verify(signed, pair.pub);
 ```
-
-ZEN wrap gun-based runtime bên trong. Graph API hoàn toàn tương thích với GUN chain API.
-
-### Crypto API (static)
-
-```js
-ZEN.pair(cb, opt)           // tạo key pair
-ZEN.sign(data, pair)        // ký
-ZEN.verify(data, pub)       // xác thực
-ZEN.encrypt(data, pair)     // mã hóa
-ZEN.decrypt(data, pair)     // giải mã
-ZEN.secret(pub, pair)       // ECDH shared secret
-ZEN.hash(data, opt)         // SHA-256 / keccak256 / SHA-1 / SHA-512
-ZEN.certify(certs, policy, pair) // certify protocol
-```
-
-Tất cả đều work cả ở dạng static (`ZEN.pair()`) lẫn instance (`zen.pair()`).
 
 ### Multi-curve
 
 ```js
-// secp256k1 (default) — GUN/ZEN native, base62
-await ZEN.pair()
-await ZEN.pair(null, { curve: 'secp256k1' })
-
-// P-256 / secp256r1 — WebAuthn, iOS, TLS
-await ZEN.pair(null, { curve: 'p256' })
-
-// EVM format — Ethereum / EVM chains
-await ZEN.pair(null, { format: 'evm' })
-
-// BTC format — Bitcoin P2PKH
-await ZEN.pair(null, { format: 'btc' })
-
-// Kết hợp: P-256 key → EVM address
-await ZEN.pair(null, { curve: 'p256', format: 'evm' })
+const secp = await ZEN.pair();
+const p256 = await ZEN.pair(null, { curve: 'p256' });
+const evm = await ZEN.pair(null, { format: 'evm' });
+const btc = await ZEN.pair(null, { format: 'btc' });
 ```
 
-Multi-curve sign/verify tự động detect curve từ `pair.curve`. Envelope chứa `c: 'p256'` nếu dùng P-256, không có `c` nếu secp256k1 — backward compatible hoàn toàn.
-
-### Deterministic keys
+### Hashing
 
 ```js
-// Từ seed cố định — reproduced được, dùng cho test/recovery
-const pair = await ZEN.pair(null, { seed: 'my-secret-seed' })
-
-// Additive derivation — HD-wallet style
-const derived = await ZEN.pair(null, { seed: 'child', priv: parent.priv })
-```
-
-### PEN — Policy + Execution
-
-```js
-// Pen policy spec
-ZEN.pen(spec)          // static
-zen.pen(spec)          // instance
-
-// Candle clock
-ZEN.candle(opts)
-```
-
-PEN là bytecode policy VM viết bằng Zig, biên dịch sang WASM. Đây là lớp policy trung tâm của ZEN, thay thế cho auth/session wrapper trong SEA.
-
----
-
-## Kiến trúc
-
-### 1. Graph engine
-
-ZEN dùng gun-based runtime làm graph engine bên trong (`src/zen/graph.js`). CRDT/HAM conflict resolution, offline-first sync, WebSocket transport đều được kế thừa nguyên vẹn.
-
-ZEN class wrap graph engine:
-
-```
-ZEN  →  _graph (GUN instance)  →  graph sync + storage
-     →  secp256k1 / p256 / keccak / ripemd160 → crypto
-     →  PEN (WASM)             →  policy + execution
-```
-
-### 2. Mật mã
-
-**secp256k1** là baseline. Tất cả mã hóa trong ZEN đều pure JS, không dependency ngoài (không libsodium, không external crypto lib). Sign/verify/ECDH hoạt động đồng nhất trên secp256k1 và P-256.
-
-**Base62** là encoding tiêu chuẩn cho keys — URL-safe, soul-friendly, compact hơn base64.
-
-**Clean JSON**: không SEA-style prefix hay envelope format. `sign()` trả về `{ m, s }`. `encrypt()` trả về `{ ct, iv, s }`. Không có `SEA{...}` wrapper.
-
-### 3. Storage
-
-- **OPFS** — browser persistence qua Origin Private File System
-- **RAD/Radisk** — filesystem storage cho Node.js
-- **IndexedDB** — fallback browser storage
-- **AWS S3** — cloud storage adapter
-
-Tất cả adapters đã migrate từ `gun.js` sang `zen.js`. Không còn `globalThis.GUN` ở bất kỳ đâu trong `lib/`.
-
-### 4. Transport
-
-- **WebSocket** — transport mặc định
-- **WebRTC** — P2P mesh
-- **Multicast** — LAN discovery
-- **Axe** — automatic clustering / DHT
-
-### 5. PEN (Zig → WASM)
-
-`src/zen/pen.zig` — bytecode VM không dependency, biên dịch sang `freestanding wasm32`. PEN không phải addon — đây là lớp policy trung tâm, xử lý authorization và execution logic gắn với soul identity.
-
----
-
-## Storage adapters
-
-```js
-import 'zen/lib/store'   // RAD/Radisk storage (Node + browser)
-import 'zen/lib/rfs'     // filesystem (Node)
-import 'zen/lib/rindexed' // IndexedDB (browser)
-import 'zen/lib/opfs'    // OPFS (browser, preferred)
-import 'zen/lib/rs3'     // AWS S3
+const sha = await ZEN.hash('hello');
+const keccak = await ZEN.hash('hello', { name: 'keccak256' });
 ```
 
 ---
 
-## Server / relay
+## Public API
+
+### Instance API
 
 ```js
-// Relay node tích hợp
-import 'zen/lib/zen-server'
+const zen = new ZEN(opt);
+
+zen.get(key);
+zen.put(data);
+zen.on(cb);
+zen.once(cb);
+zen.map();
+zen.set(data);
+zen.back(n);
 ```
 
-`npm start` khởi động ZEN relay server qua `lib/server.js`. Hỗ trợ multi-peer sync, superpeers, và faith mode.
+### Static / mirrored crypto API
+
+```js
+ZEN.pair(cb, opt);
+ZEN.sign(data, pair);
+ZEN.verify(data, pub);
+ZEN.encrypt(data, pair);
+ZEN.decrypt(data, pair);
+ZEN.secret(pub, pair);
+ZEN.hash(data, opt);
+ZEN.certify(certs, policy, pair);
+```
+
+These helpers are also mirrored onto ZEN instances.
 
 ---
 
-## Development
+## PEN
+
+PEN is part of the ZEN direction, not an add-on.
+
+- policy bytecode VM
+- Zig source
+- WASM build output
+- integrated into the repo's release and test flow
+
+Relevant scripts:
 
 ```bash
-npm test       # 145 passing (abc.js + rad/rad.js + radix.js + zen.js)
-npm start      # ZEN relay server
-npm run buildGUN   # rebuild gun.js sau khi sửa /src
-npm run buildZEN   # rebuild zen.js (nếu có)
+npm run buildPEN
+npm run testPEN
 ```
 
-Clean test data trước khi chạy lại:
+---
+
+## Storage
+
+ZEN currently includes multiple persistence paths:
+
+- **RAD / Radisk / Radix**
+- **filesystem storage**
+- **IndexedDB**
+- **OPFS**
+- **S3**
+
+Useful modules:
+
+```js
+import '@akaoio/zen/lib/store';
+import '@akaoio/zen/lib/rfs';
+import '@akaoio/zen/lib/rindexed';
+import '@akaoio/zen/lib/opfs';
+import '@akaoio/zen/lib/rs3';
+```
+
+Recent cleanup:
+
+- direct `ws` dependency removed
+- direct `formidable` dependency removed
+- direct `aws-sdk` dependency removed
+
+---
+
+## Relay / server
+
+The repo now treats **`lib/server.js`** as the server identity for ZEN.
+
+Start the example relay:
+
 ```bash
-rm -rf *data* *radata*
+npm start
+```
+
+That currently runs:
+
+```bash
+node --prof examples/zen-http.js
+```
+
+---
+
+## Build and test
+
+```bash
 npm test
+npm run testZEN
+npm run testPEN
+npm run buildZEN
+npm run buildRelease
 ```
+
+`npm test` rebuilds `zen.js`, rebuilds/minifies artifacts, cleans local test data, and runs the active graph/runtime suite.
+
+---
+
+## Architecture notes
+
+### Source of truth
+
+- runtime source: **`src/zen/`**
+- bundled output: **`zen.js`**, **`zen.min.js`**
+- policy runtime: **PEN**
+- active server path: **`lib/server.js`**
+
+### Project direction
+
+ZEN aims for:
+
+- cleaner module boundaries
+- less architecture drift
+- fewer legacy wrappers
+- fewer oversized dependencies
+- tighter ownership over critical runtime layers
 
 ---
 
 ## Lineage
 
-```
+```text
 amark/gun
-    │
-    └─ graph sync, CRDT/HAM, offline-first, P2P, SEA foundations
-    
-akaoio/gun  (major invention layer)
-    │
-    ├─ seed-based deterministic keys
-    ├─ additive key derivation
-    ├─ WebAuthn / passkey integration
-    ├─ external authenticators / HSM support
-    ├─ PEN — bytecode policy VM
-    ├─ base62 key material
-    ├─ OPFS storage adapter
-    ├─ globalThis worker compatibility
-    ├─ tilde shard indexing
-    └─ hashgraph layer draft
-    
-ZEN  (hướng tiến hóa tiếp theo)
-    ├─ multi-curve: secp256k1 + P-256
-    ├─ EVM / BTC format output
-    ├─ keccak256 + RIPEMD-160 pure JS
-    ├─ certify protocol tích hợp
-    ├─ toàn bộ lib/ migrate sang zen.js
-    ├─ globalThis.GUN hoàn toàn removed
-    ├─ ZEN class — unified graph + crypto + policy API
-    └─ PEN WASM — policy VM in Zig
+  ->
+akaoio/gun
+  ->
+ZEN
 ```
 
-ZEN giữ nguyên đặc tính cốt lõi của GUN (graph-first, offline-first, CRDT, P2P) trong khi rebuild phần crypto, storage identity và policy layer.
+ZEN keeps the graph/sync inheritance, but its repo identity and runtime architecture are now explicitly ZEN-centered.
 
 ---
 
-## Những gì ZEN không kế thừa
+## Repository reality
 
-ZEN có chủ đích không giữ những lớp sau từ SEA/GUN:
+If you knew this project yesterday, the important update is simple:
 
-- `SEA.certify` như một first-class architecture layer (ZEN có certify riêng, tích hợp trực tiếp)
-- user namespace model như một first-class layer
-- content-addressing như một feature độc lập
-- SEA-style `SEA{...}` prefix/envelope format
-- `globalThis.GUN` / `globalThis.Gun` — đây là security hole, đã remove hoàn toàn
+**ZEN is now materially different.**
 
----
-
-## Tại sao multi-curve quan trọng
-
-| Curve | Dùng cho |
-|---|---|
-| secp256k1 | GUN/ZEN native, Ethereum, Bitcoin |
-| P-256 (secp256r1) | WebAuthn, iOS Secure Enclave, Android Strongbox, TLS |
-| EVM format | Ethereum address, EIP-55 checksum |
-| BTC format | Bitcoin P2PKH, WIF private key |
-
-Một user trong ZEN có thể có identity trên nhiều chain, nhiều hệ thống crypto, nhiều context khác nhau — tất cả từ một API `pair()` duy nhất.
-
----
-
-## ZEN và akao
-
-ZEN không phải side project. ZEN tồn tại để thay thế GUN trong [akao](https://github.com/akaoio/akao) — framework-free serverless eCommerce engine dùng native Web Components.
-
-akao là lý do ZEN được xây. Mọi quyết định kiến trúc đều hướng về production readiness cho hệ sinh thái đó.
+It is no longer best described as a side experiment beside GUN/SEA. The repo has been consolidated around ZEN as the primary runtime, build target, test target, and architectural direction.

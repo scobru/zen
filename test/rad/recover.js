@@ -34,7 +34,7 @@ var Gun;
  
   try{ var expect = global.expect = __expect }catch(e){}
  
-}(this));
+}(this);
 
 {
 Gun = root.Gun
