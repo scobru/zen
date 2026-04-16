@@ -1,7 +1,7 @@
 import http from 'http';
-import Gun from '../../index.js';
+import Zen from '../../index.js';
 
-var gun = Gun({ 
+var gun = Zen({ 
 	file: 'http.json'
 });
 

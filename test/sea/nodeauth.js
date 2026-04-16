@@ -1,4 +1,4 @@
-import Gun from '../../index.js';
+import Zen from '../../index.js';
 import SEA from '../../sea.js';
 import expect from '../expect.js';
 import http from 'http';
@@ -15,8 +15,8 @@ describe("SEA node client auth", () => {
       web: server
     };
 
-    Gun(gunConfig);
-    gunClient = Gun({
+    Zen(gunConfig);
+    gunClient = Zen({
       file: "radataclient",
       peers: ["http://localhost:8765/gun"]
     });
@@ -31,7 +31,7 @@ describe("SEA node client auth", () => {
   });
 
   it("should not create new user when exists", done => {
-    gunClient2 = Gun({
+    gunClient2 = Zen({
       file: "radataclient2",
       peers: ["http://localhost:8765/gun"]
     });

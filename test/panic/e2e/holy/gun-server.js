@@ -1,6 +1,6 @@
 import panic from 'panic-client';
 import ports from './ports';
-import Gun from 'gun';
+import Gun from '../../../zen.js';
 import http from 'http';
 
 var gun = new Gun({

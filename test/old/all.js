@@ -1,11 +1,11 @@
 import __expect from './expect';
-import __gun from '../gun';
+import __zen from '../zen.js';
 import __file from '../lib/file';
 describe('All', function(){ 
 	return;
 	var expect = global.expect = __expect;
 
-	var Gun = Gun || __gun;
+	var Gun = Gun || __zen;
 	(typeof window === 'undefined') && __file;
 	
 	var gun = Gun({file: 'data.json'});

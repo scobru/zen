@@ -1,7 +1,7 @@
 import assert from 'assert';
 import ZEN from '../../zen.js';
 
-function makeGun() {
+function makeZen() {
   return new ZEN({ peers: [] });
 }
 
@@ -371,7 +371,7 @@ describe('ZEN user graph — authenticator', function() {
   this.timeout(20 * 1000);
 
   it('put to user graph without being authenticated (provide pair)', function(done) {
-    var gun = makeGun();
+    var gun = makeZen();
     (async function() {
       var bob = await ZEN.pair();
       gun.get('~' + bob.pub).get('test').put('this is Bob', function(ack) {
@@ -385,7 +385,7 @@ describe('ZEN user graph — authenticator', function() {
   });
 
   it('put deep path with authenticator', function(done) {
-    var gun = makeGun();
+    var gun = makeZen();
     (async function() {
       var bob = await ZEN.pair();
       var enc = await ZEN.encrypt('secret', bob);
@@ -399,7 +399,7 @@ describe('ZEN user graph — authenticator', function() {
   });
 
   it('does not leak authenticator on out', function(done) {
-    var gun = makeGun();
+    var gun = makeZen();
     (async function() {
       var bob = await ZEN.pair();
       gun.on('out', function(msg) {
@@ -419,7 +419,7 @@ describe('ZEN user graph — authenticator', function() {
   });
 
   it('rejects write without authenticator', function(done) {
-    var gun = makeGun();
+    var gun = makeZen();
     (async function() {
       var bob = await ZEN.pair();
       gun.get('~' + bob.pub).get('test').put('no auth', function(ack) {
@@ -434,7 +434,7 @@ describe('ZEN user graph — shard intermediate', function() {
   this.timeout(20 * 1000);
 
   it('accepts valid shard intermediate', function(done) {
-    var gun = makeGun();
+    var gun = makeZen();
     (async function() {
       var bob = await ZEN.pair();
       var key = bob.pub.slice(0, 2);
@@ -447,7 +447,7 @@ describe('ZEN user graph — shard intermediate', function() {
   });
 
   it('rejects shard intermediate when link target mismatches', function(done) {
-    var gun = makeGun();
+    var gun = makeZen();
     (async function() {
       var bob = await ZEN.pair();
       var key = bob.pub.slice(0, 2);
@@ -459,7 +459,7 @@ describe('ZEN user graph — shard intermediate', function() {
   });
 
   it('rejects shard intermediate without authenticator', function(done) {
-    var gun = makeGun();
+    var gun = makeZen();
     (async function() {
       var bob = await ZEN.pair();
       var key = bob.pub.slice(0, 2);
@@ -471,7 +471,7 @@ describe('ZEN user graph — shard intermediate', function() {
   });
 
   it('rejects shard path with double slash', function(done) {
-    var gun = makeGun();
+    var gun = makeZen();
     gun.get('~/ab//cd').get('ef').put({ '#': '~/ab//cd/ef' }, function(ack) {
       assert.ok(ack.err);
       done();
@@ -479,7 +479,7 @@ describe('ZEN user graph — shard intermediate', function() {
   });
 
   it('rejects shard with invalid key length', function(done) {
-    var gun = makeGun();
+    var gun = makeZen();
     gun.get('~').get('abc').put({ '#': '~/abc' }, function(ack) {
       assert.ok(ack.err);
       done();
@@ -487,7 +487,7 @@ describe('ZEN user graph — shard intermediate', function() {
   });
 
   it('rejects hash mismatch inside user graph', function(done) {
-    var gun = makeGun();
+    var gun = makeZen();
     (async function() {
       var bob = await ZEN.pair();
       gun.get('~' + bob.pub).get('payload#deadbeef').put('hello world', function(ack) {

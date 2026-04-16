@@ -1,9 +1,9 @@
-import __gun from '../../../gun/gun.js';
-import __radisk from '../../../gun/lib/radisk.js';
-import __rfs from '../../../gun/lib/rfs.js';
-var Gun = (typeof window !== "undefined")? window.Gun : __gun;
-var Radisk = (Gun.window && window.Radisk) || __radisk;
-Gun.TESTING = true;
+import __gun from '../../zen.js';
+import __radisk from '../../lib/radisk.js';
+import __rfs from '../../lib/rfs.js';
+var Zen = (typeof window !== "undefined")? window.Zen : __gun;
+var Radisk = (Zen.window && window.Radisk) || __radisk;
+Zen.TESTING = true;
 try{localStorage.clear()}catch(e){}
 try{indexedDB.deleteDatabase('radatatest');}catch(e){}
 try{indexedDB.deleteDatabase('radata');}catch(e){}

@@ -2,7 +2,7 @@ import '../lib/file';
 import './index.js';
 import __fs from 'fs';
 import __expect from './expect';
-import __gun from '../gun';
+import __zen from '../zen.js';
 import __serve from '../lib/serve';
 var root;
 (function(env){
@@ -14,7 +14,7 @@ var root;
     root.Gun = root.Gun;
   } else {
     var expect = global.expect = __expect;
-    root.Gun = __gun;
+    root.Gun = __zen;
     Gun.serve = __serve;
   }
 }(this));

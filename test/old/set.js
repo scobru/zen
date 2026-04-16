@@ -1,8 +1,8 @@
 import '../lib/set';
-import __gun from '../gun';
+import __zen from '../zen.js';
 (function(){
     return;
-    var Gun = __gun;
+    var Zen = __zen;
     var done = function(){};
 
     var gun = Gun().get('set').set(), i = 0;

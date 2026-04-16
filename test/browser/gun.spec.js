@@ -14,7 +14,7 @@ test('loads the browser runtime with RAD IndexedDB plugins', async ({ page }) =>
     return window.browserTests.plugins();
   });
 
-  expect(plugins.Gun).toBe(true);
+  expect(plugins.Zen).toBe(true);
   expect(plugins.Radix).toBe(true);
   expect(plugins.Radisk).toBe(true);
   expect(plugins.RindexedDB).toBe(true);

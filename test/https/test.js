@@ -11,7 +11,7 @@ export default function(port, file, cb, inject){
 	port = port || process.env.OPENSHIFT_NODEJS_PORT || process.env.VCAP_APP_PORT || process.env.PORT || process.argv[2] || 8765;
 
 	var fs = __fs;
-	var Gun = __index;
+	var Zen = __index;
 
 	var server = __https.createServer({
 		key: fs.readFileSync(__dirname+'/server.key'),
@@ -20,7 +20,7 @@ export default function(port, file, cb, inject){
 		requestCert: true,
 		rejectUnauthorized: false
 	},function(req, res){
-		if(Gun.serve(req, res)){ return } // filters gun requests!
+		if(Zen.serve(req, res)){ return } // filters gun requests!
 		var file;
 		try{file = __fs.readFileSync(__path.join(__dirname+'/../../examples', req.url))
 		}catch(e){ file = __fs.readFileSync(__path.join(__dirname+'/../../examples', 'index.html')) }
@@ -30,7 +30,7 @@ export default function(port, file, cb, inject){
 		res.end(file);
 	});
 
-	var gun = Gun({
+	var gun = Zen({
 		file: file || 'data',
 		web: server,
 		localStorage: false

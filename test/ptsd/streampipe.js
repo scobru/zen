@@ -1,5 +1,5 @@
 import stream from 'stream';
-import Gun from 'gun';
+import Gun from '../../zen.js';
 
 const randomString = length => {
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
