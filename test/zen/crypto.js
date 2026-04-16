@@ -380,7 +380,7 @@ describe('ZEN user graph — authenticator', function() {
           assert.strictEqual(data, 'this is Bob');
           done();
         });
-      }, { opt: { authenticator: bob } });
+      }, { authenticator: bob });
     })().catch(done);
   });
 
@@ -394,7 +394,25 @@ describe('ZEN user graph — authenticator', function() {
         gun.get('~' + bob.pub).get('a').get('b').once(function(data) {
           try { assert.strictEqual(data, enc); done(); } catch(e) { done(e); }
         });
-      }, { opt: { authenticator: bob } });
+      }, { authenticator: bob });
+    })().catch(done);
+  });
+
+  it('accepts top-level authenticator options without mutating caller input', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var opts = { authenticator: bob };
+      gun.get('~' + bob.pub).get('top').put('level', function(ack) {
+        if (ack && ack.err) { return done(new Error('put failed: ' + ack.err)); }
+        try {
+          assert.strictEqual(opts.authenticator, bob);
+          assert.strictEqual(opts.pub, undefined);
+        } catch(e) { return done(e); }
+        gun.get('~' + bob.pub).get('top').once(function(data) {
+          try { assert.strictEqual(data, 'level'); done(); } catch(e) { done(e); }
+        });
+      }, opts);
     })().catch(done);
   });
 
@@ -414,7 +432,7 @@ describe('ZEN user graph — authenticator', function() {
       gun.get('~' + bob.pub).get('a').get('b').put('x', function(ack) {
         if (ack && ack.err) { return done(new Error('put failed: ' + ack.err)); }
         done();
-      }, { opt: { authenticator: bob } });
+      }, { authenticator: bob });
     })().catch(done);
   });
 
@@ -443,7 +461,7 @@ describe('ZEN user graph — external authenticator', function() {
         gun.get('~' + bob.pub).get('test').once(function(data) {
           try { assert.strictEqual(data, 'this is Bob'); done(); } catch(e) { done(e); }
         });
-      }, { opt: { authenticator: authenticator } });
+      }, { authenticator: authenticator });
     })().catch(done);
   });
 });
@@ -460,7 +478,7 @@ describe('ZEN user graph — shard intermediate', function() {
       gun.get('~').get(key).put({ '#': expected }, function(ack) {
         assert.ok(!ack.err);
         done();
-      }, { opt: { authenticator: bob } });
+      }, { authenticator: bob });
     })().catch(done);
   });
 
@@ -472,7 +490,7 @@ describe('ZEN user graph — shard intermediate', function() {
       gun.get('~').get(key).put({ '#': '~/zz' }, function(ack) {
         assert.ok(ack.err);
         done();
-      }, { opt: { authenticator: bob } });
+      }, { authenticator: bob });
     })().catch(done);
   });
 
@@ -511,7 +529,7 @@ describe('ZEN user graph — shard intermediate', function() {
       gun.get('~' + bob.pub).get('payload#deadbeef').put('hello world', function(ack) {
         assert.ok(ack.err);
         done();
-      }, { opt: { authenticator: bob } });
+      }, { authenticator: bob });
     })().catch(done);
   });
 
@@ -522,7 +540,7 @@ describe('ZEN user graph — shard intermediate', function() {
       gun.get('~' + bob.pub).get('parent').get('payload#deadbeef').put('hello world', function(ack) {
         assert.ok(ack.err);
         done();
-      }, { opt: { authenticator: bob } });
+      }, { authenticator: bob });
     })().catch(done);
   });
 
@@ -533,7 +551,7 @@ describe('ZEN user graph — shard intermediate', function() {
       gun.get('~' + bob.pub).get('parent').get('child').get('payload#deadbeef').put('hello world', function(ack) {
         assert.ok(ack.err);
         done();
-      }, { opt: { authenticator: bob } });
+      }, { authenticator: bob });
     })().catch(done);
   });
 
@@ -555,7 +573,21 @@ describe('ZEN user graph — shard intermediate', function() {
       gun.get('~').get(key).put({ '#': expected }, function(ack) {
         assert.ok(!ack.err);
         done();
-      }, { opt: { authenticator: authenticator, pub: bob.pub } });
+      }, { authenticator: authenticator, pub: bob.pub });
+    })().catch(done);
+  });
+
+  it('accepts shard intermediate with top-level function authenticator and pub', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var key = bob.pub.slice(0, 2);
+      var expected = '~/' + key;
+      async function authenticator(data) { return ZEN.sign(data, bob); }
+      gun.get('~').get(key).put({ '#': expected }, function(ack) {
+        assert.ok(!ack.err);
+        done();
+      }, { authenticator: authenticator, pub: bob.pub });
     })().catch(done);
   });
 
@@ -569,7 +601,7 @@ describe('ZEN user graph — shard intermediate', function() {
       gun.get('~').get(key).put({ '#': expected }, function(ack) {
         assert.ok(ack.err);
         done();
-      }, { opt: { authenticator: authenticator } }); // no opt.pub → claim undefined
+      }, { authenticator: authenticator }); // no pub → claim undefined
     })().catch(done);
   });
 
@@ -583,7 +615,7 @@ describe('ZEN user graph — shard intermediate', function() {
       gun.get('~').get(key).put({ '#': expected }, function(ack) {
         assert.ok(ack.err);
         done();
-      }, { state: futureState, opt: { authenticator: bob } });
+      }, { state: futureState, authenticator: bob });
     })().catch(done);
   });
 
@@ -598,7 +630,7 @@ describe('ZEN user graph — shard intermediate', function() {
       gun.get('~').get(key).put({ '#': expected }, function(ack) {
         assert.ok(ack.err); // alice.pub doesn't start with key
         done();
-      }, { opt: { authenticator: alice } });
+      }, { authenticator: alice });
     })().catch(done);
   });
 
@@ -704,7 +736,7 @@ describe('ZEN user graph — shard leaf', function() {
       gun.get(soul).get(key).put({ '#': '~' + bob.pub }, function(ack) {
         assert.ok(!ack.err);
         done();
-      }, { opt: { authenticator: bob } });
+      }, { authenticator: bob });
     })().catch(done);
   });
 
@@ -719,7 +751,7 @@ describe('ZEN user graph — shard leaf', function() {
       gun.get(soul).get(key).put({ '#': '~' + bob.pub }, function(ack) {
         assert.ok(!ack.err);
         done();
-      }, { opt: { authenticator: authenticator } });
+      }, { authenticator: authenticator });
     })().catch(done);
   });
 });
@@ -737,7 +769,7 @@ describe('ZEN user graph — full shard chain', function() {
       gun.get(soul).get(key).put({ '#': '~' + bob.pub }, function(ack) {
         assert.ok(!ack.err);
         done();
-      }, { opt: { authenticator: bob } });
+      }, { authenticator: bob });
     })().catch(done);
   });
 
@@ -768,7 +800,7 @@ describe('ZEN — hash-based namespace routing (Frozen/Across spaces)', function
         gun.get('~' + alice.pub).put({ name: 'Alice', country: 'USA' }, function(ack) {
           if (ack && ack.err) { return rej(new Error(ack.err)); }
           res();
-        }, { opt: { authenticator: alice } });
+        }, { authenticator: alice });
       });
       // Write to hash namespace
       var data = 'hello world';

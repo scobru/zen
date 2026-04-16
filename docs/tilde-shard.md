@@ -184,15 +184,15 @@ Reason:
 
 ## Test coverage
 
-Current SEA tests (77 passing) include shard checks for:
+Current ZEN security tests include shard checks for:
 
 **Intermediate node writes:**
 - Accept with pair authenticator (link matches child soul)
-- Accept with external async function authenticator + `opt.pub`
+- Accept with external async function authenticator + `pub`
 - Reject link target mismatch
 - Reject non-link value
 - Reject missing authenticator
-- Reject function authenticator without `opt.pub`
+- Reject function authenticator without `pub`
 - Reject wrong pub prefix (authenticator pub does not start with key)
 
 **Validation:**
@@ -209,6 +209,5 @@ Current SEA tests (77 passing) include shard checks for:
 Run:
 
 ```bash
-npm run buildSEA
-npm run testSEA
+npm run testZEN
 ```

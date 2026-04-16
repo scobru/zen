@@ -48,7 +48,7 @@ const pair = await SEA.pair();
 gun.get(`~${pair.pub}`).get('profile').put(
     { name: "Alice" }, 
     null,
-    { opt: { authenticator: pair } }  // ⬅️ External authenticator
+    { authenticator: pair }  // ⬅️ External authenticator
 );
 ```
 
@@ -72,7 +72,7 @@ const pair = await SEA.pair();
 gun.get(`~${pair.pub}`).get('data').put(
     'Hello World',
     null,
-    { opt: { authenticator: pair } }
+    { authenticator: pair }
 );
 
 // Read it back
@@ -105,7 +105,7 @@ const customAuthenticator = async (data) => {
 gun.get(`~${myPublicKey}`).get('data').put(
     'Signed by custom service',
     null,
-    { opt: { authenticator: customAuthenticator } }
+    { authenticator: customAuthenticator }
 );
 ```
 
@@ -136,7 +136,7 @@ const webAuthnAuth = async (data) => {
 gun.get(`~${webAuthnPub}`).get('data').put(
     'Signed by Touch ID',
     null,
-    { opt: { authenticator: webAuthnAuth } }
+    { authenticator: webAuthnAuth }
 );
 ```
 
@@ -151,7 +151,7 @@ const pair = await SEA.pair();
 gun.get(`~${pair.pub}`).get('profile').put(
     { bio: "I'm Alice" },
     null,
-    { opt: { authenticator: pair } }
+    { authenticator: pair }
 );
 ```
 
@@ -237,14 +237,14 @@ const bobPair = await SEA.pair();
 gun.get(`~${alicePair.pub}`).get('post1').put(
     'Post by Alice',
     null,
-    { opt: { authenticator: alicePair } }
+    { authenticator: alicePair }
 );
 
 // Write as Bob (different identity, no session change)
 gun.get(`~${bobPair.pub}`).get('post1').put(
     'Post by Bob',
     null,
-    { opt: { authenticator: bobPair } }
+    { authenticator: bobPair }
 );
 ```
 
@@ -268,7 +268,7 @@ const delegatedAuth = async (data) => {
 gun.get(`~${masterPair.pub}`).get('data').put(
     'Delegated signature',
     null,
-    { opt: { authenticator: delegatedAuth } }
+    { authenticator: delegatedAuth }
 );
 ```
 
@@ -288,13 +288,13 @@ const socialKey = await SEA.pair(null, { priv: master.priv, seed: "social" });
 gun.get(`~${workKey.pub}`).get('documents').put(
     'Work document',
     null,
-    { opt: { authenticator: workKey } }
+    { authenticator: workKey }
 );
 
 gun.get(`~${socialKey.pub}`).get('posts').put(
     'Social post',
     null,
-    { opt: { authenticator: socialKey } }
+    { authenticator: socialKey }
 );
 ```
 
@@ -323,7 +323,7 @@ const tempAuth = await createTempAuthenticator(masterPair, 5 * 60 * 1000);
 gun.get(`~${tempAuth.pub}`).get('temp-data').put(
     'Expires in 5 minutes',
     null,
-    { opt: { authenticator: tempAuth } }
+    { authenticator: tempAuth }
 );
 ```
 
@@ -421,7 +421,7 @@ const hsmAuth = new HSMAuthenticator(hsmClient, 'my-key-id');
 gun.get(`~${hsmPub}`).get('data').put(
     'HSM-signed data',
     null,
-    { opt: { authenticator: (data) => hsmAuth.sign(data) } }
+    { authenticator: (data) => hsmAuth.sign(data) }
 );
 ```
 
@@ -446,7 +446,7 @@ async function kmsAuthenticator(data) {
 gun.get(`~${kmsPub}`).get('data').put(
     'KMS-signed data',
     null,
-    { opt: { authenticator: kmsAuthenticator } }
+    { authenticator: kmsAuthenticator }
 );
 ```
 
@@ -473,7 +473,7 @@ async function biometricAuthenticator(data) {
 gun.get(`~${pub}`).get('data').put(
     'Biometric-signed data',
     null,
-    { opt: { authenticator: biometricAuthenticator } }
+    { authenticator: biometricAuthenticator }
 );
 ```
 
@@ -547,7 +547,7 @@ describe('External Authenticators', function() {
         gun.get(`~${pair.pub}`).get('test').put(
             'test data',
             null,
-            { opt: { authenticator: pair } }
+            { authenticator: pair }
         );
         
         // Verify
@@ -571,7 +571,7 @@ describe('External Authenticators', function() {
         gun.get(`~${pair.pub}`).get('custom').put(
             'custom signed',
             null,
-            { opt: { authenticator: customAuth } }
+            { authenticator: customAuth }
         );
         
         // Verify
@@ -607,7 +607,7 @@ const debugAuth = async (data) => {
 gun.get(`~${pub}`).get('debug').put(
     'debug data',
     null,
-    { opt: { authenticator: debugAuth } }
+    { authenticator: debugAuth }
 );
 ```
 
@@ -634,7 +634,7 @@ const pair = await SEA.pair(null, { seed: 'alice-recovery-seed' });
 gun.get(`~${pair.pub}`).get('profile').put(
     { name: 'Alice' },
     null,
-    { opt: { authenticator: pair } }
+    { authenticator: pair }
 );
 ```
 

@@ -35,7 +35,7 @@ At line 147 in index.js, it currently checks:
     - if user is writing to his graph
     - if he is writing to someone else's graph, must have msg._.msg.opt.cert
 
-Now what we want is to make it to also allows unauthenticated user to make put, using put(data, null, {opt: {authenticator}}).
+Now what we want is to make it to also allows unauthenticated user to make put, using put(data, null, {authenticator}).
 It should detect if authenticator exists, then use that in replace for user._.sea. Then the following logic is the same. But we also must keep the current functionalities remain working.
 
 What I want?
@@ -152,7 +152,7 @@ document.getElementById('verify').onclick = async () => {
 }
 
 document.getElementById('put').onclick = async () => {
-    gun.get(`~${pub}`).get('test').put("hello world", null, { opt: { authenticator }})
+    gun.get(`~${pub}`).get('test').put("hello world", null, { authenticator })
     setTimeout(() => {
         gun.get(`~${pub}`).get('test').once((data) => {
             console.log("Data:", data);
@@ -162,7 +162,7 @@ document.getElementById('put').onclick = async () => {
 
 document.getElementById('put-with-pair').onclick = async () => {
     const bob = await SEA.pair()
-    gun.get(`~${bob.pub}`).get('test').put("this is bob", null, { opt: { authenticator: bob }})
+    gun.get(`~${bob.pub}`).get('test').put("this is bob", null, { authenticator: bob })
     setTimeout(() => {
         gun.get(`~${bob.pub}`).get('test').once((data) => {
             console.log("Data:", data);

@@ -271,7 +271,7 @@ const pair = await SEA.pair();
 gun.get(`~${pair.pub}`).get('data').put(
     'Hello World',
     null,
-    { opt: { authenticator: pair } }
+    { authenticator: pair }
 );
 
 // Or provide a custom signing function
@@ -324,13 +324,13 @@ SEA firewall rules that let anyone build a peer-discoverable index of public key
 // Write a first-level intermediate node
 const pair = await SEA.pair();
 const key = pair.pub.slice(0, 2);
-gun.get('~').get(key).put({'#': '~/' + key}, null, { opt: { authenticator: pair } });
+gun.get('~').get(key).put({'#': '~/' + key}, null, { authenticator: pair });
 
 // Write the leaf for your own public key
 const chunks = pair.pub.match(/.{1,2}/g) || [];
 const leafKey = chunks.pop();
 const leafSoul = chunks.length ? '~/' + chunks.join('/') : '~';
-gun.get(leafSoul).get(leafKey).put(pair.pub, null, { opt: { authenticator: pair } });
+gun.get(leafSoul).get(leafKey).put(pair.pub, null, { authenticator: pair });
 ```
 
 📖 **[Read full documentation →](./tilde-shard.md)**
@@ -462,7 +462,7 @@ const pair = await SEA.pair(null, { seed: "my-recovery-phrase" });
 gun.get(`~${pair.pub}`).get('profile').put(
     { name: "Alice", bio: "Hello World" },
     null,
-    { opt: { authenticator: pair } }
+    { authenticator: pair }
 );
 
 // Read data
@@ -514,12 +514,14 @@ All features are thoroughly tested:
 ```bash
 # Run all tests
 npm test
-
-# Run SEA-specific tests
-npm test test/sea/sea.js
 ```
 
-See [test/sea/sea.js](../test/sea/sea.js) for comprehensive test coverage including:
+See the focused suites for subsystem coverage:
+- `test/pen.js`
+- `test/zen/crypto.js`
+- `test/zen/certify.js`
+
+They cover:
 - Seed-based key generation tests
 - Additive derivation tests  
 - External authenticator tests

@@ -1970,13 +1970,14 @@ __def('./src/zen/security.js', function(module, __exp){
   }
 
   check.$sea = function(msg, user, pub) {
-    var ctx = (msg._.msg || {}).opt || {};
-    var opt = msg._.sea || initSeaOpt(msg, ctx);
+    var scope = msg._ || {};
+    var ctx = scope.opt || ((scope.msg || {}).opt) || {};
+    var opt = scope.sea || initSeaOpt(msg, ctx);
     var sea = (user && user._) || {};
     var is = (user && user.is) || {};
     var authenticator = opt.authenticator || sea.sea;
     var upub = opt.pub || (authenticator || {}).pub || is.pub || pub;
-    if (!msg._.done) { delete ctx.authenticator; delete ctx.pub; msg._.done = true; }
+    if (!scope.done) { delete ctx.authenticator; delete ctx.pub; scope.done = true; }
     return { opt: opt, authenticator: authenticator, upub: upub };
   };
 
@@ -4025,9 +4026,10 @@ __def('./src/zen/back.js', function(module, __exp){
 __def('./src/zen/put.js', function(module, __exp){
   var __root = __req('./src/zen/root.js').default;
   var Zen = __root;
-  Zen.chain.put = function(data, cb, as){ // I rewrote it :)
+  var PUT_CONTEXT = Symbol('put-context');
+  Zen.chain.put = function(data, cb, opt, as){ // I rewrote it :)
   	var zen = this, at = zen._, root = at.root;
-  	as = as || {};
+  	as = as || context(zen, data, cb, opt);
   	as.root = at.root;
   	as.run || (as.run = root.once);
   	stun(as, at.id); // set a flag for reads to check if this chain is writing.
@@ -4035,8 +4037,8 @@ __def('./src/zen/put.js', function(module, __exp){
   	as.via = as.via || zen;
   	as.data = as.data || data;
   	as.soul || (as.soul = at.soul || ('string' == typeof cb && cb));
-  	var s = as.state = as.state || Zen.state();
-  	if('function' == typeof data){ data(function(d){ as.data = d; zen.put(u,u,as) }); return zen }
+  	var s = as.state = (u !== as.state)? as.state : Zen.state();
+  	if('function' == typeof data){ data(function(d){ as.data = d; zen.put(u, u, u, as) }); return zen }
   	if(!as.soul){ return get(as), zen }
   	as.$ = root.$.get(as.soul); // TODO: This may not allow user chaining and similar?
   	as.todo = [{it: as.data, ref: as.$}];
@@ -4102,6 +4104,25 @@ __def('./src/zen/put.js', function(module, __exp){
   	return zen;
   }
 
+  function context(zen, data, cb, opt){
+  	var ctx = {};
+  	ctx[PUT_CONTEXT] = 1;
+  	ctx.opt = options(opt);
+  	ctx.data = data;
+  	ctx.ack = cb;
+  	ctx.via = zen;
+  	if(u !== ctx.opt.state){ ctx.state = ctx.opt.state }
+  	if(u !== ctx.opt.soul){ ctx.soul = ctx.opt.soul }
+  	if(u !== ctx.opt.ok){ ctx.ok = ctx.opt.ok }
+  	if(u !== ctx.opt.acks){ ctx.acks = ctx.opt.acks }
+  	return ctx;
+  }
+
+  function options(opt){
+  	if(!opt || 'object' != typeof opt){ return {} }
+  	return Object.assign({}, opt);
+  }
+
   function stun(as, id){
   	if(!id){ return } id = (id._||'').id||id;
   	var run = as.root.stun || (as.root.stun = {on: Zen.on}), test = {}, tmp;
@@ -4162,7 +4183,7 @@ __def('./src/zen/put.js', function(module, __exp){
   	if(!as.via || !as.via._.soul){
   		as.via = at.root.$.get(((as.data||'')._||'')['#'] || at.$.back('opt.uuid')())
   	}
-  	as.via.put(as.data, as.ack, as);
+  	as.via.put(as.data, as.ack, as.opt, as);
 
 
   	return;
@@ -4170,7 +4191,7 @@ __def('./src/zen/put.js', function(module, __exp){
   		tmp = as.data;
   		as.via = at.back.$;
   		(as.data = {})[at.get] = tmp; 
-  		as.via.put(as.data, as.ack, as);
+  		as.via.put(as.data, as.ack, as.opt, as);
   		return;
   	}
   }

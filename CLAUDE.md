@@ -52,9 +52,6 @@ npm run https
 npm install -g mocha
 npm test
 
-# Run SEA tests specifically
-npm run testSEA
-
 # Build browser bundles
 npm run buildGUN     # Build gun.js and gun.min.js from /src
 npm run unbuildGUN   # Extract gun.js back into /src

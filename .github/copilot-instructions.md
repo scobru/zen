@@ -47,7 +47,6 @@ npm run https          # Start with HTTPS (required for WebCrypto/SEA)
 # Testing - ALWAYS clean data between test runs
 rm -rf *data* *radata*
 npm test               # Requires global mocha: npm install -g mocha
-npm run testSEA        # SEA-specific tests
 ```
 
 ### PANIC Tests (Performance & Stress Testing)

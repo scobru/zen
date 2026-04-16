@@ -1006,7 +1006,7 @@ describe('SEA + PEN integration', function() {
           assert.strictEqual(v, value, 'shared PEN write round-trips with authenticator pub in R[5]');
           done();
         });
-      }, { opt: { authenticator: pair } });
+      }, { authenticator: pair });
     });
   });
 

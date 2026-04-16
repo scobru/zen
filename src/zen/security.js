@@ -144,13 +144,14 @@ function initSeaOpt(msg, ctx) {
 }
 
 check.$sea = function(msg, user, pub) {
-  var ctx = (msg._.msg || {}).opt || {};
-  var opt = msg._.sea || initSeaOpt(msg, ctx);
+  var scope = msg._ || {};
+  var ctx = scope.opt || ((scope.msg || {}).opt) || {};
+  var opt = scope.sea || initSeaOpt(msg, ctx);
   var sea = (user && user._) || {};
   var is = (user && user.is) || {};
   var authenticator = opt.authenticator || sea.sea;
   var upub = opt.pub || (authenticator || {}).pub || is.pub || pub;
-  if (!msg._.done) { delete ctx.authenticator; delete ctx.pub; msg._.done = true; }
+  if (!scope.done) { delete ctx.authenticator; delete ctx.pub; scope.done = true; }
   return { opt: opt, authenticator: authenticator, upub: upub };
 };
 
