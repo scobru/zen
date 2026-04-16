@@ -1,5 +1,5 @@
 import __root from './root.js';
-(function(){
+
 
 var Zen = __root;
 Zen.chain.back = function(n, opt){ var tmp;
@@ -40,4 +40,3 @@ Zen.chain.back = function(n, opt){ var tmp;
 }
 var empty = {}, u;
 
-}());

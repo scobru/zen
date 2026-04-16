@@ -2,13 +2,13 @@ import { fileURLToPath } from 'node:url';
 import { dirname as __dirnameOf } from 'node:path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = __dirnameOf(__filename);
-(function(){
+{
 var W = window, D = document, SW = screen.width, SH = screen.height, ON = 'addEventListener', HI = 'createElement', ID = 'getElementById', U, DEV = ('file://'===location.origin);
 ;(function(){ if(screen.width > screen.height){ return } // phone only debug
   var add = function(){ if(console.view){ return } (console.view = document[HI]('textarea')).style="position:fixed; z-index:99999; inset:0; width:100%; height:4em; padding: 0; background:rgba(100%,100%,100%,0.8); color:black; transition: 0.5s all; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-all;"; console.view.readOnly = 1; setTimeout(function(){D.body.appendChild(console.view);},99); console.view.onclick = function(eve){ console.view.style.height = ('4em'==console.view.style.height)?'50vh':'4em' ; console.view.select(); D.execCommand('copy'); navigator.clipboard.writeText(console.view.value) } }
   console.log = console.warn = console.error = function(...args){ if(console.off){ return } add(); console.view.value += JSON.stringify(args).slice(1,-1); console.view.scrollTop = console.view.scrollHeight; }
   window.onerror = window.onunhandledrejection = console.log;
-}());
+}
 var tmp = D[HI]('meta'); tmp.name = 'viewport'; tmp.content = 'width=device-width, initial-scale=1, interactive-widget=resizes-content'; D.head.appendChild(tmp);
 //(tmp=D[HI]('link')).rel="stylesheet"; tmp.href=((D.currentScript||'').src||'').replace('.js','.css'); D.head.appendChild(tmp); // auto-add CSS?
 W.parent === W && ((tmp = D.head.parentNode.style)['overscroll-behavior-y'] = 'contain') && (tmp['background-color'] = 'var(--fill)');
@@ -167,4 +167,4 @@ W[ON]('DOMContentLoaded',function(m){
   return;
   //if(location.hash){ kit.say('','hashchange') }
 });
-}());
+}

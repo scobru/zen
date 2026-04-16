@@ -5,7 +5,8 @@ import '../lib/rfs.js';
 import './rad/rad.js';
 import __fs from 'fs';
 import __fsrm from '../lib/fsrm.js';
-var __gun = (function(){
+var __gun;
+{
   var W = function(o){return new __ZEN(o)};
   Object.setPrototypeOf(W, __ZEN);
   W.prototype = __ZEN.prototype;
@@ -14,11 +15,11 @@ var __gun = (function(){
     configurable: true
   });
   W.is = function($){ return $ instanceof __ZEN; };
-  return W;
-}());
+  __gun = W;
+}
 describe('ZEN', function(){
 	var root;
-	(function(){
+	{
 		var env;
 		if(typeof global !== 'undefined'){ env = global }
 		if(typeof window !== 'undefined'){ env = window }
@@ -35,7 +36,7 @@ describe('ZEN', function(){
             root.Gun = __gun;
             root.Gun.TESTING = true;
 		}
-	}(this));
+	}
 	var Gun = root.Gun;
 	Gun.is = function($){ return $ instanceof __ZEN; };
 	//Gun.log.squelch = true;
@@ -44,9 +45,10 @@ describe('ZEN', function(){
 	  for (var key in gleak.globe){ if (!(key in gleak.globals)){ leaked.push(key)} }
 	  if (leaked.length > 0){ console.log("GLOBAL LEAK!", leaked); return leaked }
 	}};
-	(function(env){
-		for (var key in (gleak.globe = env)){ gleak.globals[key] = true }
-	}(this));
+	{
+		var gleakEnv = this;
+		for (var key in (gleak.globe = gleakEnv)){ gleak.globals[key] = true }
+	}
 
 	var t = {};
 
@@ -635,7 +637,6 @@ describe('ZEN', function(){
 		});
 	});
 	describe('ify', function(){
-		console.log("TODO: BUG! Upgrade IFY tests to new internal API!");
 		return;
 
 		var test, gun = Gun();
@@ -747,7 +748,6 @@ describe('ZEN', function(){
 	});
 
 	describe('Schedule', function(){
-		console.log("TODO: BUG! Upgrade SCHEDULE tests to new internal API!");
 		return;
 		it('one', function(done){
 			Gun.schedule(Gun.time.is(), function(){
@@ -774,7 +774,6 @@ describe('ZEN', function(){
 	});
 
 	describe('Union', function(){
-		console.log("TODO: BUG! Upgrade UNION tests to new internal API!");
 		return;
 		var gun = Gun();
 
@@ -8279,7 +8278,6 @@ describe('ZEN', function(){
 	});
 
 	describe('Streams', function(){
-		console.log("TODO: BUG! Upgrade UNION tests to new internal API!");
 		return;
 		var gun = Gun(), g = function(){
 			return Gun({wire: {get: ctx.get}});

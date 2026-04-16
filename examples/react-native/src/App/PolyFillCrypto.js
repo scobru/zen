@@ -14,18 +14,18 @@ const base64EncodeString = (input) => {
 
 const internalLibIOS = `
 ${webViewWorkerString}
-(function () {
+{
   var wvw = new WebViewWorker(WebViewBridge.send.bind(WebViewBridge));
   WebViewBridge.onMessage = wvw.onMainMessage.bind(wvw);
-}());
+}
 `;
 
 const intermediateLib = `
 ${webViewWorkerString}
-(function () {
+{
   var wvw = new WebViewWorker(WebViewBridge.send.bind(WebViewBridge));
   WebViewBridge.onMessage = wvw.onMainMessage.bind(wvw);
-}());
+}
 `;
 
 const internalLibAndroid = `eval(window.atob('${base64EncodeString(intermediateLib)}'))`;

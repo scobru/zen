@@ -164,7 +164,7 @@ if (!JSON) {
     JSON = {};
 }
 
-(function () {
+{
     "use strict";
 
     function f(n) {
@@ -477,4 +477,4 @@ if (!JSON) {
             throw new SyntaxError('JSON.parse');
         };
     }
-}());
+}

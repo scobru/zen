@@ -1,5 +1,5 @@
 let __defaultExport;
-(function(){
+
 
 // On event emitter generic javascript utility.
 __defaultExport = function onto(tag, arg, as){
@@ -36,5 +36,5 @@ __defaultExport = function onto(tag, arg, as){
 	return tag;
 };
 
-}());
+
 export default __defaultExport;

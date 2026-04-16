@@ -1,7 +1,7 @@
 import './shim.js';
 
 let __defaultExport;
-(function(){
+
     function Dup(opt){
         var dup = {s:{}}, s = dup.s;
         opt = opt || {max: 999, age: 1000 * 9};//*/ 1000 * 9 * 3};
@@ -29,5 +29,5 @@ let __defaultExport;
         return dup;
     }
     __defaultExport = Dup;
-}());
+
 export default __defaultExport;

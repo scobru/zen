@@ -137,13 +137,15 @@ Object.freeze(check.pipe);
 check.plugins = [];
 check.use = function(fn) { check.plugins.push(fn); };
 
+function initSeaOpt(msg, ctx) {
+  var o = Object.assign({}, ctx);
+  try { Object.defineProperty(msg._, 'sea', { value: o, enumerable: false, configurable: true, writable: true }); } catch(e) { msg._.sea = o; }
+  return o;
+}
+
 check.$sea = function(msg, user, pub) {
   var ctx = (msg._.msg || {}).opt || {};
-  var opt = msg._.sea || (function() {
-    var o = Object.assign({}, ctx);
-    try { Object.defineProperty(msg._, 'sea', { value: o, enumerable: false, configurable: true, writable: true }); } catch(e) { msg._.sea = o; }
-    return o;
-  }());
+  var opt = msg._.sea || initSeaOpt(msg, ctx);
   var sea = (user && user._) || {};
   var is = (user && user.is) || {};
   var authenticator = opt.authenticator || sea.sea;

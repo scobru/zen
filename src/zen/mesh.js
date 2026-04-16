@@ -1,7 +1,7 @@
 import './shim.js';
 
 let __defaultExport;
-(function(){
+
     var noop = function(){}
     var parse = JSON.parseAsync || function(t,cb,r){ var u, d = +new Date; try{ cb(u, JSON.parse(t,r), json.sucks(+new Date - d)) }catch(e){ cb(e) } }
     var json = JSON.stringifyAsync || function(v,cb,r,s){ var u, d = +new Date; try{ cb(u, JSON.stringify(v,r,s), json.sucks(+new Date - d)) }catch(e){ cb(e) } }
@@ -40,7 +40,7 @@ let __defaultExport;
                     if(err || !msg){ return mesh.say({dam: '!', err: "DAM JSON parse error."}, peer) }
                     console.STAT && console.STAT(+new Date, msg.length, '# on hear batch');
                     var P = opt.puff;
-                    (function go(){
+                    function go(){
                         var S = +new Date;
                         var i = 0, m; while(i < P && (m = msg[i++])){ mesh.hear(m, peer) }
                         msg = msg.slice(i); // slicing after is faster than shifting during.
@@ -48,7 +48,8 @@ let __defaultExport;
                         flush(peer); // force send all synchronously batched acks.
                         if(!msg.length){ return }
                         puff(go, 0);
-                    }());
+                    }
+                    go();
                 });
                 raw = ''; // 
                 return;
@@ -102,7 +103,7 @@ let __defaultExport;
         var tomap = function(k,i,m){m(k,true)};
         hear.c = hear.d = 0;
 
-        ;(function(){
+        {
             var SMIA = 0;
             var loop;
             mesh.hash = function(msg, peer){ var h, s, t;
@@ -151,7 +152,7 @@ let __defaultExport;
                     var S = +new Date;
                     var P = opt.puff, ps = opt.peers, pl = Object.keys(peer || opt.peers || {}); // TODO: .keys( is slow
                     console.STAT && console.STAT(S, +new Date - S, 'peer keys');
-                    ;(function go(){
+                    function go(){
                         var S = +new Date;
                         //Type.obj.map(peer || opt.peers, each); // in case peer is a peer list.
                         loop = 1; var wr = meta.raw; meta.raw = raw; // quick perf hack
@@ -165,7 +166,8 @@ let __defaultExport;
                         if(!pl.length){ return }
                         puff(go, 0);
                         ack && dup_track(ack); // keep for later
-                    }());
+                    }
+                    go();
                     return;
                 }
                 // TODO: PERF: consider splitting function here, so say loops do less work.
@@ -235,7 +237,7 @@ let __defaultExport;
                     mesh.say(msg, peer);
                 }
             }
-        }());
+        }
 
         function flush(peer){
             var tmp = peer.batch, t = 'string' == typeof tmp, l;
@@ -349,5 +351,5 @@ let __defaultExport;
     var empty = {}, ok = true, u;
 
     try{ __defaultExport = Mesh }catch(e){}
-}());
+
 export default __defaultExport;

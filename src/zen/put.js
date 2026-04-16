@@ -1,5 +1,5 @@
 import __root from './root.js';
-(function(){
+
 
 var Zen = __root;
 Zen.chain.put = function(data, cb, as){ // I rewrote it :)
@@ -21,7 +21,7 @@ Zen.chain.put = function(data, cb, as){ // I rewrote it :)
 	as.ran = as.ran || ran;
 	//var path = []; as.via.back(at => { at.get && path.push(at.get.slice(0,9)) }); path = path.reverse().join('.');
 	// TODO: Perf! We only need to stun chains that are being modified, not necessarily written to.
-	(function walk(){
+	function walk(){
 		var to = as.todo, at = to.pop(), d = at.it, cid = at.ref && at.ref._.id, v, k, cat, tmp, g;
 		stun(as, at.ref);
 		if(tmp = at.todo){
@@ -74,7 +74,8 @@ Zen.chain.put = function(data, cb, as){ // I rewrote it :)
 		}
 		if(!to.length){ return as.ran(as) }
 		as.turn(walk);
-	}());
+	}
+	walk();
 	return zen;
 }
 
@@ -155,4 +156,4 @@ function check(d, tmp){ return ((d && (tmp = d.constructor) && tmp.name) || type
 var u, empty = {}, noop = function(){}, turn = setTimeout.turn, valid = Zen.valid, state_ify = Zen.state.ify;
 var iife = function(fn,as){fn.call(as||empty)}
 
-}());
+

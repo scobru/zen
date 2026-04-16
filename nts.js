@@ -1,5 +1,5 @@
 import __zen from './zen.js';
-(function(){
+{
   var Gun  = (typeof window !== "undefined")? (window.ZEN || window.Zen) : __zen;
   var dam  = 'nts';
   var smooth = 2;
@@ -81,4 +81,4 @@ import __zen from './zen.js';
     }, 1);
   });
 
-}());
+}

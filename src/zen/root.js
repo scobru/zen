@@ -6,7 +6,7 @@ import __dup from './dup.js';
 import __ask from './ask.js';
 
 let __defaultExport;
-(function(){
+
     function Zen(o){
         if(o instanceof Zen){ return (this._ = {$: this}).$ }
         if(!(this instanceof Zen)){ return new Zen(o) }
@@ -26,7 +26,7 @@ let __defaultExport;
     Zen.dup = __dup;
     Zen.ask = __ask;
 
-    (function(){
+    {
         Zen.create = function(at){
             at.root = at.root || at;
             at.graph = at.graph || {};
@@ -77,7 +77,7 @@ let __defaultExport;
             }
             ctx.latch = root.hatch; ctx.match = root.hatch = [];
             var put = msg.put;
-            var DBG = ctx.DBG = msg.DBG, S = +new Date; CT = CT || S;
+            var DBG = ctx.DBG = msg.DBG, S = +new Date; courtesyTime = courtesyTime || S;
             if(put['#'] && put['.']){ /*root && root.on('put', msg);*/ return } // TODO: BUG! This needs to call HAM instead.
             DBG && (DBG.p = S);
             ctx['#'] = msg['#'];
@@ -87,7 +87,7 @@ let __defaultExport;
             var nl = Object.keys(put);//.sort(); // TODO: This is unbounded operation, large graphs will be slower. Write our own CPU scheduled sort? Or somehow do it in below? Keys itself is not O(1) either, create ES5 shim over ?weak map? or custom which is constant.
             console.STAT && console.STAT(S, ((DBG||ctx).pk = +new Date) - S, 'put sort');
             var ni = 0, nj, kl, soul, node, states, err, tmp;
-            (function pop(o){
+            function pop(o){
                 if(nj != ni){ nj = ni;
                     if(!(soul = nl[ni])){
                         console.STAT && console.STAT(S, ((DBG||ctx).pd = +new Date) - S, 'put');
@@ -114,11 +114,12 @@ let __defaultExport;
                     if(!valid(val)){ err = ERR+cut(key)+"on"+cut(soul)+"bad "+(typeof val)+cut(val); break }
                     //ctx.all++; //ctx.ack[soul+key] = '';
                     ham(val, key, soul, state, msg);
-                    ++C; // courtesy count;
+                    ++courtesy; // courtesy count;
                 }
                 if((kl = kl.slice(i)).length){ turn(pop); return }
                 ++ni; kl = null; pop(o);
-            }());
+            }
+            pop();
         } Zen.on.put = put;
         // TODO: MARK!!! clock below, reconnect sync, SEA certify wire merge, User.auth taking multiple times, // msg put, put, say ack, hear loop...
         // WASIS BUG! local peer not ack. .off other people: .open
@@ -174,7 +175,7 @@ let __defaultExport;
             msg.out = universe;
             ctx.root.on('out', msg);
 
-            CF(); // courtesy check;
+            courtesyCheck(); // courtesy check;
         }
         function ack(msg){ // aggregate ACKs.
             var id = msg['@'] || '', ctx, ok, tmp;
@@ -203,11 +204,16 @@ let __defaultExport;
         var cut = function(s){ return " '"+(''+s).slice(0,9)+"...' " }
         var L = JSON.stringify, MD = 2147483647, State = Zen.state;
         var Ham = ham; Ham.max = 1000 * 60 * 60 * 24 * 7; // 1 week: legit clock skew is seconds, not days.
-        var C = 0, CT, CF = function(){if(C>999 && (C/-(CT - (CT = +new Date))>1)){Zen.window && console.log("Warning: You're syncing 1K+ records a second, faster than DOM can update - consider limiting query.");CF=function(){C=0}}};
+        let courtesy = 0, courtesyTime, courtesyCheck = function(){
+            if(courtesy > 999 && (courtesy / -(courtesyTime - (courtesyTime = +new Date)) > 1)){
+                Zen.window && console.log("Warning: You're syncing 1K+ records a second, faster than DOM can update - consider limiting query.");
+                courtesyCheck = function(){ courtesy = 0 };
+            }
+        };
 
-    }());
+    }
 
-    (function(){
+    {
         Zen.on.get = function(msg, zen){
             var root = zen._, get = msg.get, soul = get['#'], node = root.graph[soul], has = get['.'];
             var next = root.next || (root.next = {}), at = next[soul];
@@ -256,7 +262,7 @@ let __defaultExport;
             var to = msg['#'], id = text_rand(9), keys = Object.keys(node||'').sort(), soul = ((node||'')._||'')['#'], kl = keys.length, j = 0, root = msg.$._.root, F = (node === root.graph[soul]);
             console.STAT && console.STAT(S, ((DBG||ctx).gk = +new Date) - S, 'got keys');
             // PERF: Consider commenting this out to force disk-only reads for perf testing? // TODO: .keys( is slow
-            node && (function go(){
+            function go(){
                 S = +new Date;
                 var i = 0, k, put = {}, tmp;
                 while(i < 9 && (k = keys[i++])){
@@ -272,12 +278,13 @@ let __defaultExport;
                 console.STAT && console.STAT(S, +new Date - S, 'got in');
                 if(!tmp){ return }
                 setTimeout.turn(go);
-            }());
+            }
+            node && go();
             if(!node){ root.on('in', {'@': msg['#']}) } // TODO: I don't think I like this, the default lS adapter uses this but "not found" is a sensitive issue, so should probably be handled more carefully/individually.
         } Zen.on.get.ack = ack;
-    }());
+    }
 
-    (function(){
+    {
         Zen.chain.opt = function(opt){
             opt = opt || {};
             var zen = this, at = zen._, tmp = opt.peers || opt;
@@ -302,11 +309,14 @@ let __defaultExport;
             at.opt.uuid = at.opt.uuid || function uuid(l){ return Zen.state().toString(36).replace('.','') + String.random(l||12) }
             return zen;
         }
-    }());
+    }
 
     var obj_each = function(o,f){ Object.keys(o).forEach(f,o) }, text_rand = String.random, turn = setTimeout.turn, valid = Zen.valid, state_is = Zen.state.is, state_ify = Zen.state.ify, u, empty = {}, C;
 
-    Zen.log = function(){ return (!Zen.log.off && C.log.apply(C, arguments)), [].slice.call(arguments).join(' ') };
+    Zen.log = function(){
+        var log = C && C.log;
+        return (!Zen.log.off && 'function' == typeof log && log.apply(C, arguments)), [].slice.call(arguments).join(' ')
+    };
     Zen.log.once = function(w,s,o){ return (o = Zen.log.once)[w] = o[w] || 0, o[w]++ || Zen.log(s) };
 
     ((typeof globalThis !== "undefined" && typeof window === "undefined" && typeof WorkerGlobalScope !== "undefined") ? ((globalThis.Zen = Zen).window = globalThis) : (typeof window !== "undefined" ? ((window.Zen = Zen).window = window) : undefined));
@@ -315,6 +325,9 @@ let __defaultExport;
     __defaultExport = Zen;
 
     (Zen.window||{}).console = (Zen.window||{}).console || {log: function(){}};
-    (C = console).only = function(i, s){ return (C.only.i && i === C.only.i && C.only.i++) && (C.log.apply(C, arguments) || s) };
-}());
+    (C = (typeof console !== 'undefined'? console : {log: function(){}})).only = function(i, s){
+        var log = C && C.log;
+        return (C.only.i && i === C.only.i && C.only.i++) && (('function' == typeof log && log.apply(C, arguments)) || s)
+    };
+
 export default __defaultExport;

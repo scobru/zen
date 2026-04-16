@@ -2,7 +2,7 @@ import SecurityMod from './zen/security.js';
 
 let __defaultExport;
 const __penWasmURL = new URL('./pen.wasm', import.meta.url);
-(function(){
+{
 
   var runtime = SecurityMod;
 
@@ -11,7 +11,7 @@ const __penWasmURL = new URL('./pen.wasm', import.meta.url);
   var _wasm = null;
   var pen = {};
 
-  pen.ready = (function() {
+  function createPenReady() {
     if (typeof process !== 'undefined' && process.versions && process.versions.node) {
       return import('node:fs/promises').then(function(mod) {
         var readFile = (mod.readFile) || ((mod.default || {}).readFile);
@@ -30,7 +30,9 @@ const __penWasmURL = new URL('./pen.wasm', import.meta.url);
         .then(function(r) { _wasm = r; });
     }
     return Promise.reject(new Error('pen: cannot load pen.wasm in this environment'));
-  }());
+  }
+
+  pen.ready = createPenReady();
 
   function _view() {
     return new Uint8Array(_wasm.instance['exports'].memory.buffer);
@@ -650,5 +652,5 @@ const __penWasmURL = new URL('./pen.wasm', import.meta.url);
   };
 try { __defaultExport = pen; } catch(e) {}
 
-}());
+}
 export default __defaultExport;

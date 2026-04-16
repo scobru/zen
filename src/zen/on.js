@@ -1,5 +1,5 @@
 import __root from './root.js';
-(function(){
+
 
 var Zen = __root;
 Zen.chain.on = function(tag, arg, eas, as){ // don't rewrite!
@@ -135,4 +135,4 @@ Zen.chain.off = function(){
 }
 var empty = {}, noop = function(){}, u;
 
-}());
+

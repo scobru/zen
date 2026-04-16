@@ -1,4 +1,4 @@
-;(function(){
+{
 window.SPAM = function(cb, opt){
 	opt = Gun.num.is(opt)? {each: opt} : opt || {};
 	opt.wait = opt.wait || 1;
@@ -22,7 +22,7 @@ function burst(){
 }
 var t;
 }
-}());
+}
 
 var gun = Gun({localStorage: false, peers: 'http://localhost:8765/gun'});
 var g = gun.get('test');
@@ -42,7 +42,7 @@ SPAM(function(i, v){
 }, 99999999999999);
 
 /*
-;(function(){
+{
 	$("#say").on('submit', function(){
 		setTimeout(function(){
 			$("#say").find('input').first().val(Gun.text.random(1000));

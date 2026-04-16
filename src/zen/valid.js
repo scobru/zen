@@ -1,5 +1,5 @@
 let __defaultExport;
-(function(){
+
 
 // Valid values are a subset of JSON: null, binary, number (!Infinity), text,
 // or a soul relation. Arrays need special algorithms to handle concurrency,
@@ -16,5 +16,5 @@ __defaultExport = function(v){
 	(!!v && "string" == typeof v["#"] && Object.keys(v).length === 1 && v["#"]);
 }
 
-}());
+
 export default __defaultExport;

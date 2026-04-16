@@ -220,7 +220,7 @@ import 'zen/lib/rs3'     // AWS S3
 import 'zen/lib/zen-server'
 ```
 
-`npm start` khởi động ZEN relay server qua `lib/zen-server.js`. Hỗ trợ multi-peer sync, superpeers, và faith mode.
+`npm start` khởi động ZEN relay server qua `lib/server.js`. Hỗ trợ multi-peer sync, superpeers, và faith mode.
 
 ---
 

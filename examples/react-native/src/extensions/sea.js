@@ -1,1 +1,1 @@
-export { default } from '../../../../src/sea/index.js';
+export { default } from '../../../../zen.js';

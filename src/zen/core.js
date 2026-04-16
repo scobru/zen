@@ -5,8 +5,8 @@ import './get.js';
 import __root from './root.js';
 
 let __defaultExport;
-(function(){
+
   var Zen = __root;
   __defaultExport = Zen;
-}());
+
 export default __defaultExport;

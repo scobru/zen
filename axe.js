@@ -2,7 +2,6 @@ import './lib/axe.js';
 import __zen from './zen.js';
 
 let __defaultExport;
-(function(){
 
 	var sT = setTimeout || {}, u;
   if(typeof window !== ''+u){ sT.window = window }
@@ -41,27 +40,29 @@ let __defaultExport;
 			if(!nav.onLine){ peer.retry = 1 }
 			if(peer.retry){ return }
 			if(axe.fall){ delete axe.fall[peer.url || peer.id] }
-			(function next(){
+			function next(){
 				if(!axe.fall){ setTimeout(next, 9); return } // not found yet
 				var fall = Object.keys(axe.fall||''), one = fall[(Math.random()*fall.length) >> 0];
 				if(!fall.length){ lS.peers = ''; one = 'https://gunjs.herokuapp.com/zen' } // out of peers
 				if(peers[one]){ next(); return } // already choose
 				mesh.hi(one);
-			}());
+			}
+			next();
 		});
 
 		root.on('hi', function(peer){ // TEMPORARY! Try to connect all peers.
 			this.to.next(peer);
 			if(!peer.url){ return } // ignore WebRTC disconnects for now.
 			return; // DO NOT COMMIT THIS FEATURE YET! KEEP TESTING NETWORK PERFORMANCE FIRST!
-			(function next(){
+			function next(){
 				if(!peer.wire){ return }
 				if(!axe.fall){ setTimeout(next, 9); return } // not found yet
 				var one = (next.fall = next.fall || Object.keys(axe.fall||'')).pop();
 				if(!one){ return }
 				setTimeout(next, 99);
 				mesh.say({dam: 'opt', opt: {peers: one}}, peer);
-			}());
+			}
+			next();
 		});
 
 		function found(text){
@@ -110,5 +111,5 @@ let __defaultExport;
 
 	var empty = {}, yes = true;
   try{ if(typeof module != ''+u){ __defaultExport = AXE } }catch(e){}
-}());
+
 export default __defaultExport;

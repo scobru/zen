@@ -6,7 +6,7 @@ import http from 'http';
 import https from 'https';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
-import ZEN from '../lib/zen-server.js';
+import ZEN from '../lib/server.js';
 import serve from '../lib/serve.js';
 
 const __filename = fileURLToPath(import.meta.url);

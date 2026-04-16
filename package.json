@@ -14,24 +14,16 @@
     "build": "npm run buildRelease",
     "prepublishOnly": "npm run verifyRelease",
     "clean": "node --input-type=module -e \"import fs from 'node:fs'; const drop = ['tmp','radata','data','radatatest','data.json']; for (const d of drop) { fs.rmSync(d,{recursive:true,force:true}); } for (const name of fs.readdirSync('.')) { if (name.startsWith('radatatest-') || name.startsWith('radata-')) { fs.rmSync(name,{recursive:true,force:true}); } }\"",
-    "test": "npm run buildZEN && npm run clean && echo 'Did you run PANIC holy-grail, 1~X, on-recover, etc.?' && mocha --exit test/abc.js test/rad/rad.js test/radix.js test/zen.js",
+    "test": "npm run buildZEN && npm run clean && ZEN_SILENCE_TEST_WARNINGS=1 node --import ./test/loaders/register-zen-minified.mjs ./node_modules/mocha/bin/_mocha --exit test/abc.js test/rad/rad.js test/radix.js test/zen.js",
     "test:browser": "playwright test",
     "test:browser:setup": "playwright install chromium",
-    "testSEA": "npm run testZEN",
     "testZEN": "npm run clean && ZEN_TEST=1 mocha --exit test/zen/instance.js test/zen/secp256k1.js test/zen/crypto.js test/zen/multicurve.js test/zen/certify.js",
     "e2e": "mocha e2e/distributed.js",
     "docker": "hooks/build",
-    "minify": "uglifyjs gun.js --module -o gun.min.js -c -m",
-    "buildGUN": "node lib/build.js gun && npm run minify",
-    "buildCompat": "npm run buildSEA && npm run buildGUN",
+    "uglify": "node lib/uglify.js",
     "minifyZEN": "uglifyjs zen.js --module -o zen.min.js -c -m",
     "buildZEN": "npm run buildPEN && node lib/build-zen.js && npm run minifyZEN",
-    "buildRelease": "npm run buildCompat && npm run buildZEN",
-    "unbuild": "npm run unbuildGUN",
-    "unbuildGUN": "node lib/unbuild.js gun",
-    "buildSEA": "node lib/build.js sea",
-    "unbuildSEA": "node lib/unbuild.js sea",
-    "unbuildMeta": "node lib/unbuild.js lib/meta",
+    "buildRelease": "npm run buildZEN && npm run uglify",
     "buildPEN": "node lib/build-pen.js",
     "testPEN": "mocha test/pen.js --timeout 10000",
     "testRelease": "npm run testPEN && npm run testZEN && npm test",
@@ -42,8 +34,7 @@
     "url": "git+https://github.com/akaoio/zen.git"
   },
   "keywords": [
-    "gun",
-    "gunDB",
+    "zen",
     "graph",
     "document",
     "key",
@@ -85,17 +76,13 @@
   "tsd": {
     "directory": "types"
   },
-  "dependencies": {
-    "aws-sdk": "^2.528.0",
-    "formidable": "^3.5.4",
-    "ws": "^7.5.10"
-  },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
     "@ziglang/cli": "^0.0.14",
     "ganache": "^7.9.2",
     "ip": "^1.1.5",
     "mocha": "^6.2.0",
+    "prettify": "^0.1.7",
     "uglify-js": "^3.6.0"
   },
   "type": "module"

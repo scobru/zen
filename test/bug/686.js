@@ -1,20 +1,20 @@
 import __ZEN from '../../zen.js';
 import '../../lib/store.js';
 import '../../lib/rfs.js';
-import '../../sea.js';
 import __fs from 'fs';
 import __fsrm from '../../lib/fsrm.js';
 import __expect from '../expect.js';
-var __gun = (function(){
+var __gun;
+{
   var W = function(o){return new __ZEN(o)};
   Object.setPrototypeOf(W, __ZEN);
   W.prototype = __ZEN.prototype;
-  return W;
-}());
+  __gun = W;
+}
 import __serve from '../../lib/serve.js';
 describe('ZEN', function(){
 	var root;
-	(function(){
+	{
 		var env;
 		if(typeof global !== 'undefined'){ env = global }
 		if(typeof window !== 'undefined'){ env = window }

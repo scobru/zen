@@ -1,7 +1,7 @@
 import __zen from '../zen.js';
 
 let __defaultExport;
-(function(){
+{
 	return; // this file is for temporary testings and shouldn't get run.
 	var Zen = __zen;
 	var gun = Gun();
@@ -76,5 +76,5 @@ let __defaultExport;
 		n();
 	});
 
-}());
+}
 export default __defaultExport;

@@ -1,41 +1,25 @@
 import ZEN from '../../zen.js';
 import '../../lib/store.js';
 import '../../lib/rfs.js';
-import SEAmod from '../../sea.js';
-import '../../src/sea/certify.js';
 import __fs from 'fs';
 import __fsrm from '../../lib/fsrm.js';
-var __gun = (function(){
+var __gun;
+{
   var W = function(o){return new ZEN(o)};
   Object.setPrototypeOf(W, ZEN);
   W.prototype = ZEN.prototype;
-  return W;
-}());
+  __gun = W;
+}
 import __expect from '../expect.js';
 import __util from 'util';
 import exp from 'constants';
 import expect from '../expect.js';
-import SeaArray from '../../src/sea/array.js';
-var USE_ZEN = !!process.env.ZEN_TEST;
-if(USE_ZEN){
-  SEAmod.pair = ZEN.pair;
-  SEAmod.sign = ZEN.sign;
-  SEAmod.verify = ZEN.verify;
-  SEAmod.encrypt = ZEN.encrypt;
-  SEAmod.decrypt = ZEN.decrypt;
-  SEAmod.secret = ZEN.secret;
-  SEAmod.hash = ZEN.hash;
-  SEAmod.Buffer = ZEN.Buffer;
-  SEAmod.random = ZEN.random;
-  SEAmod.keyid = ZEN.keyid;
-  SEAmod.opt = ZEN.opt;
-  SEAmod.check = ZEN.check;
-}
-var Runtime = USE_ZEN ? ZEN : SEAmod;
-var SUITE_NAME = USE_ZEN ? 'ZEN absorbs SEA' : 'SEA';
+import SeaArray from '../../src/zen/array.js';
+var Runtime = ZEN;
+var SUITE_NAME = 'ZEN security';
 var root;
 var Gun;
-(function(){
+{
   var env;
   if(typeof global !== 'undefined'){ env = global }
   if(typeof window !== 'undefined'){ env = window }
@@ -58,7 +42,7 @@ var Gun;
 }(this));
 
 
-(function(){
+{
 Gun = root.Gun
 var SEA = Gun.SEA
 if(!SEA){ return }
@@ -1339,4 +1323,4 @@ describe(SUITE_NAME, function(){
   });
 })
 
-}());
+}

@@ -1,5 +1,5 @@
 import __root from './root.js';
-(function(){
+
 
 var Zen = __root;
 Zen.chain.get = function(key, cb, as){
@@ -168,4 +168,4 @@ function rid(at){
 }
 var empty = {}, valid = Zen.valid, u;
 
-}());
+

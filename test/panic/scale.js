@@ -23,7 +23,7 @@ var config = {
 		'/': __dirname + '/index.html',
 		'/zen.js': __dirname + '/../../zen.js',
 		'/jquery.js': __dirname + '/../../examples/jquery.js',
-		'/sea.js': __dirname + '/../../sea.js'
+		'/sea.js': __dirname + '/../../zen.js'
 	}
 };
 

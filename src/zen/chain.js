@@ -1,5 +1,5 @@
 import __root from './root.js';
-(function(){
+
 
 // WARNING: ZEN is very simple, but the JavaScript chaining API around ZEN
 // is complicated and was extremely hard to build. If you port ZEN to another
@@ -252,4 +252,4 @@ function ack(msg, ev){
 var empty = {}, u, text_rand = String.random, valid = Zen.valid, obj_has = function(o, k){ return o && Object.prototype.hasOwnProperty.call(o, k) }, state = Zen.state, state_is = state.is, state_ify = state.ify;
 function sget(root, soul){ root._sl = 1; var g = root.$.get(soul); root._sl = 0; return g }
 
-}());
+

@@ -62,9 +62,9 @@ function spam(){
 }
 !Gun.window && setTimeout(spam,1);
 
-(function(){
+{
 if(!Gun.window){ return }
-;(function(){
+{
 var f = 'index';
 indexedDB.deleteDatabase(f);
 var o = indexedDB.open(f, 1), ind = {}, db;
@@ -90,13 +90,13 @@ ind.get = function(key, cb){
 	req.onerror = function(eve){ cb(eve||5) }
 }
 window.ind = ind;
-}());
+}
 
-;(function(){
+{
 localStorage.clear();
 var ls = localStorage, loc = {};
 loc.put = function(key, data, cb){ ls[''+key] = data; cb(null, 1) }
 loc.get = function(key, cb){ cb(null, ls[''+key]) }
 window.loc = loc;
-}());
-}());
+}
+}

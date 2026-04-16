@@ -1,6 +1,6 @@
 import '../lib/set';
 import __zen from '../zen.js';
-(function(){
+{
     return;
     var Zen = __zen;
     var done = function(){};
@@ -47,4 +47,4 @@ import __zen from '../zen.js';
 	}).map(function(val, id){
 		console.log("map", id, val);
 	});
-}());
+}

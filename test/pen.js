@@ -1,10 +1,16 @@
 import __ZEN from '../zen.js';
-var __gun = (function(){
+var __gun;
+{
   var W = function(o){return new __ZEN(o)};
   Object.setPrototypeOf(W, __ZEN);
   W.prototype = __ZEN.prototype;
-  return W;
-}());
+  Object.defineProperty(W.prototype, '_', {
+    get: function(){ return this._graph._; },
+    configurable: true
+  });
+  W.is = function($){ return $ instanceof __ZEN; };
+  __gun = W;
+}
 import __pen from '../src/pen.js';
 import ZEN from '../src/zen/index.js';
 import assert from 'assert';

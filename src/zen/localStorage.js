@@ -1,9 +1,13 @@
 import Zen from './root.js';
 
+var env = (typeof process !== 'undefined' && process.env) || {};
+
 var noop = function(){}, store, u;
 try{store = (Zen.window||noop).localStorage}catch(e){}
 if(!store){
-	Zen.log("Warning: No localStorage exists to persist data to!");
+	if(!env.ZEN_SILENCE_TEST_WARNINGS){
+		Zen.log("Warning: No localStorage exists to persist data to!");
+	}
 	store = {setItem: function(k,v){this[k]=v}, removeItem: function(k){delete this[k]}, getItem: function(k){return this[k]}};
 }
 

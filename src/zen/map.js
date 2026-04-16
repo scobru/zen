@@ -1,5 +1,5 @@
 import __root from './root.js';
-(function(){
+
 
 var Zen = __root, next = Zen.chain.get.next;
 Zen.chain.get.next = function(zen, lex){ var tmp;
@@ -44,4 +44,4 @@ function map(msg){ this.to.next(msg);
 }
 var noop = function(){}, event = {stun: noop, off: noop}, u;
 
-}());
+

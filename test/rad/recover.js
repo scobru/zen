@@ -3,18 +3,19 @@ import '../../lib/store.js';
 import '../../lib/rfs.js';
 import __fs from 'fs';
 import __fsrm from '../../lib/fsrm.js';
-var __gun = (function(){
+var __gun;
+{
   var W = function(o){return new __ZEN(o)};
   Object.setPrototypeOf(W, __ZEN);
   W.prototype = __ZEN.prototype;
-  return W;
-}());
+  __gun = W;
+}
 import __expect from '../expect.js';
 import __radisk from '../../lib/radisk.js';
 import __rfs from '../../lib/rfs.js';
 var root;
 var Gun;
-(function(){
+{
   var env;
   if(typeof global !== 'undefined'){ env = global }
   if(typeof window !== 'undefined'){ env = window }
@@ -35,7 +36,7 @@ var Gun;
  
 }(this));
 
-(function(){
+{
 Gun = root.Gun
 
 if(Gun.window && !Gun.window.RindexedDB){ return }
@@ -108,4 +109,4 @@ describe('RAD Crashes', function(){
  
 });
  
-}());
+}

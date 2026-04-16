@@ -1,13 +1,13 @@
-import '../../sea.js';
 import __fs from 'fs';
 import __fsrm from '../../lib/fsrm.js';
 import __ZEN from '../../zen.js';
-var __gun = (function(){
+var __gun;
+{
   var W = function(o){return new __ZEN(o)};
   Object.setPrototypeOf(W, __ZEN);
   W.prototype = __ZEN.prototype;
-  return W;
-}());
+  __gun = W;
+}
 import __expect from '../expect.js';
 import __radix from '../../lib/radix.js';
 import __radisk3 from '../../lib/radisk3';
@@ -56,7 +56,7 @@ var Radix;
 var Radisk;
 var RFS;
 
-(function () {
+{
   var env;
   if (typeof global !== 'undefined') { env = global }
   if (typeof window !== 'undefined') { env = window }

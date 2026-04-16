@@ -1,7 +1,7 @@
 import './onto.js';
 
 let __defaultExport;
-(function(){
+
     __defaultExport = function ask(cb, as){
         if(!this.on){ return }
         var lack = (this.opt||{}).lack || 9000;
@@ -25,5 +25,5 @@ let __defaultExport;
         return id;
     }
     var random = String.random || function(){ return Math.random().toString(36).slice(2) }
-}());
+
 export default __defaultExport;

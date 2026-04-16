@@ -139,7 +139,7 @@ const exports = module['exports'];
    */
   var support = {};
 
-  (function() {
+  {
 
     /**
      * Detect Adobe AIR.
@@ -263,7 +263,7 @@ const exports = module['exports'];
       ctor.prototype = { 'y': 1 };
       for (var prop in new ctor) { props.push(prop); }
       return props[0] == 'x';
-    }());
+    }
 
     /**
      * Detect if a node's [[Class]] is resolvable (all but IE < 9)
@@ -279,7 +279,7 @@ const exports = module['exports'];
     } catch(e) {
       support.nodeClass = true;
     }
-  }());
+  }
 
   /**
    * Timer object used by `clock()` and `Deferred#resolve`.

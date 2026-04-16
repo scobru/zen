@@ -81,50 +81,66 @@ Object.keys = Object.keys || function(o) {
   for (var k in o) { if (has.call(o, k)) { l.push(k); } }
   return l;
 };
-;(function() {
-  var u, sT = setTimeout, l = 0, c = 0, active = 0
-  , sI = (typeof setImmediate !== ''+u && setImmediate) || (function(c, f) {
-    if (typeof MessageChannel == ''+u) { return sT; }
-    (c = new MessageChannel()).port1.onmessage = function(e) { '' == e.data && f(); };
-    return function(q) { f=q; c.port2.postMessage(''); };
-  }()), check = sT.check = sT.check || (typeof performance !== ''+u && performance)
-  || {now: function() { return +new Date; }};
-  sT.hold = sT.hold || 9;
-  sT.poll = sT.poll || function(f) {
-    if (active) {
-      sI(function() { l = check.now(); active = 1; try { f(); } finally { active = 0; } }, c=0);
-      return;
-    }
-    if ((sT.hold >= (check.now() - l)) && c++ < 3333) {
-      active = 1;
-      try { f(); } finally { active = 0; }
-      return;
-    }
-    sI(function() { l = check.now(); active = 1; try { f(); } finally { active = 0; } }, c=0);
-  };
-}());
-;(function() {
-  var sT = setTimeout, t = sT.turn = sT.turn || function(f) { 1 == s.push(f) && p(T); }
-  , s = t.s = [], p = sT.poll, i = 0, f, T = function() {
-    if (f = s[i++]) { f(); }
-    if (i == s.length || 99 == i) {
-      s = t.s = s.slice(i);
-      i = 0;
-    }
-    if (s.length) { p(T); }
-  };
-}());
-;(function() {
-  var u, sT = setTimeout, T = sT.turn;
-  (sT.each = sT.each || function(l, f, e, S) { S = S || 9; (function t(s, L, r) {
-    if (L = (s = (l||[]).splice(0, S)).length) {
-      for (var i = 0; i < L; i++) {
-        if (u !== (r = f(s[i]))) { break; }
+
+function createImmediateFallback(sT, undefinedValue) {
+  if (typeof MessageChannel == ''+undefinedValue) { return sT; }
+  var channel = new MessageChannel();
+  var fn;
+  channel.port1.onmessage = function(e) { '' == e.data && fn(); };
+  return function(q) { fn = q; channel.port2.postMessage(''); };
+}
+
+let undefinedValue;
+const timeoutApi = setTimeout;
+let pollLast = 0;
+let pollSpin = 0;
+let pollActive = 0;
+const immediateApi = (typeof setImmediate !== ''+undefinedValue && setImmediate) || createImmediateFallback(timeoutApi, undefinedValue);
+const clockApi = timeoutApi.check = timeoutApi.check || (typeof performance !== ''+undefinedValue && performance)
+|| {now: function() { return +new Date; }};
+timeoutApi.hold = timeoutApi.hold || 9;
+timeoutApi.poll = timeoutApi.poll || function(task) {
+  if (pollActive) {
+    immediateApi(function() { pollLast = clockApi.now(); pollActive = 1; try { task(); } finally { pollActive = 0; } }, pollSpin=0);
+    return;
+  }
+  if ((timeoutApi.hold >= (clockApi.now() - pollLast)) && pollSpin++ < 3333) {
+    pollActive = 1;
+    try { task(); } finally { pollActive = 0; }
+    return;
+  }
+  immediateApi(function() { pollLast = clockApi.now(); pollActive = 1; try { task(); } finally { pollActive = 0; } }, pollSpin=0);
+};
+
+const pollApi = timeoutApi.poll;
+let turnIndex = 0;
+let turnTask;
+let turnQueue = [];
+const drainTurnQueue = function() {
+  if (turnTask = turnQueue[turnIndex++]) { turnTask(); }
+  if (turnIndex == turnQueue.length || 99 == turnIndex) {
+    turnQueue = turn.s = turnQueue.slice(turnIndex);
+    turnIndex = 0;
+  }
+  if (turnQueue.length) { pollApi(drainTurnQueue); }
+};
+const turn = timeoutApi.turn = timeoutApi.turn || function(task) { 1 == turnQueue.push(task) && pollApi(drainTurnQueue); };
+turn.s = turnQueue;
+
+const turnApi = timeoutApi.turn;
+timeoutApi.each = timeoutApi.each || function(list, fn, done, size) {
+  size = size || 9;
+  function next(batch, batchLength, result) {
+    if (batchLength = (batch = (list||[]).splice(0, size)).length) {
+      for (var i = 0; i < batchLength; i++) {
+        if (undefinedValue !== (result = fn(batch[i]))) { break; }
       }
-      if (u === r) { T(t); return; }
+      if (undefinedValue === result) { turnApi(next); return; }
     }
-    e && e(r);
-  }()); })();
-}());
+    done && done(result);
+  }
+  next();
+};
+
 
 export default api;

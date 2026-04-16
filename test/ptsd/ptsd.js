@@ -1,4 +1,4 @@
-(function(){
+{
 var console = window.console || {log: function(s){alert(s)}};
 var stool = {}; // rewritten entirely to use jQuery.
 var suite;
@@ -190,4 +190,4 @@ if (!parse()) {
 	//add();
 }
 window.stool = stool; // export!
-}());
+}

@@ -1,15 +1,15 @@
 {
-  "name": "gun",
-  "main": "gun.js",
+  "name": "zen",
+  "main": "zen.js",
   "version": "0.1.5",
-  "homepage": "http://gunDB.io",
+  "homepage": "https://github.com/akaoio/zen",
   "authors": [
     { "name": "Mark Nadal",     "email": "mark@accelsor.com"    },
     { "name": "Alex LaFroscia", "email": "alex@lafroscia.com"   }
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/akaoio/gun"
+    "url": "https://github.com/akaoio/zen"
   },
   "description": "A distributed, embedded, graph database engine.",
   "moduleType": [
@@ -18,8 +18,7 @@
   "keywords": [
     "graph",
     "database",
-    "gun",
-    "gundb",
+    "zen",
     "nodb"
   ],
   "license": "MIT",

@@ -394,7 +394,7 @@ var WebViewWorker = function(t) {
                     })
                 })
             }, t
-        }();
+        }
     t.exports = c
 }, function(module, exports, __webpack_require__) {
     "use strict";
@@ -830,7 +830,7 @@ var WebViewWorker = function(t) {
             }
         },
         c = e(4);
-    (function() {
+    {
         function t() {}
         return t
     })();
@@ -1096,7 +1096,7 @@ var WebViewWorker = function(t) {
         t.exports = e
     }).call(r, function() {
         return this
-    }())
+    }
 }, function(t, r, e) {
     function n(t) {
         var r = a.call(t, c),
@@ -1135,7 +1135,7 @@ var WebViewWorker = function(t) {
         i = function() {
             var t = /[^.]+$/.exec(o && o.keys && o.keys.IE_PROTO || "");
             return t ? "Symbol(src)_1." + t : ""
-        }();
+        }
     t.exports = n
 }, function(t, r, e) {
     var n = e(29),
@@ -1729,7 +1729,7 @@ var WebViewWorker = function(t) {
                 try {
                     return u && u.binding && u.binding("util")
                 } catch (t) {}
-            }();
+            }
         t.exports = c
     }).call(r, e(80)(t))
 }, function(t, r, e) {

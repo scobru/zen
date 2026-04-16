@@ -1,5 +1,5 @@
 let __defaultExport;
-(function(){
+
 
 // TODO: BUG! Unbuild will make these globals... CHANGE unbuild to wrap files in a function.
 // Book is a replacement for JS objects, maps, dictionaries.
@@ -215,5 +215,5 @@ function decord(t){
 
 try{__defaultExport =B}catch(e){}
 
-}());
+
 export default __defaultExport;

@@ -1,5 +1,4 @@
 import Zen from '../../index.js';
-import SEA from '../../sea.js';
 import expect from '../expect.js';
 import http from 'http';
 import '../../lib/promise.js';

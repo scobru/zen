@@ -5,7 +5,7 @@ function __req(id){ var mod = __mods[id]; if(!mod){ throw new Error('Missing mod
 __def('./src/zen/base64.js', function(module, __exp){
   // Patch root.btoa/root.atob to use URL-safe base64 (no +//, no padding).
   // Native btoa/atob are available in all modern browsers and Node.js 16+.
-  (function(){
+
     var root = (typeof globalThis !== 'undefined') ? globalThis
       : (typeof global !== 'undefined' ? global
       : (typeof window !== 'undefined' ? window : this));
@@ -23,7 +23,6 @@ __def('./src/zen/base64.js', function(module, __exp){
         return nativeAtob(tmp);
       };
     }
-  }());
 });
 
 __def('./src/zen/array.js', function(module, __exp){
@@ -217,58 +216,74 @@ __def('./src/zen/shim.js', function(module, __exp){
     for (var k in o) { if (has.call(o, k)) { l.push(k); } }
     return l;
   };
-  ;(function() {
-    var u, sT = setTimeout, l = 0, c = 0, active = 0
-    , sI = (typeof setImmediate !== ''+u && setImmediate) || (function(c, f) {
-      if (typeof MessageChannel == ''+u) { return sT; }
-      (c = new MessageChannel()).port1.onmessage = function(e) { '' == e.data && f(); };
-      return function(q) { f=q; c.port2.postMessage(''); };
-    }()), check = sT.check = sT.check || (typeof performance !== ''+u && performance)
-    || {now: function() { return +new Date; }};
-    sT.hold = sT.hold || 9;
-    sT.poll = sT.poll || function(f) {
-      if (active) {
-        sI(function() { l = check.now(); active = 1; try { f(); } finally { active = 0; } }, c=0);
-        return;
-      }
-      if ((sT.hold >= (check.now() - l)) && c++ < 3333) {
-        active = 1;
-        try { f(); } finally { active = 0; }
-        return;
-      }
-      sI(function() { l = check.now(); active = 1; try { f(); } finally { active = 0; } }, c=0);
-    };
-  }());
-  ;(function() {
-    var sT = setTimeout, t = sT.turn = sT.turn || function(f) { 1 == s.push(f) && p(T); }
-    , s = t.s = [], p = sT.poll, i = 0, f, T = function() {
-      if (f = s[i++]) { f(); }
-      if (i == s.length || 99 == i) {
-        s = t.s = s.slice(i);
-        i = 0;
-      }
-      if (s.length) { p(T); }
-    };
-  }());
-  ;(function() {
-    var u, sT = setTimeout, T = sT.turn;
-    (sT.each = sT.each || function(l, f, e, S) { S = S || 9; (function t(s, L, r) {
-      if (L = (s = (l||[]).splice(0, S)).length) {
-        for (var i = 0; i < L; i++) {
-          if (u !== (r = f(s[i]))) { break; }
+
+  function createImmediateFallback(sT, undefinedValue) {
+    if (typeof MessageChannel == ''+undefinedValue) { return sT; }
+    var channel = new MessageChannel();
+    var fn;
+    channel.port1.onmessage = function(e) { '' == e.data && fn(); };
+    return function(q) { fn = q; channel.port2.postMessage(''); };
+  }
+
+  let undefinedValue;
+  const timeoutApi = setTimeout;
+  let pollLast = 0;
+  let pollSpin = 0;
+  let pollActive = 0;
+  const immediateApi = (typeof setImmediate !== ''+undefinedValue && setImmediate) || createImmediateFallback(timeoutApi, undefinedValue);
+  const clockApi = timeoutApi.check = timeoutApi.check || (typeof performance !== ''+undefinedValue && performance)
+  || {now: function() { return +new Date; }};
+  timeoutApi.hold = timeoutApi.hold || 9;
+  timeoutApi.poll = timeoutApi.poll || function(task) {
+    if (pollActive) {
+      immediateApi(function() { pollLast = clockApi.now(); pollActive = 1; try { task(); } finally { pollActive = 0; } }, pollSpin=0);
+      return;
+    }
+    if ((timeoutApi.hold >= (clockApi.now() - pollLast)) && pollSpin++ < 3333) {
+      pollActive = 1;
+      try { task(); } finally { pollActive = 0; }
+      return;
+    }
+    immediateApi(function() { pollLast = clockApi.now(); pollActive = 1; try { task(); } finally { pollActive = 0; } }, pollSpin=0);
+  };
+
+  const pollApi = timeoutApi.poll;
+  let turnIndex = 0;
+  let turnTask;
+  let turnQueue = [];
+  const drainTurnQueue = function() {
+    if (turnTask = turnQueue[turnIndex++]) { turnTask(); }
+    if (turnIndex == turnQueue.length || 99 == turnIndex) {
+      turnQueue = turn.s = turnQueue.slice(turnIndex);
+      turnIndex = 0;
+    }
+    if (turnQueue.length) { pollApi(drainTurnQueue); }
+  };
+  const turn = timeoutApi.turn = timeoutApi.turn || function(task) { 1 == turnQueue.push(task) && pollApi(drainTurnQueue); };
+  turn.s = turnQueue;
+
+  const turnApi = timeoutApi.turn;
+  timeoutApi.each = timeoutApi.each || function(list, fn, done, size) {
+    size = size || 9;
+    function next(batch, batchLength, result) {
+      if (batchLength = (batch = (list||[]).splice(0, size)).length) {
+        for (var i = 0; i < batchLength; i++) {
+          if (undefinedValue !== (result = fn(batch[i]))) { break; }
         }
-        if (u === r) { T(t); return; }
+        if (undefinedValue === result) { turnApi(next); return; }
       }
-      e && e(r);
-    }()); })();
-  }());
+      done && done(result);
+    }
+    next();
+  };
+
 
   __exp.default = api;
 });
 
 __def('./src/zen/valid.js', function(module, __exp){
   let __defaultExport;
-  (function(){
+
 
   // Valid values are a subset of JSON: null, binary, number (!Infinity), text,
   // or a soul relation. Arrays need special algorithms to handle concurrency,
@@ -285,14 +300,14 @@ __def('./src/zen/valid.js', function(module, __exp){
   	(!!v && "string" == typeof v["#"] && Object.keys(v).length === 1 && v["#"]);
   }
 
-  }());
+
   __exp.default = __defaultExport;
 });
 
 __def('./src/zen/state.js', function(module, __exp){
   __req('./src/zen/shim.js');
   let __defaultExport;
-  (function(){
+
       function State(){
           var t = +new Date;
           if(last < t){
@@ -318,13 +333,13 @@ __def('./src/zen/state.js', function(module, __exp){
           return n;
       }
       __defaultExport = State;
-  }());
+
   __exp.default = __defaultExport;
 });
 
 __def('./src/zen/onto.js', function(module, __exp){
   let __defaultExport;
-  (function(){
+
 
   // On event emitter generic javascript utility.
   __defaultExport = function onto(tag, arg, as){
@@ -361,14 +376,14 @@ __def('./src/zen/onto.js', function(module, __exp){
   	return tag;
   };
 
-  }());
+
   __exp.default = __defaultExport;
 });
 
 __def('./src/zen/dup.js', function(module, __exp){
   __req('./src/zen/shim.js');
   let __defaultExport;
-  (function(){
+
       function Dup(opt){
           var dup = {s:{}}, s = dup.s;
           opt = opt || {max: 999, age: 1000 * 9};//*/ 1000 * 9 * 3};
@@ -396,14 +411,14 @@ __def('./src/zen/dup.js', function(module, __exp){
           return dup;
       }
       __defaultExport = Dup;
-  }());
+
   __exp.default = __defaultExport;
 });
 
 __def('./src/zen/ask.js', function(module, __exp){
   __req('./src/zen/onto.js');
   let __defaultExport;
-  (function(){
+
       __defaultExport = function ask(cb, as){
           if(!this.on){ return }
           var lack = (this.opt||{}).lack || 9000;
@@ -427,7 +442,7 @@ __def('./src/zen/ask.js', function(module, __exp){
           return id;
       }
       var random = String.random || function(){ return Math.random().toString(36).slice(2) }
-  }());
+
   __exp.default = __defaultExport;
 });
 
@@ -439,7 +454,7 @@ __def('./src/zen/root.js', function(module, __exp){
   var __dup = __req('./src/zen/dup.js').default;
   var __ask = __req('./src/zen/ask.js').default;
   let __defaultExport;
-  (function(){
+
       function Zen(o){
           if(o instanceof Zen){ return (this._ = {$: this}).$ }
           if(!(this instanceof Zen)){ return new Zen(o) }
@@ -459,7 +474,7 @@ __def('./src/zen/root.js', function(module, __exp){
       Zen.dup = __dup;
       Zen.ask = __ask;
 
-      (function(){
+      {
           Zen.create = function(at){
               at.root = at.root || at;
               at.graph = at.graph || {};
@@ -510,7 +525,7 @@ __def('./src/zen/root.js', function(module, __exp){
               }
               ctx.latch = root.hatch; ctx.match = root.hatch = [];
               var put = msg.put;
-              var DBG = ctx.DBG = msg.DBG, S = +new Date; CT = CT || S;
+              var DBG = ctx.DBG = msg.DBG, S = +new Date; courtesyTime = courtesyTime || S;
               if(put['#'] && put['.']){ /*root && root.on('put', msg);*/ return } // TODO: BUG! This needs to call HAM instead.
               DBG && (DBG.p = S);
               ctx['#'] = msg['#'];
@@ -520,7 +535,7 @@ __def('./src/zen/root.js', function(module, __exp){
               var nl = Object.keys(put);//.sort(); // TODO: This is unbounded operation, large graphs will be slower. Write our own CPU scheduled sort? Or somehow do it in below? Keys itself is not O(1) either, create ES5 shim over ?weak map? or custom which is constant.
               console.STAT && console.STAT(S, ((DBG||ctx).pk = +new Date) - S, 'put sort');
               var ni = 0, nj, kl, soul, node, states, err, tmp;
-              (function pop(o){
+              function pop(o){
                   if(nj != ni){ nj = ni;
                       if(!(soul = nl[ni])){
                           console.STAT && console.STAT(S, ((DBG||ctx).pd = +new Date) - S, 'put');
@@ -547,11 +562,12 @@ __def('./src/zen/root.js', function(module, __exp){
                       if(!valid(val)){ err = ERR+cut(key)+"on"+cut(soul)+"bad "+(typeof val)+cut(val); break }
                       //ctx.all++; //ctx.ack[soul+key] = '';
                       ham(val, key, soul, state, msg);
-                      ++C; // courtesy count;
+                      ++courtesy; // courtesy count;
                   }
                   if((kl = kl.slice(i)).length){ turn(pop); return }
                   ++ni; kl = null; pop(o);
-              }());
+              }
+              pop();
           } Zen.on.put = put;
           // TODO: MARK!!! clock below, reconnect sync, SEA certify wire merge, User.auth taking multiple times, // msg put, put, say ack, hear loop...
           // WASIS BUG! local peer not ack. .off other people: .open
@@ -607,7 +623,7 @@ __def('./src/zen/root.js', function(module, __exp){
               msg.out = universe;
               ctx.root.on('out', msg);
 
-              CF(); // courtesy check;
+              courtesyCheck(); // courtesy check;
           }
           function ack(msg){ // aggregate ACKs.
               var id = msg['@'] || '', ctx, ok, tmp;
@@ -636,11 +652,16 @@ __def('./src/zen/root.js', function(module, __exp){
           var cut = function(s){ return " '"+(''+s).slice(0,9)+"...' " }
           var L = JSON.stringify, MD = 2147483647, State = Zen.state;
           var Ham = ham; Ham.max = 1000 * 60 * 60 * 24 * 7; // 1 week: legit clock skew is seconds, not days.
-          var C = 0, CT, CF = function(){if(C>999 && (C/-(CT - (CT = +new Date))>1)){Zen.window && console.log("Warning: You're syncing 1K+ records a second, faster than DOM can update - consider limiting query.");CF=function(){C=0}}};
+          let courtesy = 0, courtesyTime, courtesyCheck = function(){
+              if(courtesy > 999 && (courtesy / -(courtesyTime - (courtesyTime = +new Date)) > 1)){
+                  Zen.window && console.log("Warning: You're syncing 1K+ records a second, faster than DOM can update - consider limiting query.");
+                  courtesyCheck = function(){ courtesy = 0 };
+              }
+          };
 
-      }());
+      }
 
-      (function(){
+      {
           Zen.on.get = function(msg, zen){
               var root = zen._, get = msg.get, soul = get['#'], node = root.graph[soul], has = get['.'];
               var next = root.next || (root.next = {}), at = next[soul];
@@ -689,7 +710,7 @@ __def('./src/zen/root.js', function(module, __exp){
               var to = msg['#'], id = text_rand(9), keys = Object.keys(node||'').sort(), soul = ((node||'')._||'')['#'], kl = keys.length, j = 0, root = msg.$._.root, F = (node === root.graph[soul]);
               console.STAT && console.STAT(S, ((DBG||ctx).gk = +new Date) - S, 'got keys');
               // PERF: Consider commenting this out to force disk-only reads for perf testing? // TODO: .keys( is slow
-              node && (function go(){
+              function go(){
                   S = +new Date;
                   var i = 0, k, put = {}, tmp;
                   while(i < 9 && (k = keys[i++])){
@@ -705,12 +726,13 @@ __def('./src/zen/root.js', function(module, __exp){
                   console.STAT && console.STAT(S, +new Date - S, 'got in');
                   if(!tmp){ return }
                   setTimeout.turn(go);
-              }());
+              }
+              node && go();
               if(!node){ root.on('in', {'@': msg['#']}) } // TODO: I don't think I like this, the default lS adapter uses this but "not found" is a sensitive issue, so should probably be handled more carefully/individually.
           } Zen.on.get.ack = ack;
-      }());
+      }
 
-      (function(){
+      {
           Zen.chain.opt = function(opt){
               opt = opt || {};
               var zen = this, at = zen._, tmp = opt.peers || opt;
@@ -735,11 +757,14 @@ __def('./src/zen/root.js', function(module, __exp){
               at.opt.uuid = at.opt.uuid || function uuid(l){ return Zen.state().toString(36).replace('.','') + String.random(l||12) }
               return zen;
           }
-      }());
+      }
 
       var obj_each = function(o,f){ Object.keys(o).forEach(f,o) }, text_rand = String.random, turn = setTimeout.turn, valid = Zen.valid, state_is = Zen.state.is, state_ify = Zen.state.ify, u, empty = {}, C;
 
-      Zen.log = function(){ return (!Zen.log.off && C.log.apply(C, arguments)), [].slice.call(arguments).join(' ') };
+      Zen.log = function(){
+          var log = C && C.log;
+          return (!Zen.log.off && 'function' == typeof log && log.apply(C, arguments)), [].slice.call(arguments).join(' ')
+      };
       Zen.log.once = function(w,s,o){ return (o = Zen.log.once)[w] = o[w] || 0, o[w]++ || Zen.log(s) };
 
       ((typeof globalThis !== "undefined" && typeof window === "undefined" && typeof WorkerGlobalScope !== "undefined") ? ((globalThis.Zen = Zen).window = globalThis) : (typeof window !== "undefined" ? ((window.Zen = Zen).window = window) : undefined));
@@ -748,8 +773,11 @@ __def('./src/zen/root.js', function(module, __exp){
       __defaultExport = Zen;
 
       (Zen.window||{}).console = (Zen.window||{}).console || {log: function(){}};
-      (C = console).only = function(i, s){ return (C.only.i && i === C.only.i && C.only.i++) && (C.log.apply(C, arguments) || s) };
-  }());
+      (C = (typeof console !== 'undefined'? console : {log: function(){}})).only = function(i, s){
+          var log = C && C.log;
+          return (C.only.i && i === C.only.i && C.only.i++) && (('function' == typeof log && log.apply(C, arguments)) || s)
+      };
+
   __exp.default = __defaultExport;
 });
 
@@ -1935,13 +1963,15 @@ __def('./src/zen/security.js', function(module, __exp){
   check.plugins = [];
   check.use = function(fn) { check.plugins.push(fn); };
 
+  function initSeaOpt(msg, ctx) {
+    var o = Object.assign({}, ctx);
+    try { Object.defineProperty(msg._, 'sea', { value: o, enumerable: false, configurable: true, writable: true }); } catch(e) { msg._.sea = o; }
+    return o;
+  }
+
   check.$sea = function(msg, user, pub) {
     var ctx = (msg._.msg || {}).opt || {};
-    var opt = msg._.sea || (function() {
-      var o = Object.assign({}, ctx);
-      try { Object.defineProperty(msg._, 'sea', { value: o, enumerable: false, configurable: true, writable: true }); } catch(e) { msg._.sea = o; }
-      return o;
-    }());
+    var opt = msg._.sea || initSeaOpt(msg, ctx);
     var sea = (user && user._) || {};
     var is = (user && user.is) || {};
     var authenticator = opt.authenticator || sea.sea;
@@ -2243,7 +2273,7 @@ __def('./src/pen.js', function(module, __exp){
   var SecurityMod = __req('./src/zen/security.js').default;
   let __defaultExport;
   const __penWasmURL = new URL('./pen.wasm', import.meta.url);
-  (function(){
+  {
 
     var runtime = SecurityMod;
 
@@ -2252,7 +2282,7 @@ __def('./src/pen.js', function(module, __exp){
     var _wasm = null;
     var pen = {};
 
-    pen.ready = (function() {
+    function createPenReady() {
       if (typeof process !== 'undefined' && process.versions && process.versions.node) {
         return import('node:fs/promises').then(function(mod) {
           var readFile = (mod.readFile) || ((mod.default || {}).readFile);
@@ -2271,7 +2301,9 @@ __def('./src/pen.js', function(module, __exp){
           .then(function(r) { _wasm = r; });
       }
       return Promise.reject(new Error('pen: cannot load pen.wasm in this environment'));
-    }());
+    }
+
+    pen.ready = createPenReady();
 
     function _view() {
       return new Uint8Array(_wasm.instance['exports'].memory.buffer);
@@ -2891,7 +2923,7 @@ __def('./src/pen.js', function(module, __exp){
     };
   try { __defaultExport = pen; } catch(e) {}
 
-  }());
+  }
   __exp.default = __defaultExport;
 });
 
@@ -3474,7 +3506,7 @@ __def('./src/zen/runtime.js', function(module, __exp){
 
 __def('./src/zen/book.js', function(module, __exp){
   let __defaultExport;
-  (function(){
+
 
   // TODO: BUG! Unbuild will make these globals... CHANGE unbuild to wrap files in a function.
   // Book is a replacement for JS objects, maps, dictionaries.
@@ -3690,14 +3722,12 @@ __def('./src/zen/book.js', function(module, __exp){
 
   try{__defaultExport =B}catch(e){}
 
-  }());
+
   __exp.default = __defaultExport;
 });
 
 __def('./src/zen/chain.js', function(module, __exp){
   var __root = __req('./src/zen/root.js').default;
-  (function(){
-
   // WARNING: ZEN is very simple, but the JavaScript chaining API around ZEN
   // is complicated and was extremely hard to build. If you port ZEN to another
   // language, consider implementing an easier API to build.
@@ -3948,14 +3978,10 @@ __def('./src/zen/chain.js', function(module, __exp){
 
   var empty = {}, u, text_rand = String.random, valid = Zen.valid, obj_has = function(o, k){ return o && Object.prototype.hasOwnProperty.call(o, k) }, state = Zen.state, state_is = state.is, state_ify = state.ify;
   function sget(root, soul){ root._sl = 1; var g = root.$.get(soul); root._sl = 0; return g }
-
-  }());
 });
 
 __def('./src/zen/back.js', function(module, __exp){
   var __root = __req('./src/zen/root.js').default;
-  (function(){
-
   var Zen = __root;
   Zen.chain.back = function(n, opt){ var tmp;
   	n = n || 1;
@@ -3994,14 +4020,10 @@ __def('./src/zen/back.js', function(module, __exp){
   	return this;
   }
   var empty = {}, u;
-
-  }());
 });
 
 __def('./src/zen/put.js', function(module, __exp){
   var __root = __req('./src/zen/root.js').default;
-  (function(){
-
   var Zen = __root;
   Zen.chain.put = function(data, cb, as){ // I rewrote it :)
   	var zen = this, at = zen._, root = at.root;
@@ -4022,7 +4044,7 @@ __def('./src/zen/put.js', function(module, __exp){
   	as.ran = as.ran || ran;
   	//var path = []; as.via.back(at => { at.get && path.push(at.get.slice(0,9)) }); path = path.reverse().join('.');
   	// TODO: Perf! We only need to stun chains that are being modified, not necessarily written to.
-  	(function walk(){
+  	function walk(){
   		var to = as.todo, at = to.pop(), d = at.it, cid = at.ref && at.ref._.id, v, k, cat, tmp, g;
   		stun(as, at.ref);
   		if(tmp = at.todo){
@@ -4075,7 +4097,8 @@ __def('./src/zen/put.js', function(module, __exp){
   		}
   		if(!to.length){ return as.ran(as) }
   		as.turn(walk);
-  	}());
+  	}
+  	walk();
   	return zen;
   }
 
@@ -4155,14 +4178,10 @@ __def('./src/zen/put.js', function(module, __exp){
 
   var u, empty = {}, noop = function(){}, turn = setTimeout.turn, valid = Zen.valid, state_ify = Zen.state.ify;
   var iife = function(fn,as){fn.call(as||empty)}
-
-  }());
 });
 
 __def('./src/zen/get.js', function(module, __exp){
   var __root = __req('./src/zen/root.js').default;
-  (function(){
-
   var Zen = __root;
   Zen.chain.get = function(key, cb, as){
   	var zen, tmp;
@@ -4329,14 +4348,10 @@ __def('./src/zen/get.js', function(module, __exp){
   	return;
   }
   var empty = {}, valid = Zen.valid, u;
-
-  }());
 });
 
 __def('./src/zen/on.js', function(module, __exp){
   var __root = __req('./src/zen/root.js').default;
-  (function(){
-
   var Zen = __root;
   Zen.chain.on = function(tag, arg, eas, as){ // don't rewrite!
   	var zen = this, cat = zen._, root = cat.root, act, off, id, tmp;
@@ -4470,14 +4485,10 @@ __def('./src/zen/on.js', function(module, __exp){
   	return zen;
   }
   var empty = {}, noop = function(){}, u;
-
-  }());
 });
 
 __def('./src/zen/map.js', function(module, __exp){
   var __root = __req('./src/zen/root.js').default;
-  (function(){
-
   var Zen = __root, next = Zen.chain.get.next;
   Zen.chain.get.next = function(zen, lex){ var tmp;
   	if(!Object.plain(lex)){ return (next||noop)(zen, lex) }
@@ -4520,14 +4531,10 @@ __def('./src/zen/map.js', function(module, __exp){
   	Zen.on.link(msg, cat);
   }
   var noop = function(){}, event = {stun: noop, off: noop}, u;
-
-  }());
 });
 
 __def('./src/zen/set.js', function(module, __exp){
   var __root = __req('./src/zen/root.js').default;
-  (function(){
-
   var Zen = __root;
   Zen.chain.set = function(item, cb, opt){
   	var zen = this, root = zen.back(-1), soul, tmp;
@@ -4549,14 +4556,12 @@ __def('./src/zen/set.js', function(module, __exp){
   	})
   	return item;
   }
-
-  }());
 });
 
 __def('./src/zen/mesh.js', function(module, __exp){
   __req('./src/zen/shim.js');
   let __defaultExport;
-  (function(){
+
       var noop = function(){}
       var parse = JSON.parseAsync || function(t,cb,r){ var u, d = +new Date; try{ cb(u, JSON.parse(t,r), json.sucks(+new Date - d)) }catch(e){ cb(e) } }
       var json = JSON.stringifyAsync || function(v,cb,r,s){ var u, d = +new Date; try{ cb(u, JSON.stringify(v,r,s), json.sucks(+new Date - d)) }catch(e){ cb(e) } }
@@ -4595,7 +4600,7 @@ __def('./src/zen/mesh.js', function(module, __exp){
                       if(err || !msg){ return mesh.say({dam: '!', err: "DAM JSON parse error."}, peer) }
                       console.STAT && console.STAT(+new Date, msg.length, '# on hear batch');
                       var P = opt.puff;
-                      (function go(){
+                      function go(){
                           var S = +new Date;
                           var i = 0, m; while(i < P && (m = msg[i++])){ mesh.hear(m, peer) }
                           msg = msg.slice(i); // slicing after is faster than shifting during.
@@ -4603,7 +4608,8 @@ __def('./src/zen/mesh.js', function(module, __exp){
                           flush(peer); // force send all synchronously batched acks.
                           if(!msg.length){ return }
                           puff(go, 0);
-                      }());
+                      }
+                      go();
                   });
                   raw = ''; // 
                   return;
@@ -4657,7 +4663,7 @@ __def('./src/zen/mesh.js', function(module, __exp){
           var tomap = function(k,i,m){m(k,true)};
           hear.c = hear.d = 0;
 
-          ;(function(){
+          {
               var SMIA = 0;
               var loop;
               mesh.hash = function(msg, peer){ var h, s, t;
@@ -4706,7 +4712,7 @@ __def('./src/zen/mesh.js', function(module, __exp){
                       var S = +new Date;
                       var P = opt.puff, ps = opt.peers, pl = Object.keys(peer || opt.peers || {}); // TODO: .keys( is slow
                       console.STAT && console.STAT(S, +new Date - S, 'peer keys');
-                      ;(function go(){
+                      function go(){
                           var S = +new Date;
                           //Type.obj.map(peer || opt.peers, each); // in case peer is a peer list.
                           loop = 1; var wr = meta.raw; meta.raw = raw; // quick perf hack
@@ -4720,7 +4726,8 @@ __def('./src/zen/mesh.js', function(module, __exp){
                           if(!pl.length){ return }
                           puff(go, 0);
                           ack && dup_track(ack); // keep for later
-                      }());
+                      }
+                      go();
                       return;
                   }
                   // TODO: PERF: consider splitting function here, so say loops do less work.
@@ -4790,7 +4797,7 @@ __def('./src/zen/mesh.js', function(module, __exp){
                       mesh.say(msg, peer);
                   }
               }
-          }());
+          }
 
           function flush(peer){
               var tmp = peer.batch, t = 'string' == typeof tmp, l;
@@ -4904,15 +4911,13 @@ __def('./src/zen/mesh.js', function(module, __exp){
       var empty = {}, ok = true, u;
 
       try{ __defaultExport = Mesh }catch(e){}
-  }());
+
   __exp.default = __defaultExport;
 });
 
 __def('./src/zen/websocket.js', function(module, __exp){
   var __root = __req('./src/zen/root.js').default;
   var __mesh = __req('./src/zen/mesh.js').default;
-  (function(){
-
   var Zen = __root;
   Zen.Mesh = __mesh;
 
@@ -4971,16 +4976,18 @@ __def('./src/zen/websocket.js', function(module, __exp){
   	var doc = (''+u !== typeof document) && document;
   });
   var noop = function(){}, u;
-
-  }());
 });
 
 __def('./src/zen/localStorage.js', function(module, __exp){
   var Zen = __req('./src/zen/root.js').default;
+  var env = (typeof process !== 'undefined' && process.env) || {};
+
   var noop = function(){}, store, u;
   try{store = (Zen.window||noop).localStorage}catch(e){}
   if(!store){
-  	Zen.log("Warning: No localStorage exists to persist data to!");
+  	if(!env.ZEN_SILENCE_TEST_WARNINGS){
+  		Zen.log("Warning: No localStorage exists to persist data to!");
+  	}
   	store = {setItem: function(k,v){this[k]=v}, removeItem: function(k){delete this[k]}, getItem: function(k){return this[k]}};
   }
 

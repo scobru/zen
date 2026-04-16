@@ -1,10 +1,11 @@
 import __ZEN from '../../zen.js';
-var __gun = (function(){
+var __gun;
+{
   var W = function(o){return new __ZEN(o)};
   Object.setPrototypeOf(W, __ZEN);
   W.prototype = __ZEN.prototype;
-  return W;
-}());
+  __gun = W;
+}
 var Gun = __gun;
 import '../../lib/memdisk.js';
 var gun = Gun();

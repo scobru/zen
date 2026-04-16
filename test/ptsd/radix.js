@@ -1,4 +1,4 @@
-;(function(){
+{
 	// Performance Testing Stress Development
 	// Performance Testing Style Development
 	// Performance Testing Speed Development
@@ -199,4 +199,4 @@
 	stool.add('RAD text big', function(){
 		Radisk.decode(Radisk.encode(window.BigText));
 	});
-}());
+}

@@ -1,4 +1,4 @@
-;(function(){
+{
 	// Performance Testing Stress Development
 	// Performance Testing Style Development
 	// Performance Testing Speed Development
@@ -958,7 +958,7 @@
 				chain.back = this;
 				return chain;
 			};
-			;(function(){
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.count++;
@@ -976,8 +976,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.err = err;
@@ -1016,8 +1016,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function on(cat){
 					cat.node;
 				}
@@ -1029,7 +1029,7 @@
 					if(at.count){ chain.on(at) }
 					return chain;
 				};
-			}());
+			}
 			var chaina4 = CHAINA4();
 
 			var u; function noop(){};
@@ -1061,7 +1061,7 @@
 				chain.back = this;
 				return chain;
 			};
-			;(function(){
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.count++;
@@ -1079,8 +1079,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.err = err;
@@ -1119,8 +1119,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function on(cat){
 					cat.node;
 				}
@@ -1132,7 +1132,7 @@
 					if(at.count){ chain.on(at) }
 					return chain;
 				};
-			}());
+			}
 			var chaina5 = CHAINA5();
 
 			var u; function noop(){};
@@ -1164,7 +1164,7 @@
 				chain.back = this;
 				return chain;
 			};
-			;(function(){
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.count++;
@@ -1182,8 +1182,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.err = err;
@@ -1222,8 +1222,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function on(cat){
 					cat.node;
 				}
@@ -1235,7 +1235,7 @@
 					if(at.count){ chain.on(at) }
 					return chain;
 				};
-			}());
+			}
 			var chaina6 = CHAINA6();
 
 			var u; function noop(){};
@@ -1267,7 +1267,7 @@
 				chain.back = this;
 				return chain;
 			};
-			;(function(){
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.count++;
@@ -1285,8 +1285,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.err = err;
@@ -1325,8 +1325,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function map(node, soul){
 					Gun.tab.store.put(soul, node);
 				}
@@ -1345,7 +1345,7 @@
 					if(at.count){ chain.on(at) }
 					return chain;
 				};
-			}());
+			}
 			var chaina7 = CHAINA7();
 
 			;(function(exports){ // On event emitter generic javascript utility.
@@ -1406,7 +1406,7 @@
 				chain.back = this;
 				return chain;
 			};
-			;(function(){
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.count++;
@@ -1424,8 +1424,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.err = err;
@@ -1465,8 +1465,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function map(node, soul){
 					Gun.tab.store.put(soul, node);
 				}
@@ -1498,7 +1498,7 @@
 					if(at.count){ chain.on(at) }
 					return chain;
 				};
-			}());
+			}
 			var chaina8 = CHAINA8();
 
 			var u; function noop(){};
@@ -1530,7 +1530,7 @@
 				chain.back = this;
 				return chain;
 			};
-			;(function(){
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.count++;
@@ -1548,8 +1548,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.err = err;
@@ -1589,8 +1589,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function wrap(cat, data){
 					if(!cat){ return data }
 					if(cat.lex.field){
@@ -1632,7 +1632,7 @@
 					if(at.count){ chain.on(at) }
 					return chain;
 				};
-			}());
+			}
 			var chaina9 = CHAINA9();
 
 			var u; function noop(){};
@@ -1667,7 +1667,7 @@
 				chain.back = this;
 				return chain;
 			};
-			;(function(){
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.count++;
@@ -1685,14 +1685,14 @@
 					}
 					return chain;
 				};
-			}());
+			}
 			function got(err, node){
 				var chain = this, at = chain._;
 				at.err = err;
 				at.node = node;
 				chain.run(at);
 			}
-			;(function(){
+			{
 				function run(cat){
 					var chain = this, at = chain._, lex = at.lex, field = lex.field, node, vert, val;
 					at.count++;
@@ -1729,8 +1729,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function wrap(cat, data){
 					if(!cat){ return data }
 					if(cat.lex.field){
@@ -1772,8 +1772,8 @@
 					if(at.count){ chain.run(at) }
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function run(cat){
 					var chain = this, lex = cat.lex, node = cat.node, field = lex.field, val;
 					if(field && (val = Gun.is.rel(node[field]))){
@@ -1788,7 +1788,7 @@
 					if(at.count){ chain.run(at) }
 					return chain;
 				}
-			}());
+			}
 			var chainb1 = CHAINB1();
 
 			var u; function noop(){};
@@ -1823,7 +1823,7 @@
 				chain.back = this;
 				return chain;
 			};
-			;(function(){
+			{
 				function get(err, node){
 					var chain = this, at = chain._;
 					at.count++;
@@ -1841,14 +1841,14 @@
 					}
 					return chain;
 				};
-			}());
+			}
 			function got(err, node){
 				var chain = this, at = chain._;
 				at.err = err;
 				at.node = node;
 				chain.run(at);
 			}
-			;(function(){
+			{
 				function run(cat){
 					var chain = this, at = chain._, lex = at.lex, field = lex.field, node, vert, val;
 					at.count++;
@@ -1885,8 +1885,8 @@
 					}
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function wrap(cat, data){
 					if(!cat){ return data }
 					if(cat.lex.field){
@@ -1933,8 +1933,8 @@
 					if(at.count){ chain.run(at) }
 					return chain;
 				};
-			}());
-			;(function(){
+			}
+			{
 				function run(cat){
 					var chain = this, lex = cat.lex, node = cat.node, field = lex.field, val;
 					if(field && (val = Gun.is.rel(node[field]))){
@@ -1949,7 +1949,7 @@
 					if(at.count){ chain.run(at) }
 					return chain;
 				}
-			}());
+			}
 			var chainb2 = CHAINB2();
 
 			function gun_get(soul){
@@ -2271,4 +2271,4 @@
 	stool.add('Nothing', function(){
 
 	});
-}());
+}

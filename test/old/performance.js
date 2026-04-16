@@ -7,7 +7,7 @@ describe('Performance', function(){ return; // performance tests
 		}
 	}
 	perf.now = this.performance? function(){ return performance.now() } : function(){ return Gun.time.now()/1000 };
-	(function(){
+	{
 		var t1 = perf.now();
 		var obj = {1: 'a', 2: 'b', 3: 'c', 4: 'd', 5: 'e', 6: 'f', 7: 'g', 8: 'h', 9: 'i'};
 		Object.keys && perf(function(){
@@ -28,8 +28,8 @@ describe('Performance', function(){ return; // performance tests
 			})
 		});
 		console.log('map: gun', (t2 = (perf.now() - t2)/1000) + 's', (t2 / t1).toFixed(1)+'x', 'slower.');
-	}());
-	(function(){
+	}
+	{
 		if(!Gun.store){
 			var tab = Gun().tab;
 			if(!tab){ return }
@@ -58,7 +58,7 @@ describe('Performance', function(){ return; // performance tests
 		}, it);
 		console.log('store: gun', (t2 = (perf.now() - t2)/1000) + 's', (t2 / t1).toFixed(1)+'x', 'slower.');
 		root.localStorage && root.localStorage.clear();
-	}());
+	}
 	(function(){ // setTimeout
 		if(!Gun.store){
 			var tab = Gun().tab;
@@ -88,8 +88,8 @@ describe('Performance', function(){ return; // performance tests
 		}, it);
 		console.log('store: gun', (t2 = (perf.now() - t2)/1000) + 's', (t2 / t1).toFixed(1)+'x', 'slower.');
 		root.localStorage && root.localStorage.clear();
-	}());
-	(function(){
+	}
+	{
 		var t1 = perf.now();
 		var on = Gun.on.create(), c = 0, o = [];
 		perf(function(i){
@@ -134,5 +134,5 @@ describe('Performance', function(){ return; // performance tests
 		}); var cb2 = function(){
 			console.log('setImmediate: gun', (t2 = (perf.now() - t2)/1000) + 's', (t2 / t1).toFixed(1)+'x', 'slower.');
 		}
-	}());
+	}
 });

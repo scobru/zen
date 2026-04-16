@@ -19,7 +19,7 @@ var root;
   }
 }(this));
 
-(function(){
+{
 
 const SEA = Gun.SEA
 
@@ -1001,4 +1001,4 @@ Gun().user && describe('Gun', function(){
   });
 });
 
-}());
+}

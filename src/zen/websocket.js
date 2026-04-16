@@ -1,6 +1,6 @@
 import __root from './root.js';
 import __mesh from './mesh.js';
-(function(){
+
 
 var Zen = __root;
 Zen.Mesh = __mesh;
@@ -61,4 +61,4 @@ Zen.on('opt', function(root){
 });
 var noop = function(){}, u;
 
-}());
+

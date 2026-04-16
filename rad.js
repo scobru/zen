@@ -124,7 +124,7 @@ let __defaultExport;
 	The old Node-only RAD memory probe lived here.
 	It was never part of the public RAD API and stays removed in the ESM experiment.
 */
-}());
+}
 
 
 (function(){ // temporary fs storage plugin, needs to be refactored to use the actual RAD plugin interface.
@@ -142,7 +142,7 @@ let __defaultExport;
 			cb(err, (data||'').toString()||data);
 		});
 	}
-}());
+}
 
 
 (function(){ // temporary fs storage plugin, needs to be refactored to use the actual RAD plugin interface.
@@ -162,7 +162,7 @@ let __defaultExport;
 		cb(null, lS[opt.file+'/'+file]);
 		},1);
 	}
-}());
+}
 
 (function(){ return;
 	var get;
@@ -178,5 +178,5 @@ let __defaultExport;
 		if('404' == t){ cb(); return }
 		cb(null, t);
 	}
-}());
+}
 export default __defaultExport;
