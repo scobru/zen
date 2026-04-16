@@ -1,7 +1,7 @@
 import * as React from 'react';
 import {View, StyleSheet, TextInput, Text, TouchableOpacity, AsyncStorage} from 'react-native';
 
-import Gun from 'gun/gun';
+import Gun from '@akaoio/zen';
 import 'gun/lib/open';
 import '../extensions/sea.js';
 
@@ -25,7 +25,7 @@ export class Demo extends React.Component {
     constructor() {
         super();
 
-        this.gun = new Gun();
+        this.gun = new ZEN();
         this.user = this.gun.user();
 
         window.gun = this.gun;

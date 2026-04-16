@@ -1,6 +1,6 @@
-import __gun from './gun.js';
+import __zen from './zen.js';
 (function(){
-  var Gun  = (typeof window !== "undefined")? window.Gun : __gun;
+  var Gun  = (typeof window !== "undefined")? (window.ZEN || window.Zen) : __zen;
   var dam  = 'nts';
   var smooth = 2;
 

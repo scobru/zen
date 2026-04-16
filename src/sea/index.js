@@ -1,6 +1,6 @@
 import __sea from './sea.js';
 import __settings from './settings.js';
-var __gun = (typeof GUN !== 'undefined') ? GUN : ((typeof Gun !== 'undefined') ? Gun : ((typeof require !== 'undefined') ? USE('../gun.js') : undefined));
+var __gun = (typeof GUN !== 'undefined') ? GUN : ((typeof Gun !== 'undefined') ? Gun : ((typeof require !== 'undefined') ? USE('../zen.js') : undefined));
 (function(){
 
     var SEA = __sea, S = __settings, noop = function() {}, u;

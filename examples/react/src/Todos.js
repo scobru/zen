@@ -1,6 +1,6 @@
 import React, { Component }  from 'react'
-import Gun from 'gun/gun'
-import path from 'gun/lib/path'
+import Gun from '@akaoio/zen'
+// import path from 'gun/lib/path' // TODO: use zen equivalent
 import './style.css'
 
 const formatTodos = todos => Object.keys(todos)

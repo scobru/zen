@@ -50,7 +50,7 @@ if (isMain && cluster.isPrimary) {
 
   zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
   zen._graph; // initialize the relay
-  console.log('ZEN relay peer started on port ' + opt.port + ' with /gun');
+  console.log('ZEN relay peer started on port ' + opt.port + ' with /zen');
 }
 
 export default zen;

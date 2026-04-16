@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import Gun from 'gun/gun'
+import Gun from '@akaoio/zen'
 import Todos from './Todos.js'
 import Chat from './Chat.js'
 import Json from './Json.js'
@@ -7,7 +7,7 @@ import Json from './Json.js'
 class App extends Component {
   constructor() {
     super();
-    this.gun = Gun(location.origin + '/gun')
+    this.gun = Gun(location.origin + '/zen')
   }
   
   render() {

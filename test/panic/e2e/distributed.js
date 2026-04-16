@@ -60,7 +60,7 @@ describe('PANIC!', function(){
 
 	function gunify(done, ctx){
 		var s = document.createElement('script');
-		s.src = 'gun.js';
+		s.src = 'zen.js';
 		s.onload = done;
 		s.onerror = ctx.fail;
 		document.body.appendChild(s);

@@ -28,7 +28,7 @@
 			}
 		</style>
 		<script src="./jquery.js"></script>
-		<script src="../../gun/gun.js"></script>
+		<script src="/zen.js"></script>
 		<script src="../../gun/sea.js"></script>
 		<script src="../../gun/as.js"></script>
 		<script src="../../gun/nts.js"></script>
@@ -40,8 +40,8 @@
 				window.S = S;
 				try{localStorage.clear();//sessionStorage.clear();
 				}catch(e){}
-				S.gun = Gun(location.host? location.origin+'/gun' : 'http://localhost:8765/gun');
-				//S.gun = Gun('http://localhost:8765/gun');
+				S.gun = ZEN(location.host? location.origin + '/zen' : 'http://localhost:8765/zen');
+				//S.gun = Gun('http://localhost:8765/zen');
 				//S.gun = Gun();
 				S.app = S.gun.get('examples/social/2');
 				S.user = S.gun.user();

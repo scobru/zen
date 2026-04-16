@@ -10,12 +10,12 @@
 </center>
 
 <script src="../../../gun/lib/yson.js"></script>
-<script src="../../../gun/gun.js"></script>
+<script src="/zen.js"></script>
 <script src="../../../gun/lib/dom.js"></script>
 <script src="../../../gun/lib/upload.js"></script>
 
 <script>
-gun = GUN(location.origin + '/gun');
+gun = ZEN(location.origin + '/zen');
 
 $('html, #upload').upload(function resize(eve, up){
   if(up){ return up.shrink(eve, resize, 1024) }

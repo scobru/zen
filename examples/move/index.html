@@ -76,7 +76,7 @@
       }
     </style>
     <script src="/jquery.js"></script>
-    <script src="/gun.js"></script>
+    <script src="/zen.js"></script>
     <script>
       function Where(opt, cb){
         // a small wrapper around Leaflet for map tracking.
@@ -158,7 +158,7 @@
     <script>
       ;(function(){
         // the actual GPS tracking app!
-        var gun = Gun(location.origin + '/gun');
+        var gun = ZEN(location.origin + '/zen');
         var gps = {};
         gps.opt = {
           continuous: true, // get location just once uses `getCurrentPosition()` while continuously uses `watchPosition()`

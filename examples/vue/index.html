@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- This example works only with vue 1 -->
-  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script src="/zen.js"></script>
   <script src="https://unpkg.com/vue@1.0.0/dist/vue.min.js"></script>
 </head>
 <body>
@@ -43,7 +43,7 @@
     var GunData = {
       install: function (Vue, options) {
         Vue.$gunData = {
-          gun: Gun(options),
+          gun: ZEN(options),
           arrToGunObj: function (a) {
             var o = { _isArr: true }, l = a.length;
             for (var i = 0; i < l; i++) if (a[i] !== undefined) o[i] = a[i];
@@ -103,7 +103,7 @@
 
     /********************** SIMPLE NODE GUN SERVER EXAMPLE FOR BACKEND **********************/
     // var http = require('http'), Gun = require('gun');
-    // Gun({ web: http.createServer().listen(8765) });
+    // ZEN({ web: http.createServer().listen(8765) });
 
     /********************** MODIFY WITH OUR OWN SERVER ADDRESS **********************/
     // Vue.use(GunData, 'http://REPLACE.WITH.YOUR.GUN.SERVER:SERVERPORT/gun');

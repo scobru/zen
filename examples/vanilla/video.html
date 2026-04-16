@@ -6,17 +6,17 @@
   Record <button class="record">Camera</button> or <button class="screen">Screen</button>
 </center>
 
-<script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+<script src="/zen.js"></script>
+<script src="/sea.js"></script>
 
 <script>
   const peers = [
-    `${window.location.origin}/gun`,
-    'https://gun-us.herokuapp.com/gun',
-    'https://gun-eu.herokuapp.com/gun'
+    `${window.location.origin}/zen`,
+    'https://gunjs.herokuapp.com/zen',
+    'https://gunjs.herokuapp.com/zen'
   ]
 
-  const gun = Gun({ localStorage: true, peers })
+  const gun = ZEN({ localStorage: true, peers })
 
   const pass = document.querySelector('#pass')
   const video = document.querySelector('#video')

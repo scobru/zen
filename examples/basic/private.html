@@ -71,7 +71,7 @@
 </div></div>
 
 <script src="../jquery.js"></script>
-<script src="../../../gun/gun.js"></script>
+<script src="/zen.js"></script>
 <script src="../../../gun/sea.js"></script>
 
 <script>
@@ -161,7 +161,7 @@ SEA.Gun.User.prototype.secret = function(data, cb) {
   return gun;
 }
 
-var gun = Gun('http://localhost:8765/gun');
+var gun = Gun('http://localhost:8765/zen');
 var user = gun.user();
 var LI = {};
 

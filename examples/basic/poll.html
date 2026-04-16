@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width">
 
 	<script src="../jquery.js"></script>
-	<script src="../../../gun/gun.js"></script>
+	<script src="/zen.js"></script>
 	<script src="../../../gun/sea.js"></script>
 	<!-- script src="../../../gun/axe.js"></script -->
 	<script> // main init!
 	var app = {
 		view: $, // replace with not jquery!
-		data: GUN('http://localhost:8765/gun'), // peer-to-peer database!
+		data: GUN('http://localhost:8765/zen'), // peer-to-peer database!
 	};
 	app.user = app.data.user().recall({sessionStorage: true});
 	</script>

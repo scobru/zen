@@ -7,12 +7,12 @@
 <center>Stream <select id="select"><option id="from">from</option></select></center>
 
 <script src="../jquery.js"></script>
-<script src="../../../gun/gun.js"></script>
+<script src="/zen.js"></script>
 <script src="../../../gun/sea.js"></script>
 <script src="../../../gun/lib/webrtc.js"></script>
 
 <script>;(async function(){
-streams = {}, gun = Gun(location.origin + '/gun'); //gun = GUN();
+streams = {}, gun = ZEN(location.origin + '/zen'); //gun = GUN();
 mesh = gun.back('opt.mesh');
 
 (await (me.stream = navigator.mediaDevices).enumerateDevices()).forEach((device,i) => {

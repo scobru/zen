@@ -122,7 +122,7 @@
     $('body').append("<input id='email' placeholder='email'/>");
     $('#https').on('click', function(){
       $(this).text("look at console.log for errors, if none, try https");
-      var gun = GUN(location.origin + '/gun');
+      var gun = ZEN(location.origin + '/zen');
       if(!$('#email').val()){
         $(this).text("email necessary for certs! Type it in & click here again.");
         return;
@@ -148,6 +148,6 @@
   7. Watch out for get/put loops times, maybe indicating (5) issues?
 */
 </script>
-<script src="../gun.js"></script>
+<script src="/zen.js"></script>
 </body>
 </html>

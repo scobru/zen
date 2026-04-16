@@ -5,10 +5,10 @@
 	<body style="text-align: center;">
 		<h1 id="when" style="font-size: 7vw; margin-top: 43vh; font-family: monospace;"></h1>
 	</body>
-	<script src="/gun.js"></script>
+	<script src="/zen.js"></script>
 	<script src="/gun/nts.js"></script>
 	<script>
-		window.gun = Gun(location.origin+'/gun');
+		window.gun = ZEN(location.origin + '/zen');
 		requestAnimationFrame(function now(){
 			requestAnimationFrame(now);
 			var time = new Date(Gun.state());

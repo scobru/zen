@@ -1,7 +1,7 @@
 import __path from 'path';
 import Hapi from 'hapi';
 import Inert from 'inert';
-import Gun from '..';
+import Zen from '..';
 import { fileURLToPath } from 'node:url';
 import { dirname as __dirnameOf } from 'node:path';
 const __filename = fileURLToPath(import.meta.url);
@@ -20,7 +20,7 @@ const server = new Hapi.Server({
 
 async function runtime() {
   
-  const db = new Gun({
+  const db = new Zen({
     web: server.listener,
     file: 'data.json'
   })
@@ -29,15 +29,15 @@ async function runtime() {
 
   server.route({
     method: 'GET',
-    path: '/gun.js',
+    path: '/zen.js',
     handler: {
-      file:  'gun.min.js'
+      file:  'zen.min.js'
     }
   })
 
   server.route({
     method: 'GET',
-    path: '/gun/nts.js',
+    path: '/zen/nts.js',
     handler: {
       file:  'nts.js'
     }

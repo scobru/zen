@@ -21,7 +21,7 @@ var config = {
 	browsers: 4,
 	route: {
 		'/': __dirname + '/index.html',
-		'/zen.js': __dirname + '/../../gun.js',
+		'/zen.js': __dirname + '/../../zen.js',
 		'/jquery.js': __dirname + '/../../examples/jquery.js'
 	}
 };

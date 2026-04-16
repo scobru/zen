@@ -1,4 +1,4 @@
-import * as Gun from 'gun';
+import * as Gun from '@akaoio/zen';
 import { AsyncStorage } from 'react-native';
 
 const readNode = (key, cb) => {

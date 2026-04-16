@@ -1,5 +1,5 @@
 import './lib/axe.js';
-import __gun from './gun.js';
+import __zen from './zen.js';
 
 let __defaultExport;
 (function(){
@@ -9,7 +9,7 @@ let __defaultExport;
 	var AXE = (sT.window||'').AXE || function(){};
   if(AXE.window = sT.window){ AXE.window.AXE = AXE }
 
-	var Gun = (AXE.window||'').GUN || __gun;
+	var Gun = (AXE.window||'').ZEN || (AXE.window||'').GUN || __zen;
 	(Gun.AXE = AXE).GUN = AXE.Gun = Gun;
 
   // Browser builds intentionally skip the old AXE side-load here.
@@ -26,9 +26,9 @@ let __defaultExport;
 		var axe = root.axe = {}, tmp, id;
 		var mesh = opt.mesh = opt.mesh || Gun.Mesh(root); // DAM!
 
-		tmp = peers[id = loc.origin + '/gun'] = peers[id] || {};
+		tmp = peers[id = loc.origin + '/zen'] = peers[id] || {};
 		tmp.id = tmp.url = id; tmp.retry = tmp.retry || 0;
-		tmp = peers[id = 'http://localhost:8765/gun'] = peers[id] || {};
+		tmp = peers[id = 'http://localhost:8765/zen'] = peers[id] || {};
 		tmp.id = tmp.url = id; tmp.retry = tmp.retry || 0;
 		Gun.log.once("AXE", "AXE enabled: Trying to find network via (1) local peer (2) last used peers (3) a URL parameter, and last (4) hard coded peers.");
 		Gun.log.once("AXEWarn", "Warning: AXE is in alpha, use only for testing!");
@@ -44,7 +44,7 @@ let __defaultExport;
 			(function next(){
 				if(!axe.fall){ setTimeout(next, 9); return } // not found yet
 				var fall = Object.keys(axe.fall||''), one = fall[(Math.random()*fall.length) >> 0];
-				if(!fall.length){ lS.peers = ''; one = 'https://gunjs.herokuapp.com/gun' } // out of peers
+				if(!fall.length){ lS.peers = ''; one = 'https://gunjs.herokuapp.com/zen' } // out of peers
 				if(peers[one]){ next(); return } // already choose
 				mesh.hi(one);
 			}());
@@ -79,7 +79,7 @@ let __defaultExport;
 				tmp = peers[id = key] = peers[id] || {};
 				tmp.id = tmp.url = id;
 			});
-			tmp = peers[id = 'https://guntest.herokuapp.com/gun'] = peers[id] || {};
+			tmp = peers[id = 'https://guntest.herokuapp.com/zen'] = peers[id] || {};
 			tmp.id = tmp.url = id;
 
 			var mesh = opt.mesh = opt.mesh || Gun.Mesh(root); // DAM!
@@ -99,7 +99,7 @@ let __defaultExport;
 		}
 
 		if(last){ found(last); return }
-		try{ fetch(((loc.search||'').split('axe=')[1]||'').split('&')[0] || loc.axe || 'https://raw.githubusercontent.com/wiki/akaoio/gun/volunteer.dht.md').then(function(res){
+		try{ fetch(((loc.search||'').split('axe=')[1]||'').split('&')[0] || loc.axe || 'https://raw.githubusercontent.com/wiki/akaoio/zen/volunteer.dht.md').then(function(res){
 	  	return res.text()
 	  }).then(function(text){
 	  	found(lS.peers = text);

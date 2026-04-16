@@ -1,4 +1,4 @@
-const gun = new Gun();
+const gun = new ZEN();
 
 const size = 20;
 const gunNode = gun.get('posts');

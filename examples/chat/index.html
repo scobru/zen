@@ -151,10 +151,10 @@
   </div>
 
   <script src="/jquery.js"></script>
-  <script src="/gun.js"></script>
+  <script src="/zen.js"></script>
   <script src="/gun/nts.js"></script>
   <script>
-    var gun = Gun(location.origin + '/gun');
+    var gun = ZEN(location.origin + '/zen');
     var chat = gun.get('converse/' + location.hash.slice(1));
 
     $(".chat__submit").on('click', submit);

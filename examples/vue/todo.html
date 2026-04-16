@@ -2,10 +2,10 @@
 <html>
 
 <head>
-    <title>Todo App: Gun + Vue</title>
+    <title>Todo App: ZEN + Vue</title>
     
     <script src="https://unpkg.com/vue" type="text/javascript" charset="utf-8"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/zen.js" type="text/javascript" charset="utf-8"></script>
     <link href='https://fonts.googleapis.com/css?family=Alegreya+Sans:300italic' rel='stylesheet' type='text/css'>
     <style>
 
@@ -92,7 +92,7 @@ localStorage.clear();
 // No peers for the sake of example,
 // but this could easily be a collaborative 
 // todolist by adding a few peers
-var gun = new Gun();
+var gun = new ZEN();
 var todos = gun.get('todos');
 
 new Vue({
