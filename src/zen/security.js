@@ -163,6 +163,18 @@ check.next = function(eve, msg, no) {
 check.auth = function(msg, no, authenticator, done) {
   settings.pack(msg.put, function(packed) {
     if (!authenticator) { return no("Missing authenticator"); }
+    if (typeof authenticator === 'function') {
+      Promise.resolve(authenticator(packed)).then(async function(result) {
+        if (u === result) { return no('Signature fail.'); }
+        var data = (typeof result === 'string') ? await settings.parse(result) : result;
+        if (!data || !data.m || !data.s) { return no('Invalid signature format'); }
+        var parsed = settings.unpack(data.m);
+        msg.put[':'] = { ':': parsed, '~': data.s };
+        msg.put['='] = parsed;
+        done(parsed);
+      }).catch(function(e) { no(e && e.message ? e.message : 'Auth error'); });
+      return;
+    }
     sign(packed, authenticator, async function(data) {
       if (u === data) { return no('Signature fail.'); }
       if (!data.m || !data.s) { return no('Invalid signature format'); }

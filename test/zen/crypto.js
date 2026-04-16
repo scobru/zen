@@ -430,6 +430,24 @@ describe('ZEN user graph — authenticator', function() {
   });
 });
 
+describe('ZEN user graph — external authenticator', function() {
+  this.timeout(20 * 1000);
+
+  it('put to user graph using external async authenticator (nested ZEN.sign)', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      async function authenticator(data) { return ZEN.sign(data, bob); }
+      gun.get('~' + bob.pub).get('test').put('this is Bob', function(ack) {
+        if (ack && ack.err) { return done(new Error('put failed: ' + ack.err)); }
+        gun.get('~' + bob.pub).get('test').once(function(data) {
+          try { assert.strictEqual(data, 'this is Bob'); done(); } catch(e) { done(e); }
+        });
+      }, { opt: { authenticator: authenticator } });
+    })().catch(done);
+  });
+});
+
 describe('ZEN user graph — shard intermediate', function() {
   this.timeout(20 * 1000);
 
@@ -494,6 +512,279 @@ describe('ZEN user graph — shard intermediate', function() {
         assert.ok(ack.err);
         done();
       }, { opt: { authenticator: bob } });
+    })().catch(done);
+  });
+
+  it('rejects hash mismatch at depth 2 under ~pub', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      gun.get('~' + bob.pub).get('parent').get('payload#deadbeef').put('hello world', function(ack) {
+        assert.ok(ack.err);
+        done();
+      }, { opt: { authenticator: bob } });
+    })().catch(done);
+  });
+
+  it('rejects hash mismatch at depth 3 under ~pub', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      gun.get('~' + bob.pub).get('parent').get('child').get('payload#deadbeef').put('hello world', function(ack) {
+        assert.ok(ack.err);
+        done();
+      }, { opt: { authenticator: bob } });
+    })().catch(done);
+  });
+
+  it('rejects shard intermediate when value is not link', function(done) {
+    var gun = makeZen();
+    gun.get('~').get('ab').put('no-link', function(ack) {
+      assert.ok(ack.err);
+      done();
+    });
+  });
+
+  it('accepts shard intermediate with external async authenticator', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var key = bob.pub.slice(0, 2);
+      var expected = '~/' + key;
+      async function authenticator(data) { return ZEN.sign(data, bob); }
+      gun.get('~').get(key).put({ '#': expected }, function(ack) {
+        assert.ok(!ack.err);
+        done();
+      }, { opt: { authenticator: authenticator, pub: bob.pub } });
+    })().catch(done);
+  });
+
+  it('rejects shard intermediate with function authenticator but missing opt.pub', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var key = bob.pub.slice(0, 2);
+      var expected = '~/' + key;
+      async function authenticator(data) { return ZEN.sign(data, bob); }
+      gun.get('~').get(key).put({ '#': expected }, function(ack) {
+        assert.ok(ack.err);
+        done();
+      }, { opt: { authenticator: authenticator } }); // no opt.pub → claim undefined
+    })().catch(done);
+  });
+
+  it('rejects shard intermediate with state too far in future', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var key = bob.pub.slice(0, 2);
+      var expected = '~/' + key;
+      var futureState = ZEN.state() + (1000 * 60 * 60 * 24 * 14); // 2 weeks ahead
+      gun.get('~').get(key).put({ '#': expected }, function(ack) {
+        assert.ok(ack.err);
+        done();
+      }, { state: futureState, opt: { authenticator: bob } });
+    })().catch(done);
+  });
+
+  it('rejects shard intermediate with wrong pub prefix', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var alice = await ZEN.pair();
+      var key = bob.pub.slice(0, 2);
+      while (alice.pub.slice(0, 2) === key) { alice = await ZEN.pair(); }
+      var expected = '~/' + key;
+      gun.get('~').get(key).put({ '#': expected }, function(ack) {
+        assert.ok(ack.err); // alice.pub doesn't start with key
+        done();
+      }, { opt: { authenticator: alice } });
+    })().catch(done);
+  });
+
+  it('rejects shard write when depth exceeds limit', function(done) {
+    var gun = makeZen();
+    var segs = Array(44).fill('ab');
+    var soul = '~/' + segs.join('/');
+    gun.get(soul).get('cd').put({ '#': soul + '/cd' }, function(ack) {
+      assert.ok(ack.err);
+      done();
+    });
+  });
+
+  it('rejects shard path with trailing slash', function(done) {
+    var gun = makeZen();
+    gun.get('~/ab/cd/').get('ef').put({ '#': '~/ab/cd//ef' }, function(ack) {
+      assert.ok(ack.err);
+      done();
+    });
+  });
+});
+
+describe('ZEN user graph — shard leaf', function() {
+  this.timeout(20 * 1000);
+
+  it('rejects shard leaf when value is raw pub string', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var chunks = bob.pub.match(/.{1,2}/g) || [];
+      var key = chunks.pop();
+      var soul = chunks.length ? '~/' + chunks.join('/') : '~';
+      gun.get(soul).get(key).put(bob.pub, function(ack) {
+        assert.ok(ack.err);
+        done();
+      });
+    })().catch(done);
+  });
+
+  it('rejects shard leaf when value is null', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var chunks = bob.pub.match(/.{1,2}/g) || [];
+      var key = chunks.pop();
+      var soul = chunks.length ? '~/' + chunks.join('/') : '~';
+      gun.get(soul).get(key).put(null, function(ack) {
+        assert.ok(ack.err);
+        done();
+      });
+    })().catch(done);
+  });
+
+  it('rejects shard leaf when value is a number', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var chunks = bob.pub.match(/.{1,2}/g) || [];
+      var key = chunks.pop();
+      var soul = chunks.length ? '~/' + chunks.join('/') : '~';
+      gun.get(soul).get(key).put(42, function(ack) {
+        assert.ok(ack.err);
+        done();
+      });
+    })().catch(done);
+  });
+
+  it('rejects shard leaf when link points to wrong soul', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var chunks = bob.pub.match(/.{1,2}/g) || [];
+      var key = chunks.pop();
+      var soul = chunks.length ? '~/' + chunks.join('/') : '~';
+      gun.get(soul).get(key).put({ '#': soul + '/' + key }, function(ack) {
+        assert.ok(ack.err); // link must point to ~pub not intermediate path
+        done();
+      });
+    })().catch(done);
+  });
+
+  it('rejects shard leaf without authenticator', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var chunks = bob.pub.match(/.{1,2}/g) || [];
+      var key = chunks.pop();
+      var soul = chunks.length ? '~/' + chunks.join('/') : '~';
+      gun.get(soul).get(key).put({ '#': '~' + bob.pub }, function(ack) {
+        assert.ok(ack.err);
+        done();
+      });
+    })().catch(done);
+  });
+
+  it('put to shard leaf with authenticator pair', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var chunks = bob.pub.match(/.{1,2}/g) || [];
+      var key = chunks.pop();
+      var soul = chunks.length ? '~/' + chunks.join('/') : '~';
+      gun.get(soul).get(key).put({ '#': '~' + bob.pub }, function(ack) {
+        assert.ok(!ack.err);
+        done();
+      }, { opt: { authenticator: bob } });
+    })().catch(done);
+  });
+
+  it('put to shard leaf with external authenticator', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var chunks = bob.pub.match(/.{1,2}/g) || [];
+      var key = chunks.pop();
+      var soul = chunks.length ? '~/' + chunks.join('/') : '~';
+      async function authenticator(data) { return ZEN.sign(data, bob); }
+      gun.get(soul).get(key).put({ '#': '~' + bob.pub }, function(ack) {
+        assert.ok(!ack.err);
+        done();
+      }, { opt: { authenticator: authenticator } });
+    })().catch(done);
+  });
+});
+
+describe('ZEN user graph — full shard chain', function() {
+  this.timeout(20 * 1000);
+
+  it('registers full shard path (soul+key) with authenticator pair', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var chunks = bob.pub.match(/.{1,2}/g) || [];
+      var key = chunks.pop();
+      var soul = chunks.length ? '~/' + chunks.join('/') : '~';
+      gun.get(soul).get(key).put({ '#': '~' + bob.pub }, function(ack) {
+        assert.ok(!ack.err);
+        done();
+      }, { opt: { authenticator: bob } });
+    })().catch(done);
+  });
+
+  it('rejects full shard chain when no authenticator', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var bob = await ZEN.pair();
+      var chunks = bob.pub.match(/.{1,2}/g) || [];
+      var key = chunks.pop();
+      var soul = chunks.length ? '~/' + chunks.join('/') : '~';
+      gun.get(soul).get(key).put({ '#': '~' + bob.pub }, function(ack) {
+        assert.ok(ack.err);
+        done();
+      }); // no authenticator
+    })().catch(done);
+  });
+});
+
+describe('ZEN — hash-based namespace routing (Frozen/Across spaces)', function() {
+  this.timeout(20 * 1000);
+
+  it('stores and retrieves data under a hash-keyed namespace', function(done) {
+    var gun = makeZen();
+    (async function() {
+      var alice = await ZEN.pair();
+      // Write to user graph
+      await new Promise(function(res, rej) {
+        gun.get('~' + alice.pub).put({ name: 'Alice', country: 'USA' }, function(ack) {
+          if (ack && ack.err) { return rej(new Error(ack.err)); }
+          res();
+        }, { opt: { authenticator: alice } });
+      });
+      // Write to hash namespace
+      var data = 'hello world';
+      var hash = await ZEN.hash(data, null, null, { name: 'SHA-256' });
+      hash = hash.slice(-20);
+      await new Promise(function(res, rej) {
+        gun.get('#users').get(hash).put(data, function(ack) {
+          if (ack && ack.err) { return rej(new Error(ack.err)); }
+          res();
+        });
+      });
+      var result = await new Promise(function(res) {
+        gun.get('#users').get(hash).once(function(v) { res(v); });
+      });
+      assert.strictEqual(result, data);
+      done();
     })().catch(done);
   });
 });
