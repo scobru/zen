@@ -8,7 +8,7 @@ import './map.js';
 import './set.js';
 import './mesh.js';
 import './websocket.js';
-import './localStorage.js';
+import './locstore.js';
 import ZEN from './root.js';
 
 if (!ZEN.chain.then) {

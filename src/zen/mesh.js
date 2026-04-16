@@ -1,10 +1,12 @@
 import './shim.js';
+import jsonAsync from './json.js';
 
 let __defaultExport;
 
     var noop = function(){}
-    var parse = JSON.parseAsync || function(t,cb,r){ var u, d = +new Date; try{ cb(u, JSON.parse(t,r), json.sucks(+new Date - d)) }catch(e){ cb(e) } }
-    var json = JSON.stringifyAsync || function(v,cb,r,s){ var u, d = +new Date; try{ cb(u, JSON.stringify(v,r,s), json.sucks(+new Date - d)) }catch(e){ cb(e) } }
+    var pair = jsonAsync.createJsonPair(function(d){ return json.sucks(d) });
+    var parse = pair.parse;
+    var json = pair.json;
     json.sucks = function(d){ if(d > 99){ console.log("Warning: JSON blocking CPU detected. Add `zen/lib/yson.js` to fix."); json.sucks = noop } }
 
     function Mesh(root){

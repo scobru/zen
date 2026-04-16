@@ -1,4 +1,5 @@
 import Zen from './root.js';
+import jsonAsync from './json.js';
 
 var env = (typeof process !== 'undefined' && process.env) || {};
 
@@ -11,8 +12,9 @@ if(!store){
 	store = {setItem: function(k,v){this[k]=v}, removeItem: function(k){delete this[k]}, getItem: function(k){return this[k]}};
 }
 
-var parse = JSON.parseAsync || function(t,cb,r){ var u; try{ cb(u, JSON.parse(t,r)) }catch(e){ cb(e) } }
-var json = JSON.stringifyAsync || function(v,cb,r,s){ var u; try{ cb(u, JSON.stringify(v,r,s)) }catch(e){ cb(e) } }
+var pair = jsonAsync.createJsonPair();
+var parse = pair.parse;
+var json = pair.json;
 
 Zen.on('create', function lg(root){
 	this.to.next(root);

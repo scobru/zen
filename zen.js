@@ -133,28 +133,65 @@ __def('./src/zen/buffer.js', function(module, __exp){
   __exp.default = SafeBuffer;
 });
 
+__def('./src/zen/json.js', function(module, __exp){
+  function ensureJsonAsync() {
+    JSON.parseAsync = JSON.parseAsync || function(text, cb, reviver) {
+      try { cb(undefined, JSON.parse(text, reviver)); } catch (error) { cb(error); }
+    };
+    JSON.stringifyAsync = JSON.stringifyAsync || function(value, cb, replacer, space) {
+      try { cb(undefined, JSON.stringify(value, replacer, space)); } catch (error) { cb(error); }
+    };
+  }
+
+  function parseAsync(text, cb, reviver) {
+    ensureJsonAsync();
+    return JSON.parseAsync(text, cb, reviver);
+  }
+
+  function stringifyAsync(value, cb, replacer, space) {
+    ensureJsonAsync();
+    return JSON.stringifyAsync(value, cb, replacer, space);
+  }
+
+  function createJsonPair(note) {
+    const mark = (typeof note === 'function') ? note : function() {};
+    return {
+      parse: function(text, cb, reviver) {
+        const started = +new Date;
+        return parseAsync(text, function(error, raw) {
+          cb(error, raw, mark(+new Date - started));
+        }, reviver);
+      },
+      json: function(value, cb, replacer, space) {
+        const started = +new Date;
+        return stringifyAsync(value, function(error, raw) {
+          cb(error, raw, mark(+new Date - started));
+        }, replacer, space);
+      }
+    };
+  }
+
+  __exp.default = { ensureJsonAsync, parseAsync, stringifyAsync, createJsonPair };
+});
+
 __def('./src/zen/shim.js', function(module, __exp){
   var BufferApi = __req('./src/zen/buffer.js').default;
+  var jsonAsync = __req('./src/zen/json.js').default;
   const globalScope = (typeof globalThis !== 'undefined') ? globalThis : (typeof global !== 'undefined' ? global : (typeof window !== 'undefined' ? window : {}));
   const api = { Buffer: globalScope.Buffer || BufferApi };
   const empty = {};
 
-  JSON.parseAsync = JSON.parseAsync || function(text, cb, reviver) {
-    try { cb(undefined, JSON.parse(text, reviver)); } catch (error) { cb(error); }
-  };
-  JSON.stringifyAsync = JSON.stringifyAsync || function(value, cb, replacer, space) {
-    try { cb(undefined, JSON.stringify(value, replacer, space)); } catch (error) { cb(error); }
-  };
+  jsonAsync.ensureJsonAsync();
 
   api.parse = function(text, reviver) {
     return new Promise(function(resolve, reject) {
-      JSON.parseAsync(text, function(error, raw) { error ? reject(error) : resolve(raw); }, reviver);
+      jsonAsync.parseAsync(text, function(error, raw) { error ? reject(error) : resolve(raw); }, reviver);
     });
   };
 
   api.stringify = function(value, replacer, space) {
     return new Promise(function(resolve, reject) {
-      JSON.stringifyAsync(value, function(error, raw) { error ? reject(error) : resolve(raw); }, replacer, space);
+      jsonAsync.stringifyAsync(value, function(error, raw) { error ? reject(error) : resolve(raw); }, replacer, space);
     });
   };
 
@@ -1157,13 +1194,267 @@ __def('./src/zen/hash.js', function(module, __exp){
   __exp.default = hash;
 });
 
-__def('./src/zen/secp256k1.js', function(module, __exp){
+__def('./src/zen/curves/utils.js', function(module, __exp){
+  function createCurveCore(config) {
+    const curve = config.curve;
+    const P = config.P;
+    const N = config.N;
+    const A = config.A;
+    const B = config.B;
+    const G = config.G;
+    const HALF_N = N >> 1n;
+    const shim = config.shim;
+    const base62 = config.base62;
+    const settings = config.settings;
+    const sha256 = config.sha256;
+    const extras = config.extras || {};
+
+    function mod(a, m) {
+      return ((a % m) + m) % m;
+    }
+
+    function modPow(base, exp, modn) {
+      let result = 1n;
+      let value = mod(base, modn);
+      let power = exp;
+      while (power > 0n) {
+        if (power & 1n) { result = mod(result * value, modn); }
+        value = mod(value * value, modn);
+        power >>= 1n;
+      }
+      return result;
+    }
+
+    function modInv(a, modn) {
+      if (!a) { throw new Error('Inverse does not exist'); }
+      return modPow(mod(a, modn), modn - 2n, modn);
+    }
+
+    function isPoint(point) {
+      return !!point && typeof point.x === 'bigint' && typeof point.y === 'bigint';
+    }
+
+    function isOnCurve(point) {
+      if (!isPoint(point)) { return false; }
+      if (point.x < 0n || point.x >= P || point.y < 0n || point.y >= P) { return false; }
+      return mod(point.y * point.y - (point.x * point.x * point.x + A * point.x + B), P) === 0n;
+    }
+
+    function pointAdd(left, right) {
+      if (!left) { return right; }
+      if (!right) { return left; }
+      if (left.x === right.x && mod(left.y + right.y, P) === 0n) { return null; }
+      let slope;
+      if (left.x === right.x && left.y === right.y) {
+        slope = mod((3n * mod(left.x * left.x, P) + A) * modInv(2n * left.y, P), P);
+      } else {
+        slope = mod((right.y - left.y) * modInv(right.x - left.x, P), P);
+      }
+      const x = mod(slope * slope - left.x - right.x, P);
+      const y = mod(slope * (left.x - x) - left.y, P);
+      return { x, y };
+    }
+
+    function pointMultiply(scalar, point) {
+      let n = mod(scalar, N);
+      if (!n || !point) { return null; }
+      let result = null;
+      let addend = point;
+      while (n > 0n) {
+        if (n & 1n) { result = pointAdd(result, addend); }
+        addend = pointAdd(addend, addend);
+        n >>= 1n;
+      }
+      return result;
+    }
+
+    function bytesToBigInt(bytes) {
+      return BigInt('0x' + (Array.from(bytes).map(function(byte) {
+        return byte.toString(16).padStart(2, '0');
+      }).join('') || '0'));
+    }
+
+    function bigIntToBytes(num, length) {
+      let hex = num.toString(16);
+      if (hex.length % 2) { hex = '0' + hex; }
+      const raw = shim.Buffer.from(hex, 'hex');
+      if (!length) { return new Uint8Array(raw); }
+      if (raw.length > length) { return new Uint8Array(raw.slice(raw.length - length)); }
+      const out = new Uint8Array(length);
+      out.set(raw, length - raw.length);
+      return out;
+    }
+
+    function concatBytes() {
+      const chunks = Array.prototype.slice.call(arguments).map(function(chunk) {
+        if (chunk instanceof Uint8Array) { return chunk; }
+        if (Array.isArray(chunk)) { return Uint8Array.from(chunk); }
+        if (typeof chunk === 'number') { return Uint8Array.from([chunk]); }
+        if (chunk && chunk.buffer instanceof ArrayBuffer) { return new Uint8Array(chunk.buffer, chunk.byteOffset || 0, chunk.byteLength); }
+        return new Uint8Array(0);
+      });
+      const length = chunks.reduce(function(total, chunk) { return total + chunk.length; }, 0);
+      const out = new Uint8Array(length);
+      let offset = 0;
+      chunks.forEach(function(chunk) {
+        out.set(chunk, offset);
+        offset += chunk.length;
+      });
+      return out;
+    }
+
+    function utf8Bytes(data) {
+      if (typeof data === 'string') { return new shim.TextEncoder().encode(data); }
+      if (data instanceof Uint8Array) { return data; }
+      if (data instanceof ArrayBuffer) { return new Uint8Array(data); }
+      if (data && data.buffer instanceof ArrayBuffer) {
+        return new Uint8Array(data.buffer, data.byteOffset || 0, data.byteLength);
+      }
+      return new shim.TextEncoder().encode(String(data));
+    }
+
+    function decodeBase64Url(str) {
+      const padded = str.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(str.length / 4) * 4, '=');
+      return new Uint8Array(shim.Buffer.from(padded, 'base64'));
+    }
+
+    function encodeBase64(bytes, encoding) {
+      return shim.Buffer.from(bytes).toString(encoding || 'base64');
+    }
+
+    function assertScalar(value, name) {
+      if (value <= 0n || value >= N) {
+        throw new Error((name || 'Scalar') + ' out of range');
+      }
+      return value;
+    }
+
+    function parseScalar(value, name) {
+      if (typeof value === 'bigint') { return assertScalar(value, name); }
+      if (typeof value !== 'string' || !value) { throw new Error((name || 'Scalar') + ' must be a string'); }
+      const scalar = (/^[A-Za-z0-9]{44}$/.test(value))
+        ? base62.b62ToBI(value)
+        : bytesToBigInt(decodeBase64Url(value));
+      return assertScalar(scalar, name);
+    }
+
+    function scalarToString(value) {
+      return base62.biToB62(assertScalar(value));
+    }
+
+    function pointToPub(point) {
+      if (!isOnCurve(point)) { throw new Error('Invalid public point'); }
+      return base62.biToB62(point.x) + base62.biToB62(point.y);
+    }
+
+    function parsePub(pub) {
+      if (typeof pub !== 'string') { throw new Error('Public key must be a string'); }
+      let point;
+      if (pub.length === 88 && /^[A-Za-z0-9]{88}$/.test(pub)) {
+        point = {
+          x: base62.b62ToBI(pub.slice(0, 44)),
+          y: base62.b62ToBI(pub.slice(44))
+        };
+      } else if (pub.length === 87 && pub[43] === '.') {
+        const parts = pub.split('.');
+        point = {
+          x: bytesToBigInt(decodeBase64Url(parts[0])),
+          y: bytesToBigInt(decodeBase64Url(parts[1]))
+        };
+      } else {
+        throw new Error('Unrecognized public key format');
+      }
+      if (!isOnCurve(point)) { throw new Error('Public key is not on ' + curve); }
+      return point;
+    }
+
+    function publicFromPrivate(priv) {
+      const point = pointMultiply(assertScalar(priv, 'Private key'), G);
+      if (!point || !isOnCurve(point)) { throw new Error('Could not derive public key'); }
+      return point;
+    }
+
+    function compactPoint(point) {
+      return concatBytes([point.y & 1n ? 0x03 : 0x02], bigIntToBytes(point.x, 32));
+    }
+
+    async function shaBytes(data) {
+      return new Uint8Array(await sha256(data));
+    }
+
+    async function hmacSha256(keyBytes, dataBytes) {
+      const key = await shim.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: { name: 'SHA-256' } }, false, ['sign']);
+      return new Uint8Array(await shim.subtle.sign('HMAC', key, dataBytes));
+    }
+
+    async function deterministicK(priv, hashBytes, attempt) {
+      const x = bigIntToBytes(priv, 32);
+      const h1 = bigIntToBytes(bytesToBigInt(hashBytes) % N, 32);
+      const extra = attempt ? Uint8Array.from([attempt & 255]) : new Uint8Array(0);
+      let K = new Uint8Array(32);
+      let V = new Uint8Array(32).fill(1);
+      K = await hmacSha256(K, concatBytes(V, [0], x, h1, extra));
+      V = await hmacSha256(K, V);
+      K = await hmacSha256(K, concatBytes(V, [1], x, h1, extra));
+      V = await hmacSha256(K, V);
+      while (true) {
+        V = await hmacSha256(K, V);
+        const candidate = bytesToBigInt(V);
+        if (candidate > 0n && candidate < N) { return candidate; }
+        K = await hmacSha256(K, concatBytes(V, [0]));
+        V = await hmacSha256(K, V);
+      }
+    }
+
+    async function hashToScalar(seed, label) {
+      const digest = await shaBytes(concatBytes(utf8Bytes(label), utf8Bytes(seed)));
+      return (bytesToBigInt(digest) % (N - 1n)) + 1n;
+    }
+
+    async function randomScalar() {
+      return (bytesToBigInt(shim.random(32)) % (N - 1n)) + 1n;
+    }
+
+    async function normalizeMessage(data) {
+      if (typeof data === 'string') { return settings.check(data) ? data : await settings.parse(data); }
+      return data;
+    }
+
+    async function finalize(result, opt, cb) {
+      const out = opt && opt.raw ? result : (await shim.stringify(result));
+      if (cb) { try { cb(out); } catch (e) { console.log(e); } }
+      return out;
+    }
+
+    return Object.assign({
+      curve, P, N, A, B, G, HALF_N,
+      shim, base62, settings,
+      mod, modPow, modInv,
+      isPoint, isOnCurve,
+      pointAdd, pointMultiply,
+      bytesToBigInt, bigIntToBytes,
+      concatBytes, utf8Bytes,
+      decodeBase64Url, encodeBase64,
+      parseScalar, assertScalar, scalarToString,
+      pointToPub, parsePub, publicFromPrivate,
+      compactPoint,
+      shaBytes, hmacSha256, deterministicK,
+      hashToScalar, randomScalar,
+      normalizeMessage, finalize
+    }, extras);
+  }
+
+  __exp.default = createCurveCore;
+});
+
+__def('./src/zen/curves/secp256k1.js', function(module, __exp){
   var shim = __req('./src/zen/shim.js').default;
   var base62 = __req('./src/zen/base62.js').default;
   var settings = __req('./src/zen/settings.js').default;
   var aeskey = __req('./src/zen/aeskey.js').default;
   var sha256 = __req('./src/zen/sha256.js').default;
   var hash = __req('./src/zen/hash.js').default;
+  var createCurveCore = __req('./src/zen/curves/utils.js').default;
   const P = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F');
   const N = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
   const A = 0n;
@@ -1172,284 +1463,24 @@ __def('./src/zen/secp256k1.js', function(module, __exp){
     x: BigInt('0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798'),
     y: BigInt('0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8')
   };
-  const HALF_N = N >> 1n;
-
-  function mod(a, m) {
-    return ((a % m) + m) % m;
-  }
-
-  function modPow(base, exp, modn) {
-    let result = 1n;
-    let value = mod(base, modn);
-    let power = exp;
-    while (power > 0n) {
-      if (power & 1n) {
-        result = mod(result * value, modn);
-      }
-      value = mod(value * value, modn);
-      power >>= 1n;
-    }
-    return result;
-  }
-
-  function modInv(a, modn) {
-    if (!a) { throw new Error('Inverse does not exist'); }
-    return modPow(mod(a, modn), modn - 2n, modn);
-  }
-
-  function isPoint(point) {
-    return !!point && typeof point.x === 'bigint' && typeof point.y === 'bigint';
-  }
-
-  function isOnCurve(point) {
-    if (!isPoint(point)) { return false; }
-    if (point.x < 0n || point.x >= P || point.y < 0n || point.y >= P) { return false; }
-    return mod(point.y * point.y - (point.x * point.x * point.x + A * point.x + B), P) === 0n;
-  }
-
-  function pointAdd(left, right) {
-    if (!left) { return right; }
-    if (!right) { return left; }
-    if (left.x === right.x && mod(left.y + right.y, P) === 0n) { return null; }
-    let slope;
-    if (left.x === right.x && left.y === right.y) {
-      slope = mod((3n * mod(left.x * left.x, P)) * modInv(2n * left.y, P), P);
-    } else {
-      slope = mod((right.y - left.y) * modInv(right.x - left.x, P), P);
-    }
-    const x = mod(slope * slope - left.x - right.x, P);
-    const y = mod(slope * (left.x - x) - left.y, P);
-    return { x, y };
-  }
-
-  function pointMultiply(scalar, point) {
-    let n = mod(scalar, N);
-    if (!n || !point) { return null; }
-    let result = null;
-    let addend = point;
-    while (n > 0n) {
-      if (n & 1n) {
-        result = pointAdd(result, addend);
-      }
-      addend = pointAdd(addend, addend);
-      n >>= 1n;
-    }
-    return result;
-  }
-
-  function bytesToBigInt(bytes) {
-    const hex = Array.from(bytes).map(function(byte) {
-      return byte.toString(16).padStart(2, '0');
-    }).join('');
-    return BigInt('0x' + (hex || '0'));
-  }
-
-  function bigIntToBytes(num, length) {
-    let hex = num.toString(16);
-    if (hex.length % 2) { hex = '0' + hex; }
-    const raw = shim.Buffer.from(hex, 'hex');
-    if (!length) { return new Uint8Array(raw); }
-    if (raw.length > length) {
-      return new Uint8Array(raw.slice(raw.length - length));
-    }
-    const out = new Uint8Array(length);
-    out.set(raw, length - raw.length);
-    return out;
-  }
-
-  function concatBytes() {
-    const chunks = Array.prototype.slice.call(arguments).map(function(chunk) {
-      if (chunk instanceof Uint8Array) { return chunk; }
-      if (Array.isArray(chunk)) { return Uint8Array.from(chunk); }
-      if (typeof chunk === 'number') { return Uint8Array.from([chunk]); }
-      if (chunk && chunk.buffer instanceof ArrayBuffer) { return new Uint8Array(chunk.buffer, chunk.byteOffset || 0, chunk.byteLength); }
-      return new Uint8Array(0);
-    });
-    const length = chunks.reduce(function(total, chunk) { return total + chunk.length; }, 0);
-    const out = new Uint8Array(length);
-    let offset = 0;
-    chunks.forEach(function(chunk) {
-      out.set(chunk, offset);
-      offset += chunk.length;
-    });
-    return out;
-  }
-
-  function utf8Bytes(data) {
-    if (typeof data === 'string') {
-      return new shim.TextEncoder().encode(data);
-    }
-    if (data instanceof Uint8Array) { return data; }
-    if (data instanceof ArrayBuffer) { return new Uint8Array(data); }
-    if (data && data.buffer instanceof ArrayBuffer) {
-      return new Uint8Array(data.buffer, data.byteOffset || 0, data.byteLength);
-    }
-    return new shim.TextEncoder().encode(String(data));
-  }
-
-  function decodeBase64Url(str) {
-    const padded = str.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(str.length / 4) * 4, '=');
-    return new Uint8Array(shim.Buffer.from(padded, 'base64'));
-  }
-
-  function encodeBase64(bytes, encoding) {
-    return shim.Buffer.from(bytes).toString(encoding || 'base64');
-  }
-
-  function assertScalar(value, name) {
-    if (value <= 0n || value >= N) {
-      throw new Error((name || 'Scalar') + ' out of range');
-    }
-    return value;
-  }
-
-  function parseScalar(value, name) {
-    if (typeof value === 'bigint') { return assertScalar(value, name); }
-    if (typeof value !== 'string' || !value) { throw new Error((name || 'Scalar') + ' must be a string'); }
-    const scalar = (/^[A-Za-z0-9]{44}$/.test(value))
-      ? base62.b62ToBI(value)
-      : bytesToBigInt(decodeBase64Url(value));
-    return assertScalar(scalar, name);
-  }
-
-  function scalarToString(value) {
-    return base62.biToB62(assertScalar(value));
-  }
-
-  function pointToPub(point) {
-    if (!isOnCurve(point)) { throw new Error('Invalid public point'); }
-    return base62.biToB62(point.x) + base62.biToB62(point.y);
-  }
-
-  function parsePub(pub) {
-    if (typeof pub !== 'string') { throw new Error('Public key must be a string'); }
-    let point;
-    if (pub.length === 88 && /^[A-Za-z0-9]{88}$/.test(pub)) {
-      point = {
-        x: base62.b62ToBI(pub.slice(0, 44)),
-        y: base62.b62ToBI(pub.slice(44))
-      };
-    } else if (pub.length === 87 && pub[43] === '.') {
-      const parts = pub.split('.');
-      point = {
-        x: bytesToBigInt(decodeBase64Url(parts[0])),
-        y: bytesToBigInt(decodeBase64Url(parts[1]))
-      };
-    } else {
-      throw new Error('Unrecognized public key format');
-    }
-    if (!isOnCurve(point)) { throw new Error('Public key is not on secp256k1'); }
-    return point;
-  }
-
-  function publicFromPrivate(priv) {
-    const point = pointMultiply(assertScalar(priv, 'Private key'), G);
-    if (!point || !isOnCurve(point)) { throw new Error('Could not derive public key'); }
-    return point;
-  }
-
-  function compactPoint(point) {
-    const prefix = point.y & 1n ? 0x03 : 0x02;
-    return concatBytes([prefix], bigIntToBytes(point.x, 32));
-  }
-
-  async function shaBytes(data) {
-    return new Uint8Array(await sha256(data));
-  }
-
-  async function hmacSha256(keyBytes, dataBytes) {
-    const key = await shim.subtle.importKey(
-      'raw',
-      keyBytes,
-      { name: 'HMAC', hash: { name: 'SHA-256' } },
-      false,
-      ['sign']
-    );
-    return new Uint8Array(await shim.subtle.sign('HMAC', key, dataBytes));
-  }
-
-  async function deterministicK(priv, hashBytes, attempt) {
-    const x = bigIntToBytes(priv, 32);
-    const h1 = bigIntToBytes(bytesToBigInt(hashBytes) % N, 32);
-    const extra = attempt ? Uint8Array.from([attempt & 255]) : new Uint8Array(0);
-    let K = new Uint8Array(32);
-    let V = new Uint8Array(32).fill(1);
-    K = await hmacSha256(K, concatBytes(V, [0], x, h1, extra));
-    V = await hmacSha256(K, V);
-    K = await hmacSha256(K, concatBytes(V, [1], x, h1, extra));
-    V = await hmacSha256(K, V);
-    while (true) {
-      V = await hmacSha256(K, V);
-      const candidate = bytesToBigInt(V);
-      if (candidate > 0n && candidate < N) { return candidate; }
-      K = await hmacSha256(K, concatBytes(V, [0]));
-      V = await hmacSha256(K, V);
-    }
-  }
-
-  async function hashToScalar(seed, label) {
-    const digest = await shaBytes(concatBytes(utf8Bytes(label), utf8Bytes(seed)));
-    return (bytesToBigInt(digest) % (N - 1n)) + 1n;
-  }
-
-  async function randomScalar() {
-    return (bytesToBigInt(shim.random(32)) % (N - 1n)) + 1n;
-  }
-
-  async function normalizeMessage(data) {
-    if (typeof data === 'string') {
-      return settings.check(data) ? data : await settings.parse(data);
-    }
-    return data;
-  }
-
-  async function finalize(result, opt, cb) {
-    const output = opt && opt.raw ? result : (await shim.stringify(result));
-    if (cb) { try { cb(output); } catch (e) { console.log(e); } }
-    return output;
-  }
-
-  const core = {
+  const core = createCurveCore({
     curve: 'secp256k1',
-    P,
-    N,
-    A,
-    B,
-    G,
+    P, N, A, B, G,
+    shim, base62, settings, sha256,
+    extras: { aeskey, hash }
+  });
+  const {
     HALF_N,
-    shim,
-    base62,
-    settings,
-    aeskey,
-    hash,
-    mod,
-    modPow,
-    modInv,
-    isPoint,
-    isOnCurve,
-    pointAdd,
-    pointMultiply,
-    bytesToBigInt,
-    bigIntToBytes,
-    concatBytes,
-    utf8Bytes,
-    decodeBase64Url,
-    encodeBase64,
-    parseScalar,
-    assertScalar,
-    scalarToString,
-    pointToPub,
-    parsePub,
-    publicFromPrivate,
-    compactPoint,
-    shaBytes,
-    hmacSha256,
-    deterministicK,
-    hashToScalar,
-    randomScalar,
-    normalizeMessage,
-    finalize
-  };
+    mod, modPow, modInv,
+    isPoint, isOnCurve,
+    pointAdd, pointMultiply,
+    bytesToBigInt, bigIntToBytes, concatBytes, utf8Bytes,
+    decodeBase64Url, encodeBase64,
+    parseScalar, assertScalar, scalarToString,
+    pointToPub, parsePub, publicFromPrivate, compactPoint,
+    shaBytes, hmacSha256, deterministicK, hashToScalar, randomScalar,
+    normalizeMessage, finalize
+  } = core;
 
 
   __exp.default = core;
@@ -1494,13 +1525,14 @@ __def('./src/zen/secp256k1.js', function(module, __exp){
   __exp.hash = hash;
 });
 
-__def('./src/zen/p256.js', function(module, __exp){
+__def('./src/zen/curves/p256.js', function(module, __exp){
   // P-256 / secp256r1 curve — same Weierstrass math as secp256k1, different constants.
   // A = P - 3 (i.e. -3 mod P), so the doubling formula includes the A term.
   var shim = __req('./src/zen/shim.js').default;
   var base62 = __req('./src/zen/base62.js').default;
   var sha256 = __req('./src/zen/sha256.js').default;
   var settings = __req('./src/zen/settings.js').default;
+  var createCurveCore = __req('./src/zen/curves/utils.js').default;
   const P = BigInt('0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF');
   const N = BigInt('0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551');
   const A = P - 3n; // -3 mod P
@@ -1509,231 +1541,16 @@ __def('./src/zen/p256.js', function(module, __exp){
     x: BigInt('0x6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296'),
     y: BigInt('0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5')
   };
-  const HALF_N = N >> 1n;
-  const curve = 'p256';
-
-  function mod(a, m) {
-    return ((a % m) + m) % m;
-  }
-
-  function modPow(base, exp, modn) {
-    let result = 1n, value = mod(base, modn), power = exp;
-    while (power > 0n) {
-      if (power & 1n) { result = mod(result * value, modn); }
-      value = mod(value * value, modn);
-      power >>= 1n;
-    }
-    return result;
-  }
-
-  function modInv(a, modn) {
-    if (!a) { throw new Error('Inverse does not exist'); }
-    return modPow(mod(a, modn), modn - 2n, modn);
-  }
-
-  function isPoint(pt) {
-    return !!pt && typeof pt.x === 'bigint' && typeof pt.y === 'bigint';
-  }
-
-  function isOnCurve(pt) {
-    if (!isPoint(pt)) { return false; }
-    if (pt.x < 0n || pt.x >= P || pt.y < 0n || pt.y >= P) { return false; }
-    // y² = x³ + Ax + B  (A ≠ 0 for P-256)
-    return mod(pt.y * pt.y - (pt.x * pt.x * pt.x + A * pt.x + B), P) === 0n;
-  }
-
-  function pointAdd(left, right) {
-    if (!left) { return right; }
-    if (!right) { return left; }
-    if (left.x === right.x && mod(left.y + right.y, P) === 0n) { return null; }
-    let slope;
-    if (left.x === right.x && left.y === right.y) {
-      // Doubling: slope = (3x² + A) / (2y)  — P-256 has A = -3 ≠ 0
-      slope = mod((3n * mod(left.x * left.x, P) + A) * modInv(2n * left.y, P), P);
-    } else {
-      slope = mod((right.y - left.y) * modInv(right.x - left.x, P), P);
-    }
-    const x = mod(slope * slope - left.x - right.x, P);
-    const y = mod(slope * (left.x - x) - left.y, P);
-    return { x, y };
-  }
-
-  function pointMultiply(scalar, point) {
-    let n = mod(scalar, N);
-    if (!n || !point) { return null; }
-    let result = null, addend = point;
-    while (n > 0n) {
-      if (n & 1n) { result = pointAdd(result, addend); }
-      addend = pointAdd(addend, addend);
-      n >>= 1n;
-    }
-    return result;
-  }
-
-  function bytesToBigInt(bytes) {
-    return BigInt('0x' + (Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('') || '0'));
-  }
-
-  function bigIntToBytes(num, length) {
-    let hex = num.toString(16);
-    if (hex.length % 2) { hex = '0' + hex; }
-    const raw = shim.Buffer.from(hex, 'hex');
-    if (!length) { return new Uint8Array(raw); }
-    if (raw.length > length) { return new Uint8Array(raw.slice(raw.length - length)); }
-    const out = new Uint8Array(length);
-    out.set(raw, length - raw.length);
-    return out;
-  }
-
-  function concatBytes() {
-    const chunks = Array.prototype.slice.call(arguments).map(function(c) {
-      if (c instanceof Uint8Array) { return c; }
-      if (Array.isArray(c)) { return Uint8Array.from(c); }
-      if (typeof c === 'number') { return Uint8Array.from([c]); }
-      if (c && c.buffer instanceof ArrayBuffer) { return new Uint8Array(c.buffer, c.byteOffset || 0, c.byteLength); }
-      return new Uint8Array(0);
-    });
-    const len = chunks.reduce((t, c) => t + c.length, 0);
-    const out = new Uint8Array(len);
-    let off = 0;
-    chunks.forEach(c => { out.set(c, off); off += c.length; });
-    return out;
-  }
-
-  function utf8Bytes(data) {
-    if (typeof data === 'string') { return new shim.TextEncoder().encode(data); }
-    if (data instanceof Uint8Array) { return data; }
-    if (data instanceof ArrayBuffer) { return new Uint8Array(data); }
-    if (data && data.buffer instanceof ArrayBuffer) { return new Uint8Array(data.buffer, data.byteOffset || 0, data.byteLength); }
-    return new shim.TextEncoder().encode(String(data));
-  }
-
-  function decodeBase64Url(str) {
-    const padded = str.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(str.length / 4) * 4, '=');
-    return new Uint8Array(shim.Buffer.from(padded, 'base64'));
-  }
-
-  function assertScalar(value, name) {
-    if (value <= 0n || value >= N) { throw new Error((name || 'Scalar') + ' out of range'); }
-    return value;
-  }
-
-  function parseScalar(value, name) {
-    if (typeof value === 'bigint') { return assertScalar(value, name); }
-    if (typeof value !== 'string' || !value) { throw new Error((name || 'Scalar') + ' must be a string'); }
-    const scalar = (/^[A-Za-z0-9]{44}$/.test(value))
-      ? base62.b62ToBI(value)
-      : bytesToBigInt(decodeBase64Url(value));
-    return assertScalar(scalar, name);
-  }
-
-  function scalarToString(value) {
-    return base62.biToB62(assertScalar(value));
-  }
-
-  function pointToPub(pt) {
-    if (!isOnCurve(pt)) { throw new Error('Invalid public point'); }
-    return base62.biToB62(pt.x) + base62.biToB62(pt.y);
-  }
-
-  function parsePub(pub) {
-    if (typeof pub !== 'string') { throw new Error('Public key must be a string'); }
-    let point;
-    if (pub.length === 88 && /^[A-Za-z0-9]{88}$/.test(pub)) {
-      point = { x: base62.b62ToBI(pub.slice(0, 44)), y: base62.b62ToBI(pub.slice(44)) };
-    } else if (pub.length === 87 && pub[43] === '.') {
-      const parts = pub.split('.');
-      point = { x: bytesToBigInt(decodeBase64Url(parts[0])), y: bytesToBigInt(decodeBase64Url(parts[1])) };
-    } else {
-      throw new Error('Unrecognized public key format');
-    }
-    if (!isOnCurve(point)) { throw new Error('Public key is not on p256'); }
-    return point;
-  }
-
-  function publicFromPrivate(priv) {
-    const point = pointMultiply(assertScalar(priv, 'Private key'), G);
-    if (!point || !isOnCurve(point)) { throw new Error('Could not derive public key'); }
-    return point;
-  }
-
-  async function shaBytes(data) {
-    return new Uint8Array(await sha256(data));
-  }
-
-  async function hashToScalar(seed, label) {
-    const digest = await shaBytes(concatBytes(utf8Bytes(label), utf8Bytes(seed)));
-    return (bytesToBigInt(digest) % (N - 1n)) + 1n;
-  }
-
-  async function randomScalar() {
-    return (bytesToBigInt(shim.random(32)) % (N - 1n)) + 1n;
-  }
-
-  // ── parity with secp256k1 API ─────────────────────────────────────────────────
-
-  async function hmacSha256(kbytes, dbytes) {
-    const key = await shim.subtle.importKey('raw', kbytes, { name: 'HMAC', hash: { name: 'SHA-256' } }, false, ['sign']);
-    return new Uint8Array(await shim.subtle.sign('HMAC', key, dbytes));
-  }
-
-  async function deterministicK(priv, hbytes, attempt) {
-    const x  = bigIntToBytes(priv, 32);
-    const h1 = bigIntToBytes(bytesToBigInt(hbytes) % N, 32);
-    const extra = attempt ? Uint8Array.from([attempt & 255]) : new Uint8Array(0);
-    let K = new Uint8Array(32);
-    let V = new Uint8Array(32).fill(1);
-    K = await hmacSha256(K, concatBytes(V, [0], x, h1, extra));
-    V = await hmacSha256(K, V);
-    K = await hmacSha256(K, concatBytes(V, [1], x, h1, extra));
-    V = await hmacSha256(K, V);
-    while (true) {
-      V = await hmacSha256(K, V);
-      const k = bytesToBigInt(V);
-      if (k > 0n && k < N) { return k; }
-      K = await hmacSha256(K, concatBytes(V, [0]));
-      V = await hmacSha256(K, V);
-    }
-  }
-
-  function compactPoint(pt) {
-    return concatBytes([pt.y & 1n ? 0x03 : 0x02], bigIntToBytes(pt.x, 32));
-  }
-
-  function encodeBase64(bytes, enc) {
-    return shim.Buffer.from(bytes).toString(enc || 'base64');
-  }
-
-  async function normalizeMessage(data) {
-    if (typeof data === 'string') { return settings.check(data) ? data : await settings.parse(data); }
-    return data;
-  }
-
-  async function finalize(result, opt, cb) {
-    const out = opt && opt.raw ? result : (await shim.stringify(result));
-    if (cb) { try { cb(out); } catch (e) { console.log(e); } }
-    return out;
-  }
-
-  __exp.default = {
-    curve, P, N, A, B, G, HALF_N,
-    mod, modInv,
-    isPoint, isOnCurve,
-    pointAdd, pointMultiply,
-    bytesToBigInt, bigIntToBytes, concatBytes, utf8Bytes,
-    assertScalar, parseScalar, scalarToString, decodeBase64Url,
-    pointToPub, parsePub, publicFromPrivate,
-    hashToScalar, randomScalar,
-    shaBytes, hmacSha256, deterministicK,
-    compactPoint, encodeBase64,
-    normalizeMessage, finalize,
-    shim, base62, settings
-  };
+  __exp.default = createCurveCore({
+    curve: 'p256',
+    P, N, A, B, G,
+    shim, base62, settings, sha256
+  });
 });
 
-__def('./src/zen/crv.js', function(module, __exp){
-  var secp256k1 = __req('./src/zen/secp256k1.js').default;
-  var p256 = __req('./src/zen/p256.js').default;
+__def('./src/zen/curves/curves.js', function(module, __exp){
+  var secp256k1 = __req('./src/zen/curves/secp256k1.js').default;
+  var p256 = __req('./src/zen/curves/p256.js').default;
   const MAP = { secp256k1, p256, secp256r1: p256 };
 
   function crv(name) { return MAP[name] || MAP.secp256k1; }
@@ -1742,7 +1559,7 @@ __def('./src/zen/crv.js', function(module, __exp){
 });
 
 __def('./src/zen/verify.js', function(module, __exp){
-  var crv = __req('./src/zen/crv.js').default;
+  var crv = __req('./src/zen/curves/curves.js').default;
   async function verify(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -1787,7 +1604,7 @@ __def('./src/zen/verify.js', function(module, __exp){
 });
 
 __def('./src/zen/sign.js', function(module, __exp){
-  var crv = __req('./src/zen/crv.js').default;
+  var crv = __req('./src/zen/curves/curves.js').default;
   async function sign(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -3190,7 +3007,7 @@ __def('./src/zen/format.js', function(module, __exp){
 });
 
 __def('./src/zen/pair.js', function(module, __exp){
-  var crv = __req('./src/zen/crv.js').default;
+  var crv = __req('./src/zen/curves/curves.js').default;
   var applyFormat = __req('./src/zen/format.js').default;
   async function derivepriv(c, priv, seed, label) {
     for (let i = 0; i < 100; i++) {
@@ -3278,7 +3095,7 @@ __def('./src/zen/pair.js', function(module, __exp){
 });
 
 __def('./src/zen/encrypt.js', function(module, __exp){
-  var core = __req('./src/zen/secp256k1.js').default;
+  var core = __req('./src/zen/curves/secp256k1.js').default;
   async function encrypt(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -3314,7 +3131,7 @@ __def('./src/zen/encrypt.js', function(module, __exp){
 });
 
 __def('./src/zen/decrypt.js', function(module, __exp){
-  var core = __req('./src/zen/secp256k1.js').default;
+  var core = __req('./src/zen/curves/secp256k1.js').default;
   async function decrypt(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -3349,7 +3166,7 @@ __def('./src/zen/decrypt.js', function(module, __exp){
 });
 
 __def('./src/zen/secret.js', function(module, __exp){
-  var crv = __req('./src/zen/crv.js').default;
+  var crv = __req('./src/zen/curves/curves.js').default;
   async function secret(epub, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -4581,11 +4398,13 @@ __def('./src/zen/set.js', function(module, __exp){
 
 __def('./src/zen/mesh.js', function(module, __exp){
   __req('./src/zen/shim.js');
+  var jsonAsync = __req('./src/zen/json.js').default;
   let __defaultExport;
 
       var noop = function(){}
-      var parse = JSON.parseAsync || function(t,cb,r){ var u, d = +new Date; try{ cb(u, JSON.parse(t,r), json.sucks(+new Date - d)) }catch(e){ cb(e) } }
-      var json = JSON.stringifyAsync || function(v,cb,r,s){ var u, d = +new Date; try{ cb(u, JSON.stringify(v,r,s), json.sucks(+new Date - d)) }catch(e){ cb(e) } }
+      var pair = jsonAsync.createJsonPair(function(d){ return json.sucks(d) });
+      var parse = pair.parse;
+      var json = pair.json;
       json.sucks = function(d){ if(d > 99){ console.log("Warning: JSON blocking CPU detected. Add `zen/lib/yson.js` to fix."); json.sucks = noop } }
 
       function Mesh(root){
@@ -4999,8 +4818,9 @@ __def('./src/zen/websocket.js', function(module, __exp){
   var noop = function(){}, u;
 });
 
-__def('./src/zen/localStorage.js', function(module, __exp){
+__def('./src/zen/locstore.js', function(module, __exp){
   var Zen = __req('./src/zen/root.js').default;
+  var jsonAsync = __req('./src/zen/json.js').default;
   var env = (typeof process !== 'undefined' && process.env) || {};
 
   var noop = function(){}, store, u;
@@ -5012,8 +4832,9 @@ __def('./src/zen/localStorage.js', function(module, __exp){
   	store = {setItem: function(k,v){this[k]=v}, removeItem: function(k){delete this[k]}, getItem: function(k){return this[k]}};
   }
 
-  var parse = JSON.parseAsync || function(t,cb,r){ var u; try{ cb(u, JSON.parse(t,r)) }catch(e){ cb(e) } }
-  var json = JSON.stringifyAsync || function(v,cb,r,s){ var u; try{ cb(u, JSON.stringify(v,r,s)) }catch(e){ cb(e) } }
+  var pair = jsonAsync.createJsonPair();
+  var parse = pair.parse;
+  var json = pair.json;
 
   Zen.on('create', function lg(root){
   	this.to.next(root);
@@ -5088,7 +4909,7 @@ __def('./src/zen/graph.js', function(module, __exp){
   __req('./src/zen/set.js');
   __req('./src/zen/mesh.js');
   __req('./src/zen/websocket.js');
-  __req('./src/zen/localStorage.js');
+  __req('./src/zen/locstore.js');
   var ZEN = __req('./src/zen/root.js').default;
   if (!ZEN.chain.then) {
     ZEN.chain.then = function(cb, opt) {
@@ -5117,7 +4938,7 @@ __def('./src/zen/graph.js', function(module, __exp){
 
 __def('./src/zen/index.js', function(module, __exp){
   var PEN = __req('./src/pen.js').default;
-  var secp256k1 = __req('./src/zen/secp256k1.js').default;
+  var secp256k1 = __req('./src/zen/curves/secp256k1.js').default;
   var settings = __req('./src/zen/settings.js').default;
   var pair = __req('./src/zen/pair.js').default;
   var sign = __req('./src/zen/sign.js').default;

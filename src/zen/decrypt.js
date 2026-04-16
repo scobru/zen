@@ -1,4 +1,4 @@
-import core from './secp256k1.js';
+import core from './curves/secp256k1.js';
 
 async function decrypt(data, pair, cb, opt) {
   try {

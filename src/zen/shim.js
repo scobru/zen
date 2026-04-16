@@ -1,25 +1,21 @@
 import BufferApi from './buffer.js';
+import jsonAsync from './json.js';
 
 const globalScope = (typeof globalThis !== 'undefined') ? globalThis : (typeof global !== 'undefined' ? global : (typeof window !== 'undefined' ? window : {}));
 const api = { Buffer: globalScope.Buffer || BufferApi };
 const empty = {};
 
-JSON.parseAsync = JSON.parseAsync || function(text, cb, reviver) {
-  try { cb(undefined, JSON.parse(text, reviver)); } catch (error) { cb(error); }
-};
-JSON.stringifyAsync = JSON.stringifyAsync || function(value, cb, replacer, space) {
-  try { cb(undefined, JSON.stringify(value, replacer, space)); } catch (error) { cb(error); }
-};
+jsonAsync.ensureJsonAsync();
 
 api.parse = function(text, reviver) {
   return new Promise(function(resolve, reject) {
-    JSON.parseAsync(text, function(error, raw) { error ? reject(error) : resolve(raw); }, reviver);
+    jsonAsync.parseAsync(text, function(error, raw) { error ? reject(error) : resolve(raw); }, reviver);
   });
 };
 
 api.stringify = function(value, replacer, space) {
   return new Promise(function(resolve, reject) {
-    JSON.stringifyAsync(value, function(error, raw) { error ? reject(error) : resolve(raw); }, replacer, space);
+    jsonAsync.stringifyAsync(value, function(error, raw) { error ? reject(error) : resolve(raw); }, replacer, space);
   });
 };
 

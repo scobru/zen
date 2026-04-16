@@ -1,4 +1,4 @@
-import crv from './crv.js';
+import crv from './curves/curves.js';
 
 async function secret(epub, pair, cb, opt) {
   try {

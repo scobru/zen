@@ -1,4 +1,4 @@
-import crv from './crv.js';
+import crv from './curves/curves.js';
 import applyFormat from './format.js';
 
 async function derivepriv(c, priv, seed, label) {

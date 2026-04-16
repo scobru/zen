@@ -1,4 +1,4 @@
-import crv from './crv.js';
+import crv from './curves/curves.js';
 
 async function verify(data, pair, cb, opt) {
   try {
