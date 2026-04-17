@@ -1,4 +1,4 @@
-﻿# ZEN
+﻿# ZEN — Zen Entropy Network
 
 **ZEN** is an offline-first, decentralized graph database with a built-in cryptographic runtime.
 
@@ -162,24 +162,51 @@ npm run testPEN      # run PEN unit tests
 
 ## WASM crypto pipeline
 
-ZEN ships a second WASM module — `crypto.wasm` — compiled from Zig for the algorithms where native WASM compute beats JavaScript:
+ZEN ships a second WASM module — `crypto.wasm` — compiled from Zig for the algorithms where native WASM compute beats JavaScript.
+
+The principle: **use whatever is fastest**. Measure at the micro level, then decide. Hardware wins for SHA/AES/HMAC. WASM wins for algorithms the platform does not expose natively.
 
 | Algorithm | Runtime | Why |
 |-----------|---------|-----|
 | SHA-256 | WebCrypto (`subtle.digest`) | Hardware SHA-NI |
 | AES-GCM | WebCrypto (`subtle.encrypt`) | Hardware AES-NI |
-| HMAC-SHA-256 | WebCrypto (`subtle.sign`) | Hardware SHA-NI |
-| secp256k1 point multiply | V8 BigInt (native C++) | V8 JIT > WASM32 emulated wide mul |
+| HMAC-SHA-256 | WebCrypto (`subtle.sign`) | Hardware SHA-NI — WASM was 7× slower |
+| secp256k1 point multiply | V8 BigInt (native C++) | V8 JIT > WASM32 emulated wide mul (8–12×) |
 | P-256 point multiply | V8 BigInt (native C++) | same reason |
-| **Keccak-256** | **WASM** (`crypto.wasm`) | 25-lane u64, no WebCrypto equivalent |
-| **RIPEMD-160** | **WASM** (`crypto.wasm`) | No WebCrypto equivalent |
+| **Keccak-256** | **WASM** (`crypto.wasm`) | 25-lane u64, no WebCrypto equivalent — **5× faster** |
+| **RIPEMD-160** | **WASM** (`crypto.wasm`) | No WebCrypto equivalent — **1.6M ops/s** |
 | **base62** encode/decode | **WASM** (`crypto.wasm`) | Faster than BigInt for encoding |
-
-The principle: use whatever is fastest. Platform hardware wins for SHA/AES/HMAC. WASM wins for algorithms the platform does not expose natively.
 
 ```bash
 npm run buildCrypto  # rebuild crypto.wasm from src/crypto_wasm.zig
 ```
+
+---
+
+## Benchmarks
+
+ZEN ships a micro-benchmark harness in `test/bench/` for data-driven optimization. Each benchmark suite runs with configurable warmup and iteration counts and outputs both human-readable color output and machine-readable JSON.
+
+```bash
+npm run bench          # run all suites
+npm run bench:hash     # hash algorithms (SHA-256, keccak256, ripemd160, DJB2)
+npm run bench:json     # JSON.parse / parseAsync / YSON chunk parser
+npm run bench:dup      # dedup pipeline (dup.check + dup.track)
+npm run bench:radix    # Radix tree vs native Map
+npm run bench:ham      # HAM CRDT comparisons, State(), put() e2e
+npm run bench:sign     # ZEN.pair / sign / verify / encrypt
+npm run bench:base62   # base62 WASM vs base64 baseline
+```
+
+Selected baselines (Node.js, 5000 iters):
+
+| Suite | Operation | Throughput |
+|-------|-----------|-----------|
+| hash | keccak256 WASM 4B | 275K ops/s |
+| hash | ripemd160 WASM 4B | 1.6M ops/s |
+| hash | String.hash DJB2 | 3.6M ops/s |
+| dup | full pipeline (Map) | 1.13M ops/s |
+| dup | check missing (Map) | 4.54M ops/s |
 
 ---
 
@@ -202,9 +229,14 @@ Current baseline: **171 passing**.
 
 ```
 src/                  — runtime source (source of truth)
-  root.js             — ZEN constructor
+  shim.js             — setTimeout.turn, setTimeout.each, String.hash DJB2
+  dup.js              — message deduplication (called on every message)
+  state.js            — CRDT vector clock (HAM)
+  valid.js            — value validation
+  onto.js             — doubly-linked list event emitter
+  root.js             — ZEN constructor, universe() pipeline
   core.js             — graph operations
-  mesh.js             — P2P networking
+  mesh.js             — P2P networking, JSON parse, batching
   sea/                — crypto: pair, sign, verify, encrypt, hash, certify
   curves/             — ECC (secp256k1, P-256) BigInt + Zig sources
   keccak256.js        — WASM-accelerated Keccak-256
@@ -226,6 +258,7 @@ lib/                 — storage adapters, build scripts
   radisk.js / rfs.js / rindexed.js / rs3.js / ...
 
 test/
+  bench/             — micro-benchmark harness + 7 suites
   zen/               — ZEN unit tests (instance, crypto, multicurve, certify)
   pen.js             — PEN unit tests
   zen.js             — core graph integration tests
@@ -239,7 +272,7 @@ test/
 ```
 amark/gun
   → akaoio/gun
-    → ZEN
+    → ZEN (Zen Entropy Network)
 ```
 
 ZEN keeps the graph and sync inheritance but has a separate runtime identity, build system, and architectural direction. It is not a thin rebrand — the source has been materially rewritten.
