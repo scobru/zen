@@ -643,17 +643,18 @@ __def('./src/dup.js', function(module, __exp){
   let __defaultExport;
 
   function Dup(opt) {
-    var dup = { s: {} },
+    var dup = { s: new Map() },
       s = dup.s;
     opt = opt || { max: 999, age: 1000 * 9 }; //*/ 1000 * 9 * 3};
     dup.check = function (id) {
-      if (!s[id]) {
+      if (!s.has(id)) {
         return false;
       }
       return dt(id);
     };
     var dt = (dup.track = function (id) {
-      var it = s[id] || (s[id] = {});
+      var it = s.get(id);
+      if (!it) { it = {}; s.set(id, it); }
       it.was = dup.now = +new Date();
       if (!dup.to) {
         dup.to = setTimeout(dup.drop, opt.age + 9);
@@ -666,17 +667,17 @@ __def('./src/dup.js', function(module, __exp){
     dup.drop = function (age) {
       dup.to = null;
       dup.now = +new Date();
-      var l = Object.keys(s);
+      var l = [...s.keys()];
       console.STAT &&
         console.STAT(dup.now, +new Date() - dup.now, "dup drop keys"); // prev ~20% CPU 7% RAM 300MB // now ~25% CPU 7% RAM 500MB
       setTimeout.each(
         l,
         function (id) {
-          var it = s[id]; // TODO: .keys( is slow?
+          var it = s.get(id);
           if (it && (age || opt.age) > dup.now - it.was) {
             return;
           }
-          delete s[id];
+          s.delete(id);
         },
         0,
         99,
@@ -7383,7 +7384,7 @@ __def('./src/mesh.js', function(module, __exp){
           return;
         }
         dup_track.ed = 0;
-        if (!(d = dup.s[id])) {
+        if (!(d = dup.s.get(id))) {
           return;
         }
         d.via = peer;
@@ -7480,20 +7481,20 @@ __def('./src/mesh.js', function(module, __exp){
         } // TODO: Should broadcasts be hashed?
         if (!peer && ack) {
           peer =
-            ((tmp = dup.s[ack]) &&
+            ((tmp = dup.s.get(ack)) &&
               (tmp.via || ((tmp = tmp.it) && (tmp = tmp._) && tmp.via))) ||
             ((tmp = mesh.last) && ack === tmp["#"] && mesh.leap);
         } // warning! mesh.leap could be buggy! mesh last check reduces this. // TODO: CLEAN UP THIS LINE NOW? `.it` should be reliable.
         if (!peer && ack) {
           // still no peer, then ack daisy chain 'tunnel' got lost.
-          if (dup.s[ack]) {
+          if (dup.s.has(ack)) {
             return;
           } // in dups but no peer hints that this was ack to ourself, ignore.
           console.STAT &&
             console.STAT(+new Date(), ++SMIA, "total no peer to ack to"); // TODO: Delete this now. Dropping lost ACKs is protocol fine now.
           return false;
         } // TODO: Temporary? If ack via trace has been lost, acks will go to all peers, which trashes browser bandwidth. Not relaying the ack will force sender to ask for ack again. Note, this is technically wrong for mesh behavior.
-        if (ack && !msg.put && !hash && ((dup.s[ack] || "").it || "")["##"]) {
+        if (ack && !msg.put && !hash && ((dup.s.get(ack) || "").it || "")["##"]) {
           return false;
         } // If we're saying 'not found' but a relay had data, do not bother sending our not found. // Is this correct, return false? // NOTE: ADD PANIC TEST FOR THIS!
         if (!peer && mesh.way) {
@@ -7606,7 +7607,7 @@ __def('./src/mesh.js', function(module, __exp){
           if (!meta.via && dup_check(ack + hash)) {
             return false;
           } // for our own out messages, memory & storage may ack the same thing, so dedup that. Tho if via another peer, we already tracked it upon hearing, so this will always trigger false positives, so don't do that!
-          if ((tmp = (dup.s[ack] || "").it)) {
+          if ((tmp = (dup.s.get(ack) || "").it)) {
             if (hash === tmp["##"]) {
               return false;
             } // if ask has a matching hash, acking is optional.
@@ -7719,7 +7720,7 @@ __def('./src/mesh.js', function(module, __exp){
       } else {
         tmp = peer.id = peer.id || peer.url || String.random(9);
         mesh.say({ dam: "?", pid: root.opt.pid }, (opt.peers[tmp] = peer));
-        delete dup.s[peer.last]; // IMPORTANT: see https://zen.eco/docs/DAM#self
+        dup.s.delete(peer.last); // IMPORTANT: see https://zen.eco/docs/DAM#self
       }
       if (!peer.met) {
         mesh.near++;
@@ -7760,7 +7761,7 @@ __def('./src/mesh.js', function(module, __exp){
         }
       }
       mesh.say({ dam: "?", pid: opt.pid, "@": msg["#"] }, peer);
-      delete dup.s[peer.last]; // IMPORTANT: see https://zen.eco/docs/DAM#self
+      dup.s.delete(peer.last); // IMPORTANT: see https://zen.eco/docs/DAM#self
     };
     mesh.hear["mob"] = function (msg, peer) {
       // NOTE: AXE will overload this with better logic.

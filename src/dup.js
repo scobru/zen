@@ -3,17 +3,18 @@ import "./shim.js";
 let __defaultExport;
 
 function Dup(opt) {
-  var dup = { s: {} },
+  var dup = { s: new Map() },
     s = dup.s;
   opt = opt || { max: 999, age: 1000 * 9 }; //*/ 1000 * 9 * 3};
   dup.check = function (id) {
-    if (!s[id]) {
+    if (!s.has(id)) {
       return false;
     }
     return dt(id);
   };
   var dt = (dup.track = function (id) {
-    var it = s[id] || (s[id] = {});
+    var it = s.get(id);
+    if (!it) { it = {}; s.set(id, it); }
     it.was = dup.now = +new Date();
     if (!dup.to) {
       dup.to = setTimeout(dup.drop, opt.age + 9);
@@ -26,17 +27,17 @@ function Dup(opt) {
   dup.drop = function (age) {
     dup.to = null;
     dup.now = +new Date();
-    var l = Object.keys(s);
+    var l = [...s.keys()];
     console.STAT &&
       console.STAT(dup.now, +new Date() - dup.now, "dup drop keys"); // prev ~20% CPU 7% RAM 300MB // now ~25% CPU 7% RAM 500MB
     setTimeout.each(
       l,
       function (id) {
-        var it = s[id]; // TODO: .keys( is slow?
+        var it = s.get(id);
         if (it && (age || opt.age) > dup.now - it.was) {
           return;
         }
-        delete s[id];
+        s.delete(id);
       },
       0,
       99,
