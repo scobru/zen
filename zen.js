@@ -5,7 +5,7 @@ function __req(id){ var mod = __mods[id]; if(!mod){ throw new Error('Missing mod
 __def('./src/zen/base64.js', function(module, __exp){
   // Patch root.btoa/root.atob to use URL-safe base64 (no +//, no padding).
   // Native btoa/atob are available in all modern browsers and Node.js 16+.
-  
+
     var root = (typeof globalThis !== 'undefined') ? globalThis
       : (typeof global !== 'undefined' ? global
       : (typeof window !== 'undefined' ? window : this));
@@ -48,12 +48,13 @@ __def('./src/zen/array.js', function(module, __exp){
       return btoa(this)
     }
   }
-  
+
   __exp.default = SeaArray;
 });
 
 __def('./src/zen/buffer.js', function(module, __exp){
-  __req('./src/zen/base64.js');var __array = __req('./src/zen/array.js').default;
+  __req('./src/zen/base64.js');
+  var __array = __req('./src/zen/array.js').default;
   // This is Buffer implementation used in SEA. Functionality is mostly
   // compatible with NodeJS 'safe-buffer' and is used for encoding conversions
   // between binary and 'hex' | 'utf8' | 'base64'
@@ -128,7 +129,7 @@ __def('./src/zen/buffer.js', function(module, __exp){
   })
   SafeBuffer.prototype.from = SafeBuffer.from
   SafeBuffer.prototype.toString = SeaArray.prototype.toString
-  
+
   __exp.default = SafeBuffer;
 });
 
@@ -141,17 +142,17 @@ __def('./src/zen/json.js', function(module, __exp){
       try { cb(undefined, JSON.stringify(value, replacer, space)); } catch (error) { cb(error); }
     };
   }
-  
+
   function parseAsync(text, cb, reviver) {
     ensureJsonAsync();
     return JSON.parseAsync(text, cb, reviver);
   }
-  
+
   function stringifyAsync(value, cb, replacer, space) {
     ensureJsonAsync();
     return JSON.stringifyAsync(value, cb, replacer, space);
   }
-  
+
   function createJsonPair(note) {
     const mark = (typeof note === 'function') ? note : function() {};
     return {
@@ -169,39 +170,40 @@ __def('./src/zen/json.js', function(module, __exp){
       }
     };
   }
-  
+
   __exp.default = { ensureJsonAsync, parseAsync, stringifyAsync, createJsonPair };
 });
 
 __def('./src/zen/shim.js', function(module, __exp){
-  var BufferApi = __req('./src/zen/buffer.js').default;var jsonAsync = __req('./src/zen/json.js').default;
+  var BufferApi = __req('./src/zen/buffer.js').default;
+  var jsonAsync = __req('./src/zen/json.js').default;
   const globalScope = (typeof globalThis !== 'undefined') ? globalThis : (typeof global !== 'undefined' ? global : (typeof window !== 'undefined' ? window : {}));
   const api = { Buffer: globalScope.Buffer || BufferApi };
   const empty = {};
-  
+
   jsonAsync.ensureJsonAsync();
-  
+
   api.parse = function(text, reviver) {
     return new Promise(function(resolve, reject) {
       jsonAsync.parseAsync(text, function(error, raw) { error ? reject(error) : resolve(raw); }, reviver);
     });
   };
-  
+
   api.stringify = function(value, replacer, space) {
     return new Promise(function(resolve, reject) {
       jsonAsync.stringifyAsync(value, function(error, raw) { error ? reject(error) : resolve(raw); }, replacer, space);
     });
   };
-  
+
   if (!api.TextEncoder) { api.TextEncoder = globalScope.TextEncoder; }
   if (!api.TextDecoder) { api.TextDecoder = globalScope.TextDecoder; }
-  
+
   api.crypto = globalScope.crypto;
   api.subtle = (globalScope.crypto || empty).subtle || (globalScope.crypto || empty).webkitSubtle;
   api.random = function(len) {
     return api.Buffer.from(api.crypto.getRandomValues(new Uint8Array(api.Buffer.alloc(len))));
   };
-  
+
   // JS utility shims (ported from gun/shim.js)
   String.random = String.random || function(l, c) {
     var s = '';
@@ -251,7 +253,7 @@ __def('./src/zen/shim.js', function(module, __exp){
     for (var k in o) { if (has.call(o, k)) { l.push(k); } }
     return l;
   };
-  
+
   function createImmediateFallback(sT, undefinedValue) {
     if (typeof MessageChannel == ''+undefinedValue) { return sT; }
     var channel = new MessageChannel();
@@ -259,7 +261,7 @@ __def('./src/zen/shim.js', function(module, __exp){
     channel.port1.onmessage = function(e) { '' == e.data && fn(); };
     return function(q) { fn = q; channel.port2.postMessage(''); };
   }
-  
+
   let undefinedValue;
   const timeoutApi = setTimeout;
   let pollLast = 0;
@@ -281,7 +283,7 @@ __def('./src/zen/shim.js', function(module, __exp){
     }
     immediateApi(function() { pollLast = clockApi.now(); pollActive = 1; try { task(); } finally { pollActive = 0; } }, pollSpin=0);
   };
-  
+
   const pollApi = timeoutApi.poll;
   let turnIndex = 0;
   let turnTask;
@@ -292,11 +294,18 @@ __def('./src/zen/shim.js', function(module, __exp){
       turnQueue = turn.s = turnQueue.slice(turnIndex);
       turnIndex = 0;
     }
-    if (turnQueue.length) { pollApi(drainTurnQueue); }
+    if (turnQueue.length) {
+      // Bypass pollActive check for continuation: use direct call with spin-based yielding
+      if ((timeoutApi.hold >= (clockApi.now() - pollLast)) && pollSpin++ < 3333) {
+        drainTurnQueue();
+      } else {
+        immediateApi(function() { pollLast = clockApi.now(); pollSpin = 0; drainTurnQueue(); }, 0);
+      }
+    }
   };
   const turn = timeoutApi.turn = timeoutApi.turn || function(task) { 1 == turnQueue.push(task) && pollApi(drainTurnQueue); };
   turn.s = turnQueue;
-  
+
   const turnApi = timeoutApi.turn;
   timeoutApi.each = timeoutApi.each || function(list, fn, done, size) {
     size = size || 9;
@@ -311,15 +320,15 @@ __def('./src/zen/shim.js', function(module, __exp){
     }
     next();
   };
-  
-  
+
+
   __exp.default = api;
 });
 
 __def('./src/zen/valid.js', function(module, __exp){
   let __defaultExport;
-  
-  
+
+
   // Valid values are a subset of JSON: null, binary, number (!Infinity), text,
   // or a soul relation. Arrays need special algorithms to handle concurrency,
   // so they are not supported directly. Use an extension that supports them if
@@ -334,15 +343,15 @@ __def('./src/zen/valid.js', function(module, __exp){
   	("number" === typeof v && v != Infinity && v != -Infinity && v === v) ||
   	(!!v && "string" == typeof v["#"] && Object.keys(v).length === 1 && v["#"]);
   }
-  
-  
+
+
   __exp.default = __defaultExport;
 });
 
 __def('./src/zen/state.js', function(module, __exp){
   __req('./src/zen/shim.js');
   let __defaultExport;
-  
+
       function State(){
           var t = +new Date;
           if(last < t){
@@ -368,14 +377,14 @@ __def('./src/zen/state.js', function(module, __exp){
           return n;
       }
       __defaultExport = State;
-  
+
   __exp.default = __defaultExport;
 });
 
 __def('./src/zen/onto.js', function(module, __exp){
   let __defaultExport;
-  
-  
+
+
   // On event emitter generic javascript utility.
   __defaultExport = function onto(tag, arg, as){
   	if(!tag){ return {to: onto} }
@@ -410,15 +419,15 @@ __def('./src/zen/onto.js', function(module, __exp){
   	if((tag = tag.to) && u !== arg){ tag.next(arg) }
   	return tag;
   };
-  
-  
+
+
   __exp.default = __defaultExport;
 });
 
 __def('./src/zen/dup.js', function(module, __exp){
   __req('./src/zen/shim.js');
   let __defaultExport;
-  
+
       function Dup(opt){
           var dup = {s:{}}, s = dup.s;
           opt = opt || {max: 999, age: 1000 * 9};//*/ 1000 * 9 * 3};
@@ -446,14 +455,14 @@ __def('./src/zen/dup.js', function(module, __exp){
           return dup;
       }
       __defaultExport = Dup;
-  
+
   __exp.default = __defaultExport;
 });
 
 __def('./src/zen/ask.js', function(module, __exp){
   __req('./src/zen/onto.js');
   let __defaultExport;
-  
+
       __defaultExport = function ask(cb, as){
           if(!this.on){ return }
           var lack = (this.opt||{}).lack || 9000;
@@ -477,33 +486,38 @@ __def('./src/zen/ask.js', function(module, __exp){
           return id;
       }
       var random = String.random || function(){ return Math.random().toString(36).slice(2) }
-  
+
   __exp.default = __defaultExport;
 });
 
 __def('./src/zen/root.js', function(module, __exp){
-  __req('./src/zen/shim.js');var __valid = __req('./src/zen/valid.js').default;var __state = __req('./src/zen/state.js').default;var __onto = __req('./src/zen/onto.js').default;var __dup = __req('./src/zen/dup.js').default;var __ask = __req('./src/zen/ask.js').default;
+  __req('./src/zen/shim.js');
+  var __valid = __req('./src/zen/valid.js').default;
+  var __state = __req('./src/zen/state.js').default;
+  var __onto = __req('./src/zen/onto.js').default;
+  var __dup = __req('./src/zen/dup.js').default;
+  var __ask = __req('./src/zen/ask.js').default;
   let __defaultExport;
-  
+
       function Zen(o){
           if(o instanceof Zen){ return (this._ = {$: this}).$ }
           if(!(this instanceof Zen)){ return new Zen(o) }
           return Zen.create(this._ = {$: this, opt: o});
       }
-  
+
       Zen.is = function($){ return ($ instanceof Zen) || ($ && $._ && ($ === $._.$)) || false }
-  
+
       Zen.version = 0.2020;
-  
+
       Zen.chain = Zen.prototype;
       Zen.chain.toJSON = function(){};
-  
+
       Zen.valid = __valid;
       Zen.state = __state;
       Zen.on = __onto;
       Zen.dup = __dup;
       Zen.ask = __ask;
-  
+
       {
           Zen.create = function(at){
               at.root = at.root || at;
@@ -604,9 +618,9 @@ __def('./src/zen/root.js', function(module, __exp){
           function ham(val, key, soul, state, msg){
               var ctx = msg._||'', root = ctx.root, graph = root.graph, lot, tmp;
               var vertex = graph[soul] || empty, was = state_is(vertex, key, 1), known = vertex[key];
-  
+
               var DBG = ctx.DBG; if(tmp = console.STAT){ if(!graph[soul] || !known){ tmp.has = (tmp.has || 0) + 1 } }
-  
+
               var now = State(), u;
               if(state > now){
                   if((tmp = state - now) > Ham.max){
@@ -652,7 +666,7 @@ __def('./src/zen/root.js', function(module, __exp){
               if(!(msg = ctx.msg) || ctx.err || msg.err){ return }
               msg.out = universe;
               ctx.root.on('out', msg);
-  
+
               courtesyCheck(); // courtesy check;
           }
           function ack(msg){ // aggregate ACKs.
@@ -677,7 +691,7 @@ __def('./src/zen/root.js', function(module, __exp){
               if(ctx.stun || (ctx.acks||0) !== ctx.all){ return } // normalize acks: undefined treated as 0 before first storage ack arrives.
               ctx.root.on('in', {'@': ctx['#'], err: ctx.err, ok: ctx.err? u : ctx.ok || {'':1}});
           }
-  
+
           var ERR = "Error: Invalid graph!";
           var cut = function(s){ return " '"+(''+s).slice(0,9)+"...' " }
           var L = JSON.stringify, MD = 2147483647, State = Zen.state;
@@ -688,16 +702,16 @@ __def('./src/zen/root.js', function(module, __exp){
                   courtesyCheck = function(){ courtesy = 0 };
               }
           };
-  
+
       }
-  
+
       {
           Zen.on.get = function(msg, zen){
               var root = zen._, get = msg.get, soul = get['#'], node = root.graph[soul], has = get['.'];
               var next = root.next || (root.next = {}), at = next[soul];
-  
+
               // TODO: Azarattum bug, what is in graph is not same as what is in next. Fix!
-  
+
               // queue concurrent GETs?
               // TODO: consider tagging original message into dup for DAM.
               // TODO: ^ above? In chat app, 12 messages resulted in same peer asking for `#user.pub` 12 times. (same with #user GET too, yipes!) // DAM note: This also resulted in 12 replies from 1 peer which all had same ##hash but none of them deduped because each get was different.
@@ -761,7 +775,7 @@ __def('./src/zen/root.js', function(module, __exp){
               if(!node){ root.on('in', {'@': msg['#']}) } // TODO: I don't think I like this, the default lS adapter uses this but "not found" is a sensitive issue, so should probably be handled more carefully/individually.
           } Zen.on.get.ack = ack;
       }
-  
+
       {
           Zen.chain.opt = function(opt){
               opt = opt || {};
@@ -788,26 +802,26 @@ __def('./src/zen/root.js', function(module, __exp){
               return zen;
           }
       }
-  
+
       var obj_each = function(o,f){ Object.keys(o).forEach(f,o) }, text_rand = String.random, turn = setTimeout.turn, valid = Zen.valid, state_is = Zen.state.is, state_ify = Zen.state.ify, u, empty = {}, C;
-  
+
       Zen.log = function(){
           var log = C && C.log;
           return (!Zen.log.off && 'function' == typeof log && log.apply(C, arguments)), [].slice.call(arguments).join(' ')
       };
       Zen.log.once = function(w,s,o){ return (o = Zen.log.once)[w] = o[w] || 0, o[w]++ || Zen.log(s) };
-  
+
       ((typeof globalThis !== "undefined" && typeof window === "undefined" && typeof WorkerGlobalScope !== "undefined") ? ((globalThis.Zen = Zen).window = globalThis) : (typeof window !== "undefined" ? ((window.Zen = Zen).window = window) : undefined));
       ((globalThis.Zen = Zen).globalThis = globalThis);
       try{ if(typeof MODULE !== "undefined"){ MODULE.exports = Zen } }catch(e){}
       __defaultExport = Zen;
-  
+
       (Zen.window||{}).console = (Zen.window||{}).console || {log: function(){}};
       (C = (typeof console !== 'undefined'? console : {log: function(){}})).only = function(i, s){
           var log = C && C.log;
           return (C.only.i && i === C.only.i && C.only.i++) && (('function' == typeof log && log.apply(C, arguments)) || s)
       };
-  
+
   __exp.default = __defaultExport;
 });
 
@@ -817,7 +831,7 @@ __def('./src/zen/base62.js', function(module, __exp){
   const ALPHA_MAP = {};
   for (let i = 0; i < ALPHA.length; i++) { ALPHA_MAP[ALPHA[i]] = i; }
   const PUB_LEN = 44;
-  
+
   function biToB62(n) {
     if (typeof n !== 'bigint' || n < 0n) {
       throw new Error('biToB62: input must be non-negative BigInt');
@@ -834,7 +848,7 @@ __def('./src/zen/base62.js', function(module, __exp){
     }
     return out;
   }
-  
+
   function b62ToBI(s) {
     if (typeof s !== 'string' || s.length !== PUB_LEN) {
       throw new Error('b62ToBI: expected ' + PUB_LEN + '-char base62 string');
@@ -850,19 +864,19 @@ __def('./src/zen/base62.js', function(module, __exp){
     }
     return n;
   }
-  
+
   function b64ToB62(s) {
     const hex = shim.Buffer.from(atob(s), 'binary').toString('hex');
     return biToB62(BigInt('0x' + (hex || '0')));
   }
-  
+
   function b62ToB64(s) {
     const n = b62ToBI(s);
     const hex = n.toString(16).padStart(64, '0');
     return shim.Buffer.from(hex, 'hex').toString('base64')
       .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
   }
-  
+
   function pubToJwkXY(pub) {
     if (typeof pub !== 'string') {
       throw new Error('pubToJwkXY: pub must be a string');
@@ -880,7 +894,7 @@ __def('./src/zen/base62.js', function(module, __exp){
     }
     throw new Error('pubToJwkXY: unrecognised pub format');
   }
-  
+
   function bufToB62(buf) {
     let out = '';
     for (let i = 0; i < buf.length; i += 32) {
@@ -894,13 +908,14 @@ __def('./src/zen/base62.js', function(module, __exp){
     }
     return out;
   }
-  
+
   const base62 = { biToB62, b62ToBI, b64ToB62, b62ToB64, pubToJwkXY, bufToB62, PUB_LEN };
   __exp.default = base62;
 });
 
 __def('./src/zen/settings.js', function(module, __exp){
-  var shim = __req('./src/zen/shim.js').default;var base62 = __req('./src/zen/base62.js').default;
+  var shim = __req('./src/zen/shim.js').default;
+  var base62 = __req('./src/zen/base62.js').default;
   const settings = {};
   settings.pbkdf2 = { hash: { name: 'SHA-256' }, iter: 100000, ks: 64 };
   settings.ecdsa = {
@@ -908,7 +923,7 @@ __def('./src/zen/settings.js', function(module, __exp){
     sign: { name: 'ECDSA', hash: { name: 'SHA-256' } }
   };
   settings.ecdh = { name: 'ECDH', namedCurve: 'secp256k1' };
-  
+
   settings.jwk = function(pub, d) {
     const xy = base62.pubToJwkXY(pub);
     const jwk = { kty: 'EC', crv: 'secp256k1', x: xy.x, y: xy.y, ext: true };
@@ -916,7 +931,7 @@ __def('./src/zen/settings.js', function(module, __exp){
     if (d) { jwk.d = (d.length === 44 && /^[A-Za-z0-9]{44}$/.test(d)) ? base62.b62ToB64(d) : d; }
     return jwk;
   };
-  
+
   settings.keyToJwk = function(keyBytes) {
     const keyB64 = keyBytes.toString('base64');
     return {
@@ -926,7 +941,7 @@ __def('./src/zen/settings.js', function(module, __exp){
       alg: 'A256GCM'
     };
   };
-  
+
   settings.check = function(t) {
     if (typeof t !== 'string') { return false; }
     if ('SEA{' === t.slice(0, 4)) { return true; }
@@ -940,7 +955,7 @@ __def('./src/zen/settings.js', function(module, __exp){
     } catch (e) {}
     return false;
   };
-  
+
   settings.parse = async function(t) {
     try {
       const yes = (typeof t === 'string');
@@ -949,7 +964,7 @@ __def('./src/zen/settings.js', function(module, __exp){
     } catch (e) {}
     return t;
   };
-  
+
   __exp.default = settings;
 });
 
@@ -965,7 +980,9 @@ __def('./src/zen/sha256.js', function(module, __exp){
 });
 
 __def('./src/zen/aeskey.js', function(module, __exp){
-  var shim = __req('./src/zen/shim.js').default;var settings = __req('./src/zen/settings.js').default;var sha256 = __req('./src/zen/sha256.js').default;
+  var shim = __req('./src/zen/shim.js').default;
+  var settings = __req('./src/zen/settings.js').default;
+  var sha256 = __req('./src/zen/sha256.js').default;
   async function aeskey(key, salt, opt) {
     opt = opt || {};
     const combo = key + (salt || shim.random(8)).toString('utf8');
@@ -1004,19 +1021,19 @@ __def('./src/zen/keccak256.js', function(module, __exp){
     0x8000000080008081n, 0x8000000000008080n,
     0x0000000080000001n, 0x8000000080008008n
   ];
-  
+
   function rotl64(value, shift) {
     const amount = BigInt(shift & 63);
     if (!amount) { return value & MASK64; }
     return ((value << amount) | (value >> (64n - amount))) & MASK64;
   }
-  
+
   function keccakF(state) {
     for (let round = 0; round < 24; round++) {
       const c = new Array(5);
       const d = new Array(5);
       const b = new Array(25);
-  
+
       for (let x = 0; x < 5; x++) {
         c[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
       }
@@ -1028,24 +1045,24 @@ __def('./src/zen/keccak256.js', function(module, __exp){
           state[x + (5 * y)] ^= d[x];
         }
       }
-  
+
       for (let y = 0; y < 5; y++) {
         for (let x = 0; x < 5; x++) {
           const idx = x + (5 * y);
           b[y + (5 * ((2 * x + 3 * y) % 5))] = rotl64(state[idx], ROT[idx]);
         }
       }
-  
+
       for (let y = 0; y < 5; y++) {
         for (let x = 0; x < 5; x++) {
           state[x + (5 * y)] = b[x + (5 * y)] ^ ((~b[((x + 1) % 5) + (5 * y)]) & b[((x + 2) % 5) + (5 * y)]);
         }
       }
-  
+
       state[0] ^= RC[round];
     }
   }
-  
+
   function xorBlock(state, block) {
     for (let i = 0; i < block.length; i++) {
       const lane = Math.floor(i / 8);
@@ -1053,7 +1070,7 @@ __def('./src/zen/keccak256.js', function(module, __exp){
       state[lane] ^= BigInt(block[i]) << shift;
     }
   }
-  
+
   function toBytes(data) {
     if (typeof data === 'string') {
       return new shim.TextEncoder().encode(data);
@@ -1065,25 +1082,25 @@ __def('./src/zen/keccak256.js', function(module, __exp){
     }
     return new shim.TextEncoder().encode(String(data));
   }
-  
+
   async function keccak256(data) {
     const bytes = toBytes(data);
     const state = new Array(25).fill(0n);
     let offset = 0;
-  
+
     while ((offset + RATE) <= bytes.length) {
       xorBlock(state, bytes.subarray(offset, offset + RATE));
       keccakF(state);
       offset += RATE;
     }
-  
+
     const finalBlock = new Uint8Array(RATE);
     finalBlock.set(bytes.subarray(offset));
     finalBlock[bytes.length - offset] ^= SUFFIX;
     finalBlock[RATE - 1] ^= 0x80;
     xorBlock(state, finalBlock);
     keccakF(state);
-  
+
     const out = new Uint8Array(OUTPUT_BYTES);
     for (let i = 0; i < OUTPUT_BYTES; i++) {
       const lane = state[Math.floor(i / 8)];
@@ -1096,7 +1113,11 @@ __def('./src/zen/keccak256.js', function(module, __exp){
 });
 
 __def('./src/zen/hash.js', function(module, __exp){
-  var shim = __req('./src/zen/shim.js').default;var settings = __req('./src/zen/settings.js').default;var sha256 = __req('./src/zen/sha256.js').default;var keccak256 = __req('./src/zen/keccak256.js').default;var base62 = __req('./src/zen/base62.js').default;
+  var shim = __req('./src/zen/shim.js').default;
+  var settings = __req('./src/zen/settings.js').default;
+  var sha256 = __req('./src/zen/sha256.js').default;
+  var keccak256 = __req('./src/zen/keccak256.js').default;
+  var base62 = __req('./src/zen/base62.js').default;
   function normhash(name) {
     const raw = (name || '').toString();
     const slim = raw.toLowerCase().replace(/[\s_-]/g, '');
@@ -1108,32 +1129,32 @@ __def('./src/zen/hash.js', function(module, __exp){
     if (slim === 'sha512') { return 'SHA-512'; }
     return raw;
   }
-  
+
   function ishash(name) {
     const n = normhash(name);
     return n === 'KECCAK-256' || n.indexOf('SHA-') === 0;
   }
-  
+
   function encbuf(data, enc) {
     if (enc === 'base62') { return base62.bufToB62(data); }
     if (enc === 'base64') { return shim.Buffer.from(data).toString('base64'); }
     return shim.Buffer.from(data).toString(enc);
   }
-  
+
   async function digest(data, name) {
     const n = normhash(name);
     if (n === 'KECCAK-256') { return keccak256(data); }
     return sha256(data, n || undefined);
   }
-  
-  
-  
+
+
+
   async function hash(data, pair, cb, opt) {
     try {
       opt = opt || {};
       let salt = (pair || {}).epub || pair;
       const enc = opt.encode || 'base62';
-  
+
       if (salt instanceof Function) {
         cb = salt;
         salt = undefined;
@@ -1143,18 +1164,18 @@ __def('./src/zen/hash.js', function(module, __exp){
         data = new shim.TextDecoder('utf-8').decode(data);
       }
       data = (typeof data === 'string') ? data : await shim.stringify(data);
-  
+
       if (ishash(opt.name)) {
         let hashed = shim.Buffer.from(await digest(data, opt.name), 'binary');
         hashed = encbuf(hashed, enc);
         if (cb) { try { cb(hashed); } catch (e) { console.log(e); } }
         return hashed;
       }
-  
+
       if (typeof salt === 'number') { salt = salt.toString(); }
       if (typeof opt.salt === 'number') { opt.salt = opt.salt.toString(); }
       salt = salt || shim.random(9);
-  
+
       const key = await (shim.ossl || shim.subtle).importKey('raw', new shim.TextEncoder().encode(data), { name: opt.name || 'PBKDF2' }, false, ['deriveBits']);
       const bits = await (shim.ossl || shim.subtle).deriveBits({
         name: opt.name || 'PBKDF2',
@@ -1194,11 +1215,11 @@ __def('./src/zen/curves/utils.js', function(module, __exp){
     const settings = config.settings;
     const sha256 = config.sha256;
     const extras = config.extras || {};
-  
+
     function mod(a, m) {
       return ((a % m) + m) % m;
     }
-  
+
     function modPow(base, exp, modn) {
       let result = 1n;
       let value = mod(base, modn);
@@ -1210,22 +1231,22 @@ __def('./src/zen/curves/utils.js', function(module, __exp){
       }
       return result;
     }
-  
+
     function modInv(a, modn) {
       if (!a) { throw new Error('Inverse does not exist'); }
       return modPow(mod(a, modn), modn - 2n, modn);
     }
-  
+
     function isPoint(point) {
       return !!point && typeof point.x === 'bigint' && typeof point.y === 'bigint';
     }
-  
+
     function isOnCurve(point) {
       if (!isPoint(point)) { return false; }
       if (point.x < 0n || point.x >= P || point.y < 0n || point.y >= P) { return false; }
       return mod(point.y * point.y - (point.x * point.x * point.x + A * point.x + B), P) === 0n;
     }
-  
+
     function pointAdd(left, right) {
       if (!left) { return right; }
       if (!right) { return left; }
@@ -1240,7 +1261,7 @@ __def('./src/zen/curves/utils.js', function(module, __exp){
       const y = mod(slope * (left.x - x) - left.y, P);
       return { x, y };
     }
-  
+
     function pointMultiply(scalar, point) {
       let n = mod(scalar, N);
       if (!n || !point) { return null; }
@@ -1253,13 +1274,13 @@ __def('./src/zen/curves/utils.js', function(module, __exp){
       }
       return result;
     }
-  
+
     function bytesToBigInt(bytes) {
       return BigInt('0x' + (Array.from(bytes).map(function(byte) {
         return byte.toString(16).padStart(2, '0');
       }).join('') || '0'));
     }
-  
+
     function bigIntToBytes(num, length) {
       let hex = num.toString(16);
       if (hex.length % 2) { hex = '0' + hex; }
@@ -1270,7 +1291,7 @@ __def('./src/zen/curves/utils.js', function(module, __exp){
       out.set(raw, length - raw.length);
       return out;
     }
-  
+
     function concatBytes() {
       const chunks = Array.prototype.slice.call(arguments).map(function(chunk) {
         if (chunk instanceof Uint8Array) { return chunk; }
@@ -1288,7 +1309,7 @@ __def('./src/zen/curves/utils.js', function(module, __exp){
       });
       return out;
     }
-  
+
     function utf8Bytes(data) {
       if (typeof data === 'string') { return new shim.TextEncoder().encode(data); }
       if (data instanceof Uint8Array) { return data; }
@@ -1298,23 +1319,23 @@ __def('./src/zen/curves/utils.js', function(module, __exp){
       }
       return new shim.TextEncoder().encode(String(data));
     }
-  
+
     function decodeBase64Url(str) {
       const padded = str.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(str.length / 4) * 4, '=');
       return new Uint8Array(shim.Buffer.from(padded, 'base64'));
     }
-  
+
     function encodeBase64(bytes, encoding) {
       return shim.Buffer.from(bytes).toString(encoding || 'base64');
     }
-  
+
     function assertScalar(value, name) {
       if (value <= 0n || value >= N) {
         throw new Error((name || 'Scalar') + ' out of range');
       }
       return value;
     }
-  
+
     function parseScalar(value, name) {
       if (typeof value === 'bigint') { return assertScalar(value, name); }
       if (typeof value !== 'string' || !value) { throw new Error((name || 'Scalar') + ' must be a string'); }
@@ -1323,16 +1344,16 @@ __def('./src/zen/curves/utils.js', function(module, __exp){
         : bytesToBigInt(decodeBase64Url(value));
       return assertScalar(scalar, name);
     }
-  
+
     function scalarToString(value) {
       return base62.biToB62(assertScalar(value));
     }
-  
+
     function pointToPub(point) {
       if (!isOnCurve(point)) { throw new Error('Invalid public point'); }
       return base62.biToB62(point.x) + base62.biToB62(point.y);
     }
-  
+
     function parsePub(pub) {
       if (typeof pub !== 'string') { throw new Error('Public key must be a string'); }
       let point;
@@ -1353,26 +1374,26 @@ __def('./src/zen/curves/utils.js', function(module, __exp){
       if (!isOnCurve(point)) { throw new Error('Public key is not on ' + curve); }
       return point;
     }
-  
+
     function publicFromPrivate(priv) {
       const point = pointMultiply(assertScalar(priv, 'Private key'), G);
       if (!point || !isOnCurve(point)) { throw new Error('Could not derive public key'); }
       return point;
     }
-  
+
     function compactPoint(point) {
       return concatBytes([point.y & 1n ? 0x03 : 0x02], bigIntToBytes(point.x, 32));
     }
-  
+
     async function shaBytes(data) {
       return new Uint8Array(await sha256(data));
     }
-  
+
     async function hmacSha256(keyBytes, dataBytes) {
       const key = await shim.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: { name: 'SHA-256' } }, false, ['sign']);
       return new Uint8Array(await shim.subtle.sign('HMAC', key, dataBytes));
     }
-  
+
     async function deterministicK(priv, hashBytes, attempt) {
       const x = bigIntToBytes(priv, 32);
       const h1 = bigIntToBytes(bytesToBigInt(hashBytes) % N, 32);
@@ -1391,27 +1412,27 @@ __def('./src/zen/curves/utils.js', function(module, __exp){
         V = await hmacSha256(K, V);
       }
     }
-  
+
     async function hashToScalar(seed, label) {
       const digest = await shaBytes(concatBytes(utf8Bytes(label), utf8Bytes(seed)));
       return (bytesToBigInt(digest) % (N - 1n)) + 1n;
     }
-  
+
     async function randomScalar() {
       return (bytesToBigInt(shim.random(32)) % (N - 1n)) + 1n;
     }
-  
+
     async function normalizeMessage(data) {
       if (typeof data === 'string') { return settings.check(data) ? data : await settings.parse(data); }
       return data;
     }
-  
+
     async function finalize(result, opt, cb) {
       const out = opt && opt.raw ? result : (await shim.stringify(result));
       if (cb) { try { cb(out); } catch (e) { console.log(e); } }
       return out;
     }
-  
+
     return Object.assign({
       curve, P, N, A, B, G, HALF_N,
       shim, base62, settings,
@@ -1429,12 +1450,18 @@ __def('./src/zen/curves/utils.js', function(module, __exp){
       normalizeMessage, finalize
     }, extras);
   }
-  
+
   __exp.default = createCurveCore;
 });
 
 __def('./src/zen/curves/secp256k1.js', function(module, __exp){
-  var shim = __req('./src/zen/shim.js').default;var base62 = __req('./src/zen/base62.js').default;var settings = __req('./src/zen/settings.js').default;var aeskey = __req('./src/zen/aeskey.js').default;var sha256 = __req('./src/zen/sha256.js').default;var hash = __req('./src/zen/hash.js').default;var createCurveCore = __req('./src/zen/curves/utils.js').default;
+  var shim = __req('./src/zen/shim.js').default;
+  var base62 = __req('./src/zen/base62.js').default;
+  var settings = __req('./src/zen/settings.js').default;
+  var aeskey = __req('./src/zen/aeskey.js').default;
+  var sha256 = __req('./src/zen/sha256.js').default;
+  var hash = __req('./src/zen/hash.js').default;
+  var createCurveCore = __req('./src/zen/curves/utils.js').default;
   const P = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F');
   const N = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
   const A = 0n;
@@ -1461,8 +1488,8 @@ __def('./src/zen/curves/secp256k1.js', function(module, __exp){
     shaBytes, hmacSha256, deterministicK, hashToScalar, randomScalar,
     normalizeMessage, finalize
   } = core;
-  
-  
+
+
   __exp.default = core;
 
   __exp.P = P;
@@ -1507,7 +1534,12 @@ __def('./src/zen/curves/secp256k1.js', function(module, __exp){
 
 __def('./src/zen/curves/p256.js', function(module, __exp){
   // P-256 / secp256r1 curve — same Weierstrass math as secp256k1, different constants.
-  // A = P - 3 (i.e. -3 mod P), so the doubling formula includes the A term.var shim = __req('./src/zen/shim.js').default;var base62 = __req('./src/zen/base62.js').default;var sha256 = __req('./src/zen/sha256.js').default;var settings = __req('./src/zen/settings.js').default;var createCurveCore = __req('./src/zen/curves/utils.js').default;
+  // A = P - 3 (i.e. -3 mod P), so the doubling formula includes the A term.
+  var shim = __req('./src/zen/shim.js').default;
+  var base62 = __req('./src/zen/base62.js').default;
+  var sha256 = __req('./src/zen/sha256.js').default;
+  var settings = __req('./src/zen/settings.js').default;
+  var createCurveCore = __req('./src/zen/curves/utils.js').default;
   const P = BigInt('0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF');
   const N = BigInt('0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551');
   const A = P - 3n; // -3 mod P
@@ -1524,9 +1556,10 @@ __def('./src/zen/curves/p256.js', function(module, __exp){
 });
 
 __def('./src/zen/curves/curves.js', function(module, __exp){
-  var secp256k1 = __req('./src/zen/curves/secp256k1.js').default;var p256 = __req('./src/zen/curves/p256.js').default;
+  var secp256k1 = __req('./src/zen/curves/secp256k1.js').default;
+  var p256 = __req('./src/zen/curves/p256.js').default;
   const MAP = { secp256k1, p256, secp256r1: p256 };
-  
+
   function crv(name) { return MAP[name] || MAP.secp256k1; }
 
   __exp.default = crv;
@@ -1570,8 +1603,8 @@ __def('./src/zen/verify.js', function(module, __exp){
       throw e;
     }
   }
-  
-  
+
+
   __exp.default = verify;
 
   __exp.verify = verify;
@@ -1608,20 +1641,24 @@ __def('./src/zen/sign.js', function(module, __exp){
       throw e;
     }
   }
-  
-  
+
+
   __exp.default = sign;
 
   __exp.sign = sign;
 });
 
 __def('./src/zen/security.js', function(module, __exp){
-  var ZEN = __req('./src/zen/root.js').default;var verify = __req('./src/zen/verify.js').default;var hash = __req('./src/zen/hash.js').default;var sign = __req('./src/zen/sign.js').default;var settings = __req('./src/zen/settings.js').default;
+  var ZEN = __req('./src/zen/root.js').default;
+  var verify = __req('./src/zen/verify.js').default;
+  var hash = __req('./src/zen/hash.js').default;
+  var sign = __req('./src/zen/sign.js').default;
+  var settings = __req('./src/zen/settings.js').default;
   var u;
   var Gun = ZEN;
-  
+
   // --------------- pack / unpack ---------------
-  
+
   settings.pack = function(d, cb, k, n, s) { // pack for verifying
     if (settings.check(d)) { return cb(d); }
     var f = 0, tmp;
@@ -1632,7 +1669,7 @@ __def('./src/zen/security.js', function(module, __exp){
       cb({ m: { '#': s || d['#'], '.': k || d['.'], ':': (meta || '')[':'], '>': d['>'] || (Gun.state && Gun.state.is ? Gun.state.is(n, k) : 0) }, s: sig });
     });
   };
-  
+
   settings.unpack = function(d, k, n) {
     if (u === d) { return; }
     if (d && (u !== (tmp = d[':']))) { return tmp; }
@@ -1651,7 +1688,7 @@ __def('./src/zen/security.js', function(module, __exp){
   var fl = Math.floor;
   var tmp;
   settings.shuffle_attack = 1546329600000;
-  
+
   settings.pub = function(s) {
     if (!s) { return; }
     s = s.split('~')[1];
@@ -1662,25 +1699,25 @@ __def('./src/zen/security.js', function(module, __exp){
     if (!parts || 2 !== parts.length) { return; }
     return parts.slice(0, 2).join('.');
   };
-  
+
   // --------------- gun security middleware ---------------
-  
+
   var valid = Gun && Gun.valid;
   var link_is = function(d, l) { return 'string' == typeof (l = valid && valid(d)) && l; };
-  
+
   function check(msg) {
     var eve = this, at = eve.as, put = msg.put, soul = put['#'], key = put['.'], val = put[':'], state = put['>'], id = msg['#'];
     if (!soul || !key) { return; }
-  
+
     if ((msg._ || '').faith && (at.opt || '').faith && 'function' == typeof msg._) {
       check.pipe.faith({ eve: eve, msg: msg, put: put, at: at }); return;
     }
-  
+
     var no = function(why) { at.on('in', { '@': id, err: msg.err = why }); };
-  
+
     var ctx = { eve: eve, msg: msg, at: at, put: put, soul: soul, key: key, val: val, state: state, id: id, no: no, pub: null };
     var pipeline = [check.pipe.forget];
-  
+
     if ('~@' === soul) {
       pipeline.push(check.pipe.alias);
     } else if ('~@' === soul.slice(0, 2)) {
@@ -1695,7 +1732,7 @@ __def('./src/zen/security.js', function(module, __exp){
     } else {
       pipeline.push(check.pipe.any);
     }
-  
+
     var required = pipeline[1];
     for (var pi = 0; pi < check.plugins.length; pi++) {
       check.plugins[pi](ctx, pipeline);
@@ -1703,7 +1740,7 @@ __def('./src/zen/security.js', function(module, __exp){
     if (required && pipeline.indexOf(required) < 0) { return no("Security stage removed."); }
     check.run(pipeline, ctx);
   }
-  
+
   check.run = function(stages, ctx) {
     var no = ctx.no;
     var i = 0;
@@ -1716,7 +1753,7 @@ __def('./src/zen/security.js', function(module, __exp){
     };
     next();
   };
-  
+
   check.pipe = {
     faith: function(ctx) {
       var eve = ctx.eve, msg = ctx.msg, put = ctx.put;
@@ -1746,16 +1783,16 @@ __def('./src/zen/security.js', function(module, __exp){
     any:    function(ctx, next, reject) { check.any(ctx.eve, ctx.msg, ctx.val, ctx.key, ctx.soul, ctx.at, reject, ctx.at.user || ''); }
   };
   Object.freeze(check.pipe);
-  
+
   check.plugins = [];
   check.use = function(fn) { check.plugins.push(fn); };
-  
+
   function initSeaOpt(msg, ctx) {
     var o = Object.assign({}, ctx);
     try { Object.defineProperty(msg._, 'sea', { value: o, enumerable: false, configurable: true, writable: true }); } catch(e) { msg._.sea = o; }
     return o;
   }
-  
+
   check.$sea = function(msg, user, pub) {
     var scope = msg._ || {};
     var ctx = scope.opt || ((scope.msg || {}).opt) || {};
@@ -1767,7 +1804,7 @@ __def('./src/zen/security.js', function(module, __exp){
     if (!scope.done) { delete ctx.authenticator; delete ctx.pub; scope.done = true; }
     return { opt: opt, authenticator: authenticator, upub: upub };
   };
-  
+
   check.next = function(eve, msg, no) {
     JSON.stringifyAsync(msg.put[':'], function(err, s) {
       if (err) { return no(err || "Stringify error."); }
@@ -1775,7 +1812,7 @@ __def('./src/zen/security.js', function(module, __exp){
       return eve.to.next(msg);
     });
   };
-  
+
   check.auth = function(msg, no, authenticator, done) {
     settings.pack(msg.put, function(packed) {
       if (!authenticator) { return no("Missing authenticator"); }
@@ -1801,7 +1838,7 @@ __def('./src/zen/security.js', function(module, __exp){
       }, { raw: 1 });
     });
   };
-  
+
   check.$vfy = function(eve, msg, key, soul, pub, no, certificate, certificant, cb) {
     if (!(certificate || '').m || !(certificate || '').s || !certificant || !pub) { return; }
     return verify(certificate, pub, function(data) {
@@ -1828,12 +1865,12 @@ __def('./src/zen/security.js', function(module, __exp){
       }
     });
   };
-  
+
   check.guard = function(eve, msg, key, soul, at, no, data, next) {
     if (0 > key.indexOf('#')) { return next(); }
     check.hash(eve, msg, data, key, soul, at, no, next);
   };
-  
+
   check.hash = function(eve, msg, val, key, soul, at, no, yes) {
     function base64ToHex(data) {
       var binaryStr = atob(data), a = [];
@@ -1852,22 +1889,22 @@ __def('./src/zen/security.js', function(module, __exp){
       no("Data hash not same as hash!");
     }, { name: 'SHA-256' });
   };
-  
+
   check.alias = function(eve, msg, val, key, soul, at, no) {
     if (!val) { return no("Data must exist!"); }
     if ('~@' + key === link_is(val)) { return eve.to.next(msg); }
     no("Alias not same!");
   };
-  
+
   check.pubs = function(eve, msg, val, key, soul, at, no) {
     if (!val) { return no("Alias must exist!"); }
     if (key === link_is(val)) { return eve.to.next(msg); }
     no("Alias not same!");
   };
-  
+
   check.$sh = { pub: 88, cut: 2, min: 1, root: '~', pre: '~/', bad: /[^0-9a-zA-Z]/ };
   check.$sh.max = Math.ceil(check.$sh.pub / check.$sh.cut);
-  
+
   check.$seg = function(seg, short) {
     if ('string' != typeof seg || !seg) { return; }
     if (short) {
@@ -1903,12 +1940,12 @@ __def('./src/zen/security.js', function(module, __exp){
     if (settings.pub('~' + pub) !== pub) { return; }
     return pub;
   };
-  
+
   check.$tag = async function(msg, cert, upub, $verify, next) {
     var _cert = await settings.parse(cert);
     if (_cert && _cert.m && _cert.s) { $verify(_cert, upub, function(_) { msg.put[':']['+'] = _cert; msg.put[':']['*'] = upub; next(); }); }
   };
-  
+
   check.pass = function(eve, msg, raw, data, $verify) {
     if (raw['+'] && raw['+']['m'] && raw['+']['s'] && raw['*']) {
       return $verify(raw['+'], raw['*'], function(_) { msg.put['='] = data; return eve.to.next(msg); });
@@ -1916,7 +1953,7 @@ __def('./src/zen/security.js', function(module, __exp){
     msg.put['='] = data;
     return eve.to.next(msg);
   };
-  
+
   check.pub = async function(eve, msg, val, key, soul, at, no, user, pub, conf) {
     conf = conf || {};
     var $verify = function(certificate, certificant, cb) { return check.$vfy(eve, msg, key, soul, pub, no, certificate, certificant, cb); };
@@ -1931,12 +1968,12 @@ __def('./src/zen/security.js', function(module, __exp){
     };
     var raw = (await settings.parse(val)) || {};
     var $hash = function(data, next2) { check.guard(eve, msg, key, soul, at, no, data, next2); };
-  
+
     if ('pub' === key && '~' + pub === soul) {
       if (val === pub) { return eve.to.next(msg); }
       return no("Account not same!");
     }
-  
+
     if (((user && user.is) || authenticator) && upub && !raw['*'] && !raw['+'] && (pub === upub || (pub !== upub && cert))) {
       check.auth(msg, no, authenticator, function(data) {
         if (!$expect(data)) { return; }
@@ -1947,7 +1984,7 @@ __def('./src/zen/security.js', function(module, __exp){
       });
       return;
     }
-  
+
     settings.pack(msg.put, function(packed) {
       verify(packed, raw['*'] || pub, function(data) {
         data = settings.unpack(data);
@@ -1959,7 +1996,7 @@ __def('./src/zen/security.js', function(module, __exp){
       });
     });
   };
-  
+
   check.shard = async function(eve, msg, val, key, soul, at, no, user) {
     var path = check.$path(soul), link = link_is(val), expected, leaf, raw, claim;
     if (!path) { return no("Invalid shard soul path."); }
@@ -2024,7 +2061,7 @@ __def('./src/zen/security.js', function(module, __exp){
       });
     });
   };
-  
+
   check.any = function(eve, msg, val, key, soul, at, no) {
     if (at.opt.secure) { return no("Soul missing public key at '" + key + "'."); }
     at.on('secure', function(msg2) {
@@ -2033,9 +2070,9 @@ __def('./src/zen/security.js', function(module, __exp){
       no("Data cannot be changed.");
     }).on.on('secure', msg);
   };
-  
+
   // --------------- gun plugin ---------------
-  
+
   Gun.on('opt', function(at) {
     if (!at.sea) {
       at.sea = { own: {} };
@@ -2043,9 +2080,9 @@ __def('./src/zen/security.js', function(module, __exp){
     }
     this.to.next(at);
   });
-  
+
   // --------------- exports ---------------
-  
+
   var security = {
     check: check,
     opt: settings,
@@ -2053,7 +2090,7 @@ __def('./src/zen/security.js', function(module, __exp){
     hash: hash,
     sign: sign
   };
-  
+
   __exp.default = security;
 });
 
@@ -2062,14 +2099,14 @@ __def('./src/pen.js', function(module, __exp){
   let __defaultExport;
   const __penWasmURL = new URL('./pen.wasm', import.meta.url);
   {
-  
+
     var runtime = SecurityMod;
-  
+
     // ── WASM init ───────────────────────────────────────────────────────────────
-  
+
     var _wasm = null;
     var pen = {};
-  
+
     function createPenReady() {
       if (typeof process !== 'undefined' && process.versions && process.versions.node) {
         return import('node:fs/promises').then(function(mod) {
@@ -2090,22 +2127,22 @@ __def('./src/pen.js', function(module, __exp){
       }
       return Promise.reject(new Error('pen: cannot load pen.wasm in this environment'));
     }
-  
+
     pen.ready = createPenReady();
-  
+
     function _view() {
       return new Uint8Array(_wasm.instance['exports'].memory.buffer);
     }
-  
+
     // ── Wire encoding ────────────────────────────────────────────────────────────
-  
+
     var _enc = (typeof TextEncoder !== 'undefined') ? new TextEncoder() : {
       encode: function(s) {
         var buf = Buffer.from(s, 'utf8');
         return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
       }
     };
-  
+
     function _writeReg(view, offset, val) {
       if (val === null || val === undefined) {
         view[offset++] = 0; return offset;
@@ -2141,35 +2178,35 @@ __def('./src/pen.js', function(module, __exp){
       }
       view[offset++] = 0; return offset;
     }
-  
+
     // ── run ──────────────────────────────────────────────────────────────────────
-  
+
     pen.run = function(bytecode, regs) {
       if (!_wasm) throw new Error('pen: not ready. await pen.ready first.');
       var exp = _wasm.instance.exports;
       var view = _view();
-  
+
       exp.free();
-  
+
       var base = exp.mem();
       var bclen = bytecode.length;
       view[base + 0] = bclen & 0xFF;
       view[base + 1] = (bclen >> 8) & 0xFF;
       view[base + 2] = (bclen >> 16) & 0xFF;
       view[base + 3] = (bclen >> 24) & 0xFF;
-  
+
       for (var i = 0; i < bclen; i++) view[base + 4 + i] = bytecode[i];
-  
+
       var regOff = base + 4 + bclen;
       var nregs  = regs ? regs.length : 0;
       view[regOff + 0] = nregs & 0xFF;
       view[regOff + 1] = (nregs >> 8) & 0xFF;
       view[regOff + 2] = (nregs >> 16) & 0xFF;
       view[regOff + 3] = (nregs >> 24) & 0xFF;
-  
+
       var off = regOff + 4;
       for (var j = 0; j < nregs; j++) off = _writeReg(view, off, regs[j]);
-  
+
       var result = exp.run();
       if (result === 1) return true;
       if (result === 0) return false;
@@ -2177,35 +2214,35 @@ __def('./src/pen.js', function(module, __exp){
       if (result === -3) throw new Error('PEN: max recursion depth exceeded');
       throw new Error('PEN: runtime error (' + result + ')');
     };
-  
+
     // ── pack / unpack (bytecode ↔ base62) ────────────────────────────────────────
     // Used to store bytecode as the soul/node-ID in GUN graph.
     // Soul format: '$' + pen.pack(bytecode)
     // e.g. '$abc123...' (variable length base62)
-  
+
     var B62_ALPHA = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
     var B62_MAP   = {};
     for (var _i = 0; _i < B62_ALPHA.length; _i++) B62_MAP[B62_ALPHA[_i]] = _i;
-  
+
     function b62enc(n) {
       if (n === 0n) return B62_ALPHA[0];
       var s = '';
       while (n > 0n) { s = B62_ALPHA[Number(n % 62n)] + s; n = n / 62n; }
       return s;
     }
-  
+
     function b62dec(s) {
       var n = 0n;
       for (var i = 0; i < s.length; i++) n = n * 62n + BigInt(B62_MAP[s[i]] || 0);
       return n;
     }
-  
+
     pen.pack = function(buf) {
       var hex = '01';
       for (var i = 0; i < buf.length; i++) hex += ('0' + buf[i].toString(16)).slice(-2);
       return b62enc(BigInt('0x' + hex));
     };
-  
+
     pen.unpack = function(s) {
       var n   = b62dec(s);
       var hex = n.toString(16);
@@ -2214,11 +2251,11 @@ __def('./src/pen.js', function(module, __exp){
       for (var i = 0; i < hex.length; i += 2) bytes.push(parseInt(hex.slice(i, i + 2), 16));
       return new Uint8Array(bytes.slice(1)); // drop sentinel 0x01
     };
-  
+
     // ── Bytecode builder ─────────────────────────────────────────────────────────
-  
+
     var bc = pen.bc = {};
-  
+
     bc.uleb = function(n) {
       var bytes = []; n = n >>> 0;
       do { var b = n & 0x7F; n >>>= 7; if (n !== 0) b |= 0x80; bytes.push(b); } while (n !== 0);
@@ -2234,7 +2271,7 @@ __def('./src/pen.js', function(module, __exp){
       }
       return bytes;
     };
-  
+
     bc.prog   = function(root) { return new Uint8Array([0x01].concat(root)); };
     bc.null_  = function()     { return [0x00]; };
     bc.true_  = function()     { return [0x01]; };
@@ -2255,18 +2292,18 @@ __def('./src/pen.js', function(module, __exp){
     bc.r6     = function()     { return [0x10, 6]; }; // path register
     bc.local  = function(n)    { return [0xF8 + n]; };
     bc.intn   = function(n)    { return (n >= 0 && n <= 15) ? [0xE0 + n] : bc.uint(n); };
-  
+
     bc.and    = function(exprs) { return [0x20, exprs.length].concat(...exprs); };
     bc.or     = function(exprs) { return [0x21, exprs.length].concat(...exprs); };
     bc.not    = function(a)     { return [0x22].concat(a); };
-  
+
     bc.eq     = function(a, b)  { return [0x30].concat(a, b); };
     bc.ne     = function(a, b)  { return [0x31].concat(a, b); };
     bc.lt     = function(a, b)  { return [0x32].concat(a, b); };
     bc.gt     = function(a, b)  { return [0x33].concat(a, b); };
     bc.lte    = function(a, b)  { return [0x34].concat(a, b); };
     bc.gte    = function(a, b)  { return [0x35].concat(a, b); };
-  
+
     bc.add    = function(a, b)  { return [0x40].concat(a, b); };
     bc.sub    = function(a, b)  { return [0x41].concat(a, b); };
     bc.mul    = function(a, b)  { return [0x42].concat(a, b); };
@@ -2274,7 +2311,7 @@ __def('./src/pen.js', function(module, __exp){
     bc.mod    = function(a, b)  { return [0x44].concat(a, b); };
     bc.abs    = function(a)     { return [0x46].concat(a); };
     bc.neg    = function(a)     { return [0x47].concat(a); };
-  
+
     bc.len    = function(a)          { return [0x50].concat(a); };
     bc.slice  = function(a, s, e)    { return [0x51].concat(a, s, e); };
     bc.seg    = function(a, sep, idx){ return [0x52].concat(a, [sep.charCodeAt(0)], idx); };
@@ -2286,22 +2323,22 @@ __def('./src/pen.js', function(module, __exp){
     bc.inc    = function(a, b)       { return [0x58].concat(a, b); };
     bc.upper  = function(a)          { return [0x5A].concat(a); };
     bc.lower  = function(a)          { return [0x5B].concat(a); };
-  
+
     bc.iss    = function(a)          { return [0x60].concat(a); };
     bc.isn    = function(a)          { return [0x61].concat(a); };
     bc.isx    = function(a)          { return [0x62].concat(a); };
     bc.isb    = function(a)          { return [0x63].concat(a); };
     bc.lng    = function(a, mn, mx)  { return [0x64].concat(a, [mn, mx]); };
-  
+
     bc.let_   = function(slot, def, body) { return [0x70, slot].concat(def, body); };
     bc.if_    = function(c, t, e)    { return [0x71].concat(c, t, e); };
     bc.segr   = function(reg, sep, idx) { return [0x80, reg, sep.charCodeAt(0), idx]; };
     bc.segrn  = function(reg, sep, idx) { return [0x81, reg, sep.charCodeAt(0), idx]; };
-  
+
     // ── treeskip: advance pos past one expression node without evaluating ─────────
     // Used by scanpolicy to find where the root expression ends, so policy bytes
     // appended after the tree can be scanned without false positives.
-  
+
     function treeskip(bytecode, pos) {
       var op = bytecode[pos++];
       if (op === 0x00 || op === 0x01 || op === 0x02 || op === 0x23 || op === 0x24) return pos;
@@ -2331,7 +2368,7 @@ __def('./src/pen.js', function(module, __exp){
       if ((op >= 0xF0 && op <= 0xF5) || op >= 0xF8) return pos;                 // reg shorthands
       return pos; // unknown — stop here (policy byte or EOF)
     }
-  
+
     function readuleb(bytes, pos) {
       var value = 0, shift = 0, b = 0;
       do {
@@ -2342,13 +2379,13 @@ __def('./src/pen.js', function(module, __exp){
       } while (b & 0x80);
       return { value: value >>> 0, next: pos };
     }
-  
+
     function stableparams(value) {
       var seen = [];
-  
+
       function normalize(v) {
         if (v === null) return null;
-  
+
         var t = typeof v;
         if (t === 'string' || t === 'boolean') return v;
         if (t === 'number') {
@@ -2376,18 +2413,18 @@ __def('./src/pen.js', function(module, __exp){
           seen.pop();
           return out;
         }
-  
+
         throw new Error('PEN: params must be JSON-serializable');
       }
-  
+
       return JSON.stringify(normalize(value));
     }
-  
+
     // ── scanpolicy: extract tail opcodes appended after expression root ───────────
     // Tail bytes (0xC0..) are appended AFTER the complete expression tree.
     // We use treeskip() to find where the tree ends, avoiding false positives from
     // integer/string byte values within the expression that happen to overlap tail opcodes.
-  
+
     function scanpolicy(bytecode) {
       var p = { sign: false, cert: null, open: false, pow: null, params: null };
       if (!bytecode || bytecode.length < 2) return p;
@@ -2425,17 +2462,17 @@ __def('./src/pen.js', function(module, __exp){
       }
       return p;
     }
-  
+
     pen.scanpolicy = scanpolicy;
-  
+
     // ── applypolicy: enforce policy after predicate passes ────────────────────────
     // Handles sign (SGN/0xC0), cert (CRT/0xC1), open (NOA/0xC3), and no-policy.
     // PoW (0xC4) is handled in penStage before calling applypolicy.
-  
+
     function applypolicy(policy, ctx, reject) {
       var eve = ctx.eve, msg = ctx.msg, at = ctx.at;
       var chk = runtime.check;
-  
+
       if (policy.cert) {
         var raw = {}; try { raw = JSON.parse(ctx.val) || {}; } catch(e) {}
         if (!raw['+'] || !raw['*']) return reject('PEN: cert required');
@@ -2444,7 +2481,7 @@ __def('./src/pen.js', function(module, __exp){
         });
         return;
       }
-  
+
       if (policy.sign) {
         var sec = chk.$sea(msg, at.user || '', null);
         if (sec.authenticator) {
@@ -2464,13 +2501,13 @@ __def('./src/pen.js', function(module, __exp){
         });
         return;
       }
-  
+
       // open or no policy: forward directly without stringify
       eve.to.next(msg);
     }
-  
+
     // ── penStage: pipeline stage for $-soul validation ────────────────────────────
-  
+
     function penStage(ctx, next, reject) {
       var soul = ctx.soul;
       var slashIdx = soul.indexOf('/');
@@ -2480,7 +2517,7 @@ __def('./src/pen.js', function(module, __exp){
       try { bytecode = pen.unpack(pencode); } catch(e) { return reject('PEN: invalid soul encoding'); }
       if (!bytecode || bytecode.length < 2) return reject('PEN: empty bytecode');
       if (bytecode.length > 512) return reject('PEN: bytecode too large');
-  
+
       var policy = scanpolicy(bytecode);
       var sec = (runtime.check && runtime.check.$sea) ? runtime.check.$sea(ctx.msg, (ctx.at && ctx.at.user) || '', null) : {};
       var writer = sec.upub || ((sec.authenticator || {}).pub) || '';
@@ -2490,12 +2527,12 @@ __def('./src/pen.js', function(module, __exp){
         writer,
         pathpart   // R[6]: path after pencode/ in soul (e.g. 'asdf-1234/hgfd-2345')
       ];
-  
+
       pen.ready.then(function() {
         var ok;
         try { ok = pen.run(bytecode, regs); } catch(e) { return reject('PEN VM: ' + (e.message || e)); }
         if (!ok) return reject('PEN: predicate failed');
-  
+
         if (policy.pow) {
           var field = regs[policy.pow.field] || '';
           return runtime.hash(field, null, function(hash) {
@@ -2506,18 +2543,18 @@ __def('./src/pen.js', function(module, __exp){
             applypolicy(policy, ctx, reject);
           }, { name: 'SHA-256', encode: 'hex' });
         }
-  
+
         applypolicy(policy, ctx, reject);
       });
     }
-  
+
     if (runtime && runtime.check && runtime.check.use) {
       runtime.check.use(function(ctx, pipeline) {
         if (!ctx.soul || ctx.soul[0] !== '$') return;
         pipeline.splice(1, 0, penStage);
       });
     }
-  
+
     // ── runtime.pen() — bytecode compiler ─────────────────────────────────────────
     // Compiles a high-level spec to bytecode and returns the soul string '$<base62>'
     //
@@ -2543,30 +2580,30 @@ __def('./src/pen.js', function(module, __exp){
     //   { reg: n }                    → REG(n) for LET locals
     //   { divu, mod, add, sub, mul }  → arithmetic
     //   { tonum, tostr }              → coercion
-  
+
     function compileExpr(x, field_reg) {
       if (x === undefined || x === null) return bc.pass();
       if (typeof x === 'boolean') return x ? bc.pass() : bc.fail();
       if (typeof x === 'number')  return bc.intn(x);
       if (typeof x === 'string')  return bc.eq(field_reg, bc.str(x));
-  
+
       var r = field_reg;
-  
+
       if (x.and) return bc.and(x.and.map(function(e) { return compileExpr(e, r); }));
       if (x.or)  return bc.or(x.or.map(function(e)   { return compileExpr(e, r); }));
       if (x.not) return bc.not(compileExpr(x.not, r));
-  
+
       if (x.eq  !== undefined) { if (Array.isArray(x.eq)) return bc.eq(compileVal(x.eq[0]), compileVal(x.eq[1])); return bc.eq(r, bc.str(String(x.eq))); }
       if (x.ne  !== undefined) { if (Array.isArray(x.ne)) return bc.ne(compileVal(x.ne[0]), compileVal(x.ne[1])); return bc.ne(r, bc.str(String(x.ne))); }
       if (x.pre !== undefined) return bc.pre(r, bc.str(String(x.pre)));
       if (x.suf !== undefined) return bc.suf(r, bc.str(String(x.suf)));
       if (x.inc !== undefined) return bc.inc(r, bc.str(String(x.inc)));
-  
+
       if (x.lt  !== undefined) { if (Array.isArray(x.lt))  return bc.lt(compileVal(x.lt[0]),   compileVal(x.lt[1]));  return bc.lt(r,  bc.uint(x.lt));  }
       if (x.gt  !== undefined) { if (Array.isArray(x.gt))  return bc.gt(compileVal(x.gt[0]),   compileVal(x.gt[1]));  return bc.gt(r,  bc.uint(x.gt));  }
       if (x.lte !== undefined) { if (Array.isArray(x.lte)) return bc.lte(compileVal(x.lte[0]), compileVal(x.lte[1])); return bc.lte(r, bc.uint(x.lte)); }
       if (x.gte !== undefined) { if (Array.isArray(x.gte)) return bc.gte(compileVal(x.gte[0]), compileVal(x.gte[1])); return bc.gte(r, bc.uint(x.gte)); }
-  
+
       if (x.type) {
         var t = x.type;
         if (t === 'string')  return bc.iss(r);
@@ -2574,9 +2611,9 @@ __def('./src/pen.js', function(module, __exp){
         if (t === 'null')    return bc.isx(r);
         if (t === 'bool')    return bc.isb(r);
       }
-  
+
       if (x.length) return bc.lng(r, x.length[0], x.length[1]);
-  
+
       if (x.seg) {
         var s = x.seg;
         var src = s.of ? compileVal(s.of) : r;
@@ -2584,30 +2621,30 @@ __def('./src/pen.js', function(module, __exp){
         if (s.match) return compileExpr(s.match, segexpr);
         return segexpr;
       }
-  
+
       if (x.let) {
         var l = x.let;
         return bc.let_(l.bind, compileVal(l.def), compileExpr(l.body, r));
       }
-  
+
       if (x.if) {
         return bc.if_(compileExpr(x.if.cond, r), compileExpr(x.if.then, r), compileExpr(x.if.else, r));
       }
-  
+
       if (x.reg !== undefined) return bc.reg(x.reg);
-  
+
       if (x.divu) return bc.divu(compileVal(x.divu[0]), compileVal(x.divu[1]));
       if (x.mod)  return bc.mod(compileVal(x.mod[0]),   compileVal(x.mod[1]));
       if (x.add)  return bc.add(compileVal(x.add[0]),   compileVal(x.add[1]));
       if (x.sub)  return bc.sub(compileVal(x.sub[0]),   compileVal(x.sub[1]));
       if (x.mul)  return bc.mul(compileVal(x.mul[0]),   compileVal(x.mul[1]));
-  
+
       if (x.tonum) return bc.tonum(compileVal(x.tonum));
       if (x.tostr) return bc.tostr(compileVal(x.tostr));
-  
+
       return bc.pass();
     }
-  
+
     function compileVal(x) {
       if (typeof x === 'number') return bc.uint(x);
       if (typeof x === 'string') return bc.str(x);
@@ -2625,25 +2662,25 @@ __def('./src/pen.js', function(module, __exp){
       if (x && x.num !== undefined) return bc.intn(x.num) ? bc.intn(x.num) : bc.uint(x.num);
       return bc.null_();
     }
-  
+
     runtime.pen = function(spec) {
       var parts = [];
-  
+
       if (spec.key)   parts.push(compileExpr(spec.key,   bc.r0()));
       if (spec.val)   parts.push(compileExpr(spec.val,   bc.r1()));
       if (spec.soul)  parts.push(compileExpr(spec.soul,  bc.r2()));
       if (spec.state) parts.push(compileExpr(spec.state, bc.r3()));
       if (spec.path)  parts.push(compileExpr(spec.path,  bc.r6()));
-  
+
       var root = parts.length === 0 ? bc.pass()
                : parts.length === 1 ? parts[0]
                : bc.and(parts);
-  
+
       // Build predicate bytecode, then append tail bytes AFTER expression root.
       // Tail bytes (0xC0..) are unreachable by WASM VM (which stops after root
       // expression), and are extracted by scanpolicy() on the GUN bridge layer.
       var pred = Array.from(bc.prog(root));
-  
+
       if (spec.sign) pred.push(0xC0);
       if (spec.cert) {
         var cpub = Array.from(_enc.encode(String(spec.cert).slice(0, 255)));
@@ -2666,23 +2703,23 @@ __def('./src/pen.js', function(module, __exp){
         Array.prototype.push.apply(pred, bc.uleb(pbytes.length));
         for (var qi = 0; qi < pbytes.length; qi++) pred.push(pbytes[qi]);
       }
-  
+
       return '$' + pen.pack(new Uint8Array(pred));
     };
-  
+
     // ── runtime.candle() — temporal window helper ─────────────────────────────────
     // Returns an expr (for use in spec.key) that validates the candle number
     // embedded at a key segment is within [current - back, current + fwd].
     //
     // opts: { seg: 0, sep: '_', size: 300000, back: 100, fwd: 2 }
-  
+
     runtime.candle = function(opts) {
       var seg  = opts.seg  !== undefined ? opts.seg  : 0;
       var sep  = opts.sep  || '_';
       var size = opts.size || 300000;
       var back = opts.back !== undefined ? opts.back : 100;
       var fwd  = opts.fwd  !== undefined ? opts.fwd  : 2;
-  
+
       return {
         let: {
           bind: 0,
@@ -2702,7 +2739,7 @@ __def('./src/pen.js', function(module, __exp){
         }
       };
     };
-  
+
     pen.pen = function(spec) {
       return runtime.pen(spec);
     };
@@ -2710,7 +2747,7 @@ __def('./src/pen.js', function(module, __exp){
       return runtime.candle(opts);
     };
   try { __defaultExport = pen; } catch(e) {}
-  
+
   }
   __exp.default = __defaultExport;
 });
@@ -2718,10 +2755,10 @@ __def('./src/pen.js', function(module, __exp){
 __def('./src/zen/ripemd160.js', function(module, __exp){
   // Pure RIPEMD-160 implementation — no dependencies, no WebCrypto.
   // Spec: https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
-  
+
   const KL = [0x00000000, 0x5A827999, 0x6ED9EBA1, 0x8F1BBCDC, 0xA953FD4E];
   const KR = [0x50A28BE6, 0x5C4DD124, 0x6D703EF3, 0x7A6D76E9, 0x00000000];
-  
+
   // Message word indices
   const ML = [
      0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,
@@ -2737,7 +2774,7 @@ __def('./src/zen/ripemd160.js', function(module, __exp){
      8, 6, 4, 1, 3,11,15, 0, 5,12, 2,13, 9, 7,10,14,
     12,15,10, 4, 1, 5, 8, 7, 6, 2,13,14, 0, 3, 9,11
   ];
-  
+
   // Shift amounts
   const SL = [
     11,14,15,12, 5, 8, 7, 9,11,13,14,15, 6, 7, 9, 8,
@@ -2753,9 +2790,9 @@ __def('./src/zen/ripemd160.js', function(module, __exp){
     15, 5, 8,11,14,14, 6,14, 6, 9,12, 9,12, 5,15, 8,
      8, 5,12, 9,12, 5,14, 6, 8,13, 6, 5,15,13,11,11
   ];
-  
+
   function rotl(x, n) { return ((x << n) | (x >>> (32 - n))) >>> 0; }
-  
+
   // Round selection functions (left: f1..f5, right: f5..f1)
   const FL = [
     (x, y, z) => (x ^ y ^ z) >>> 0,
@@ -2765,12 +2802,12 @@ __def('./src/zen/ripemd160.js', function(module, __exp){
     (x, y, z) => (x ^ (y | ~z)) >>> 0
   ];
   const FR = [FL[4], FL[3], FL[2], FL[1], FL[0]];
-  
+
   function ripemd160(data) {
     const bytes = data instanceof Uint8Array ? data
       : data instanceof ArrayBuffer ? new Uint8Array(data)
       : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-  
+
     const len = bytes.length;
     const bitLen = len * 8;
     const padLen = ((len + 9 + 63) & ~63);
@@ -2780,27 +2817,27 @@ __def('./src/zen/ripemd160.js', function(module, __exp){
     const dv = new DataView(padded.buffer);
     dv.setUint32(padLen - 8, bitLen >>> 0, true);
     dv.setUint32(padLen - 4, Math.floor(bitLen / 0x100000000), true);
-  
+
     let h0 = 0x67452301, h1 = 0xEFCDAB89, h2 = 0x98BADCFE, h3 = 0x10325476, h4 = 0xC3D2E1F0;
-  
+
     for (let off = 0; off < padLen; off += 64) {
       const M = [];
       for (let i = 0; i < 16; i++) M[i] = dv.getUint32(off + i * 4, true);
-  
+
       let al = h0, bl = h1, cl = h2, dl = h3, el = h4;
       let ar = h0, br = h1, cr = h2, dr = h3, er = h4;
-  
+
       for (let i = 0; i < 80; i++) {
         const r = (i / 16) | 0;
         const sumL = (al + FL[r](bl, cl, dl) + M[ML[i]] + KL[r]) >>> 0;
         const tl = (rotl(sumL, SL[i]) + el) >>> 0;
         al = el; el = dl; dl = rotl(cl, 10); cl = bl; bl = tl;
-  
+
         const sumR = (ar + FR[r](br, cr, dr) + M[MR[i]] + KR[r]) >>> 0;
         const tr = (rotl(sumR, SR[i]) + er) >>> 0;
         ar = er; er = dr; dr = rotl(cr, 10); cr = br; br = tr;
       }
-  
+
       const T = (h1 + cl + dr) >>> 0;
       h1 = (h2 + dl + er) >>> 0;
       h2 = (h3 + el + ar) >>> 0;
@@ -2808,7 +2845,7 @@ __def('./src/zen/ripemd160.js', function(module, __exp){
       h4 = (h0 + bl + cr) >>> 0;
       h0 = T;
     }
-  
+
     const out = new DataView(new ArrayBuffer(20));
     out.setUint32(0,  h0, true);
     out.setUint32(4,  h1, true);
@@ -2823,29 +2860,32 @@ __def('./src/zen/ripemd160.js', function(module, __exp){
 
 __def('./src/zen/format.js', function(module, __exp){
   // Format converters for zen.pair() output.
-  // Receives raw BigInt scalars and {x,y} curve points; returns {curve, pub, epub, priv, epriv}.var keccak256 = __req('./src/zen/keccak256.js').default;var ripemd160 = __req('./src/zen/ripemd160.js').default;var shim = __req('./src/zen/shim.js').default;
+  // Receives raw BigInt scalars and {x,y} curve points; returns {curve, pub, epub, priv, epriv}.
+  var keccak256 = __req('./src/zen/keccak256.js').default;
+  var ripemd160 = __req('./src/zen/ripemd160.js').default;
+  var shim = __req('./src/zen/shim.js').default;
   // ── shared helpers ────────────────────────────────────────────────────────────
-  
+
   function bigIntToBytes32(n) {
     let hex = n.toString(16).padStart(64, '0');
     const out = new Uint8Array(32);
     for (let i = 0; i < 32; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
     return out;
   }
-  
+
   function toHex(bytes) {
     return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
   }
-  
+
   // Binary SHA-256 — uses WebCrypto directly on raw bytes (NOT via sha256.js JSON path)
   async function sha256Bytes(bytes) {
     const hash = await shim.subtle.digest('SHA-256', bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
     return new Uint8Array(hash);
   }
-  
+
   // Base58Check encode
   const B58_ALPHA = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  
+
   function base58Encode(bytes) {
     const digits = [0];
     for (let i = 0; i < bytes.length; i++) {
@@ -2862,7 +2902,7 @@ __def('./src/zen/format.js', function(module, __exp){
     for (let i = digits.length - 1; i >= 0; i--) result += B58_ALPHA[digits[i]];
     return result;
   }
-  
+
   async function base58Check(payload) {
     const h1 = await sha256Bytes(payload);
     const h2 = await sha256Bytes(h1);
@@ -2870,9 +2910,9 @@ __def('./src/zen/format.js', function(module, __exp){
     out.set(payload); out.set(h2.slice(0, 4), payload.length);
     return base58Encode(out);
   }
-  
+
   // ── EVM format ────────────────────────────────────────────────────────────────
-  
+
   async function evmAddress(pub) {
     const xBytes = bigIntToBytes32(pub.x);
     const yBytes = bigIntToBytes32(pub.y);
@@ -2889,11 +2929,11 @@ __def('./src/zen/format.js', function(module, __exp){
     }
     return addr;
   }
-  
+
   function evmPrivHex(priv) {
     return '0x' + toHex(bigIntToBytes32(priv));
   }
-  
+
   function evmEncPub(pub) {
     // Uncompressed pubkey: 0x04 + 32-byte x + 32-byte y
     const out = new Uint8Array(65);
@@ -2902,16 +2942,16 @@ __def('./src/zen/format.js', function(module, __exp){
     out.set(bigIntToBytes32(pub.y), 33);
     return '0x' + toHex(out);
   }
-  
+
   // ── BTC format ────────────────────────────────────────────────────────────────
-  
+
   function compressedPubBytes(pub) {
     const out = new Uint8Array(33);
     out[0] = pub.y & 1n ? 0x03 : 0x02;
     out.set(bigIntToBytes32(pub.x), 1);
     return out;
   }
-  
+
   async function btcAddress(pub) {
     // P2PKH mainnet: Base58Check(0x00 + RIPEMD160(SHA256(compressed_pubkey)))
     const compressed = compressedPubBytes(pub);
@@ -2922,7 +2962,7 @@ __def('./src/zen/format.js', function(module, __exp){
     payload.set(ripd, 1);
     return base58Check(payload);
   }
-  
+
   async function btcWIF(priv) {
     // WIF mainnet compressed: Base58Check(0x80 + 32-byte-priv + 0x01)
     const privBytes = bigIntToBytes32(priv);
@@ -2932,17 +2972,17 @@ __def('./src/zen/format.js', function(module, __exp){
     payload[33] = 0x01;
     return base58Check(payload);
   }
-  
+
   function btcCompressedHex(pub) {
     return '0x' + toHex(compressedPubBytes(pub));
   }
-  
+
   // ── main export ───────────────────────────────────────────────────────────────
-  
+
   async function applyFormat(format, curveName, core, raw) {
     const { signPriv, signPub, encPriv, encPub } = raw;
     const out = { curve: curveName };
-  
+
     if (format === 'zen') {
       if (signPriv) { out.priv = core.scalarToString(signPriv); }
       if (signPub)  { out.pub  = core.pointToPub(signPub); }
@@ -2950,7 +2990,7 @@ __def('./src/zen/format.js', function(module, __exp){
       if (encPub)   { out.epub  = core.pointToPub(encPub); }
       return out;
     }
-  
+
     if (format === 'evm') {
       if (signPub)  { out.pub   = await evmAddress(signPub); }
       if (signPriv) { out.priv  = evmPrivHex(signPriv); }
@@ -2958,7 +2998,7 @@ __def('./src/zen/format.js', function(module, __exp){
       if (encPriv)  { out.epriv = evmPrivHex(encPriv); }
       return out;
     }
-  
+
     if (format === 'btc') {
       if (signPub)  { out.pub   = await btcAddress(signPub); }
       if (signPriv) { out.priv  = await btcWIF(signPriv); }
@@ -2966,7 +3006,7 @@ __def('./src/zen/format.js', function(module, __exp){
       if (encPriv)  { out.epriv = await btcWIF(encPriv); }
       return out;
     }
-  
+
     throw new Error('Unknown format: ' + format + '. Supported: zen, evm, btc');
   }
 
@@ -2974,7 +3014,8 @@ __def('./src/zen/format.js', function(module, __exp){
 });
 
 __def('./src/zen/pair.js', function(module, __exp){
-  var crv = __req('./src/zen/curves/curves.js').default;var applyFormat = __req('./src/zen/format.js').default;
+  var crv = __req('./src/zen/curves/curves.js').default;
+  var applyFormat = __req('./src/zen/format.js').default;
   async function derivepriv(c, priv, seed, label) {
     for (let i = 0; i < 100; i++) {
       const off = await c.hashToScalar(seed, label + (i ? i : ''));
@@ -2983,7 +3024,7 @@ __def('./src/zen/pair.js', function(module, __exp){
     }
     throw new Error('Failed to derive non-zero private key');
   }
-  
+
   async function derivepub(c, pt, seed, label) {
     for (let i = 0; i < 100; i++) {
       const off = await c.hashToScalar(seed, label + (i ? i : ''));
@@ -2992,7 +3033,7 @@ __def('./src/zen/pair.js', function(module, __exp){
     }
     throw new Error('Failed to derive valid public key');
   }
-  
+
   async function pair(cb, opt) {
     try {
       opt = opt || {};
@@ -3003,9 +3044,9 @@ __def('./src/zen/pair.js', function(module, __exp){
       // Use c.curve as the canonical name for deterministic labels so that
       // aliases (secp256r1 → p256) produce the same key from the same seed.
       const labelCurve = c.curve;
-  
+
       let spriv = null, spub = null, epriv = null, epub = null;
-  
+
       if (opt.seed && (opt.priv || opt.epriv || opt.pub || opt.epub)) {
         // Additive derivation from existing key + seed
         if (opt.priv) {
@@ -3026,7 +3067,7 @@ __def('./src/zen/pair.js', function(module, __exp){
         // Generate fresh or restore from private / seed
         spriv = opt.priv  ? c.parseScalar(opt.priv,  'Signing key')    : null;
         epriv  = opt.epriv ? c.parseScalar(opt.epriv, 'Encryption key') : null;
-  
+
         // Seed labels use canonical c.curve so aliases (secp256r1 ≡ p256) share the same key.
         // For secp256k1: 'ZEN|secp256k1|sign|' matches the original hardcoded value — backward compat.
         if (!spriv && opt.seed) { spriv = await c.hashToScalar(opt.seed, 'ZEN|' + labelCurve + '|sign|'); }
@@ -3034,14 +3075,14 @@ __def('./src/zen/pair.js', function(module, __exp){
         if (!epriv  && opt.seed) { epriv = await c.hashToScalar(opt.seed, 'ZEN|' + labelCurve + '|encrypt|'); }
         if (!spriv  && !opt.pub)  { spriv = await c.randomScalar(); }
         if (!epriv  && !opt.epub) { epriv = await c.randomScalar(); }
-  
+
         if (spriv) { spub = c.publicFromPrivate(spriv); }
         else if (opt.pub)  { spub = c.parsePub(opt.pub); }
-  
+
         if (epriv)  { epub = c.publicFromPrivate(epriv); }
         else if (opt.epub) { epub = c.parsePub(opt.epub); }
       }
-  
+
       const out = await applyFormat(format, labelCurve, c, { signPriv: spriv, signPub: spub, encPriv: epriv, encPub: epub });
       if (cb) { try { cb(out); } catch (e) { console.log(e); } }
       return out;
@@ -3053,8 +3094,8 @@ __def('./src/zen/pair.js', function(module, __exp){
       throw e;
     }
   }
-  
-  
+
+
   __exp.default = pair;
 
   __exp.pair = pair;
@@ -3089,8 +3130,8 @@ __def('./src/zen/encrypt.js', function(module, __exp){
       throw e;
     }
   }
-  
-  
+
+
   __exp.default = encrypt;
 
   __exp.encrypt = encrypt;
@@ -3124,8 +3165,8 @@ __def('./src/zen/decrypt.js', function(module, __exp){
       throw e;
     }
   }
-  
-  
+
+
   __exp.default = decrypt;
 
   __exp.decrypt = decrypt;
@@ -3152,8 +3193,8 @@ __def('./src/zen/secret.js', function(module, __exp){
       throw e;
     }
   }
-  
-  
+
+
   __exp.default = secret;
 
   __exp.secret = secret;
@@ -3167,7 +3208,7 @@ __def('./src/zen/certify.js', function(module, __exp){
     IMPORTANT: A Certificate is like a Signature. No one knows who (authority)
     created/signed a cert until you put it into their graph.
   */
-  
+
   // RAD/LEX object key detection
   var RAD = ['+', '#', '.', '=', '*', '>', '<'];
   function israd(obj) {
@@ -3175,7 +3216,7 @@ __def('./src/zen/certify.js', function(module, __exp){
     for (var i = 0; i < RAD.length; i++) { if (RAD[i] in obj) { return true; } }
     return false;
   }
-  
+
   // Normalize certificants → '*' | pub_string | [pub_string, ...]
   function normcerts(raw) {
     if (!raw) { return null; }
@@ -3203,32 +3244,32 @@ __def('./src/zen/certify.js', function(module, __exp){
     }
     return null;
   }
-  
+
   async function certify(certs, pol, auth, cb, opt) {
     try {
       opt = opt || {};
       pol = pol || {};
-  
+
       var c = normcerts(certs);
       if (!c) { console.log('No certificant found.'); return; }
-  
+
       var r = (pol.read) ? pol.read : null;
       var w = (pol.write) ? pol.write
             : (typeof pol === 'string' || Array.isArray(pol) || israd(pol)) ? pol
             : null;
-  
+
       if (!r && !w) { console.log('No policy found.'); return; }
-  
+
       var expiry = (opt.expiry !== undefined && opt.expiry !== null)
         ? parseFloat(opt.expiry) : null;
-  
+
       var blk = opt.block || opt.blacklist || opt.ban || {};
       var rb = (blk.read && (typeof blk.read === 'string' || (blk.read || {})['#']))
         ? blk.read : null;
       var wb = typeof blk === 'string' ? blk
         : (blk.write && (typeof blk.write === 'string' || (blk.write || {})['#']))
           ? blk.write : null;
-  
+
       var data = JSON.stringify(Object.assign(
         { c: c },
         expiry ? { e: expiry } : {},
@@ -3237,7 +3278,7 @@ __def('./src/zen/certify.js', function(module, __exp){
         rb ? { rb: rb } : {},
         wb ? { wb: wb } : {}
       ));
-  
+
       var cert = await sign(data, auth, null, { raw: 1 });
       var out = opt.raw ? cert : JSON.stringify(cert);
       if (cb) { try { cb(out); } catch (e) { console.log(e); } }
@@ -3247,20 +3288,21 @@ __def('./src/zen/certify.js', function(module, __exp){
       throw e;
     }
   }
-  
-  
+
+
   __exp.default = certify;
 
   __exp.certify = certify;
 });
 
 __def('./src/zen/keyid.js', function(module, __exp){
-  var shim = __req('./src/zen/shim.js').default;var base62 = __req('./src/zen/base62.js').default;
+  var shim = __req('./src/zen/shim.js').default;
+  var base62 = __req('./src/zen/base62.js').default;
   async function sha1hash(bytes) {
     const crypto = shim.ossl || shim.subtle;
     return crypto.digest({ name: 'SHA-1' }, new Uint8Array(bytes));
   }
-  
+
   async function keyid(pub) {
     const xy = base62.pubToJwkXY(pub);
     const pb = shim.Buffer.concat(
@@ -3281,7 +3323,7 @@ __def('./src/zen/keyid.js', function(module, __exp){
 
 __def('./src/zen/runtime.js', function(module, __exp){
   var security = __req('./src/zen/security.js').default;
-  
+
   __exp.default = security;
 
   __exp.security = security;
@@ -3289,8 +3331,8 @@ __def('./src/zen/runtime.js', function(module, __exp){
 
 __def('./src/zen/book.js', function(module, __exp){
   let __defaultExport;
-  
-  
+
+
   // TODO: BUG! Unbuild will make these globals... CHANGE unbuild to wrap files in a function.
   // Book is a replacement for JS objects, maps, dictionaries.
   var sT = setTimeout, B = sT.Book || (sT.Book = function(text){
@@ -3317,7 +3359,7 @@ __def('./src/zen/book.js', function(module, __exp){
   	b.all = {};
   	return b;
   }), PAGE = 2**12;
-  
+
   function page(word){
   	var b = this, l = b.list, i = spot(word, l, b.parse), p = l[i];
   	if('string' == typeof p){ l[i] = p = {size: -1, first: b.parse? b.parse(p) : p, substring: sub, toString: to, book: b, get: b, read: list} } // TODO: test, how do we arrive at this condition again?
@@ -3351,7 +3393,7 @@ __def('./src/zen/book.js', function(module, __exp){
   	has = l[i] = b.all[word] = {word: ''+word, is: B.decode(a[1]), page: page, substring: subt, toString: tot}; // TODO: convert to a JS value!!! Maybe index! TODO: BUG word needs a page!!!! TODO: Check for other types!!!
   	return has.is;
   }
-  
+
   function spot(word, sorted, parse){ parse = parse || spot.no || (spot.no = function(t){ return t }); // TODO: BUG???? Why is there substring()||0 ? // TODO: PERF!!! .toString() is +33% faster, can we combine it with the export?
   	var L = sorted, min = 0, page, found, l = (word=''+word).length, max = L.length, i = max/2;
   	while(((word < (page = (parse(L[i=i>>0])||'').substring())) || ((parse(L[i+1])||'').substring() <= word)) && i != min){ // L[i] <= word < L[i+1]
@@ -3359,7 +3401,7 @@ __def('./src/zen/book.js', function(module, __exp){
   	}
   	return i;
   }
-  
+
   function from(a, t, l){
   	if('string' != typeof a.from){ return a.from }
   	//(l = a.from = (t = a.from||'').substring(1, t.length-1).split(t[0])); // slot
@@ -3372,7 +3414,7 @@ __def('./src/zen/book.js', function(module, __exp){
   	while(w = l[i++]){ r.push(each(this.get(w = w.word||p(w)||w), w, this)) } // TODO: BUG! PERF?
   	return r;
   }
-  
+
   function set(word, is){
   	// TODO: Perf on random write is decent, but short keys or seq seems significantly slower.
   	var b = this, has = b.all[word];
@@ -3392,7 +3434,7 @@ __def('./src/zen/book.js', function(module, __exp){
   	if((b.PAGE || PAGE) < page.size){ split(page, b) }
   	return b;
   }
-  
+
   function split(p, b){ // TODO: use closest hash instead of half.
   	//console.time();
   	//var S = performance.now();
@@ -3412,7 +3454,7 @@ __def('./src/zen/book.js', function(module, __exp){
   	//console.log(S = (performance.now() - S), 'split');
   	//console.BIG = console.BIG > S? console.BIG : S;
   }
-  
+
   function slot(t){ return heal((t=t||'').substring(1, t.length-1).split(t[0]), t[0]) } B.slot = slot; // TODO: check first=last & pass `s`.
   function heal(l, s){ var i, e;
   	if(0 > (i = l.indexOf(''))){ return l } // ~700M ops/sec on 4KB of Math.random()s, even faster if escape does exist.
@@ -3422,7 +3464,7 @@ __def('./src/zen/book.js', function(module, __exp){
   	l[i] = l.slice(i, e).join(s||'|'); // rejoin the escaped value
   	return l.slice(0,i+1).concat(heal(l.slice(e), s)); // merge left with checked right.
   }
-  
+
   function size(t){ return (t||'').length||1 } // bits/numbers less size? Bug or feature?
   function subt(i,j){ return this.word }
   //function tot(){ return this.text = this.text || "'"+(this.word)+"'"+(this.is)+"'" }
@@ -3439,7 +3481,7 @@ __def('./src/zen/book.js', function(module, __exp){
   	if(p.limbo){ sort(p) } // TODO: BUG? Empty page meaning? undef, '', '||'?
   	return ('string' == typeof p.from)? p.from : '|'+(p.from||[]).join('|')+'|';
   }
-  
+
   function sort(p, l){
   	var f = p.from = ('string' == typeof p.from)? slot(p.from) : p.from||[];
   	if(!(l = l || p.limbo)){ return f }
@@ -3459,7 +3501,7 @@ __def('./src/zen/book.js', function(module, __exp){
   	}
   	return f;
   }
-  
+
   B.encode = function(d, s, u){ s = s || "|"; u = u || String.fromCharCode(32);
   	switch(typeof d){
   		case 'string': // text
@@ -3483,7 +3525,7 @@ __def('./src/zen/book.js', function(module, __exp){
   	}
   	return t.slice(t.indexOf('"')+1);
   }
-  
+
   B.hash = function(s, c){ // via SO
   	if(typeof s !== 'string'){ return }
     c = c || 0; // CPU schedule hashing by
@@ -3495,17 +3537,17 @@ __def('./src/zen/book.js', function(module, __exp){
     }
     return c;
   }
-  
+
   function record(key, val){ return key+B.encode(val)+"%"+key.length }
   function decord(t){
   	var o = {}, i = t.lastIndexOf("%"), c = parseFloat(t.slice(i+1));
   	o[t.slice(0,c)] = B.decode(t.slice(c,i));
   	return o;
   }
-  
+
   try{__defaultExport =B}catch(e){}
-  
-  
+
+
   __exp.default = __defaultExport;
 });
 
@@ -3525,7 +3567,7 @@ __def('./src/zen/chain.js', function(module, __exp){
   	cat.on('out', Zen.on.out, cat); // However for output, there isn't really the global option. I must listen by adding my own listener individually BEFORE this one is ever called.
   	return chain;
   }
-  
+
   function output(msg){
   	var put, get, at = this.as, back = at.back, root = at.root, tmp;
   	if(!msg.$){ msg.$ = at.$ }
@@ -3607,7 +3649,7 @@ __def('./src/zen/chain.js', function(module, __exp){
   	}
   	return back.on('out', msg);
   }; Zen.on.out = output;
-  
+
   function input(msg, cat){ cat = cat || this.as; // TODO: V8 may not be able to optimize functions with different parameter calls, so try to do benchmark to see if there is any actual difference.
   	var root = cat.root, zen = msg.$ || (msg.$ = cat.$), at = (zen||'')._ || empty, tmp = msg.put||'', soul = tmp['#'], key = tmp['.'], change = (u !== tmp['='])? tmp['='] : tmp[':'], state = tmp['>'] || -Infinity, sat; // eve = event, at = data at, cat = chain at, sat = sub at (children chains).
   	if(u !== msg.put && (u === tmp['#'] || u === tmp['.'] || (u === tmp[':'] && u === tmp['=']) || u === tmp['>'])){ // convert from old format
@@ -3623,7 +3665,7 @@ __def('./src/zen/chain.js', function(module, __exp){
   		return;
   	}
   	if((msg.seen||'')[cat.id]){ return } (msg.seen || (msg.seen = function(){}))[cat.id] = cat; // help stop some infinite loops
-  
+
   	if(cat !== at){ // don't worry about this when first understanding the code, it handles changing contexts on a message. A soul chain will never have a different context.
   		Object.keys(msg).forEach(function(k){ tmp[k] = msg[k] }, tmp = {}); // make copy of message
   		tmp.get = cat.get || tmp.get;
@@ -3637,7 +3679,7 @@ __def('./src/zen/chain.js', function(module, __exp){
   		msg = tmp; // use the message with the new context instead;
   	}
   	unlink(msg, cat);
-  
+
   	if((((cat.soul)/* && (cat.ask||'')['']*/) || msg.$$) && state >= state_is(root.graph[soul], key)){ // The root has an in-memory cache of the graph, but if our peer has asked for the data then we want a per deduplicated chain copy of the data that might have local edits on it.
   		(tmp = sget(root, soul)._).put = state_ify(tmp.put, key, state, change, soul);
   	}
@@ -3647,12 +3689,12 @@ __def('./src/zen/chain.js', function(module, __exp){
   			sat.put = sget(root, tmp)._.put || change; // share same cache as what we're linking to.
   		}
   	}
-  
+
   	this.to && this.to.next(msg); // 1st API job is to call all chain listeners.
   	// TODO: Make input more reusable by only doing these (some?) calls if we are a chain we recognize? This means each input listener would be responsible for when listeners need to be called, which makes sense, as they might want to filter.
   	cat.any && setTimeout.each(Object.keys(cat.any), function(any){ (any = cat.any[any]) && any(msg) },0,99); // 1st API job is to call all chain listeners. // TODO: .keys( is slow // BUG: Some re-in logic may depend on this being sync.
   	cat.echo && setTimeout.each(Object.keys(cat.echo), function(lat){ (lat = cat.echo[lat]) && lat.on('in', msg) },0,99); // & linked at chains // TODO: .keys( is slow // BUG: Some re-in logic may depend on this being sync.
-  
+
   	if(((msg.$$||'')._||at).soul){ // comments are linear, but this line of code is non-linear, so if I were to comment what it does, you'd have to read 42 other comments first... but you can't read any of those comments until you first read this comment. What!? // shouldn't this match link's check?
   		// is there cases where it is a $$ that we do NOT want to do the following? 
   		if((sat = cat.next) && (sat = sat[key])){ // TODO: possible trick? Maybe have `ionmap` code set a sat? // TODO: Maybe we should do `cat.ask` instead? I guess does not matter.
@@ -3661,10 +3703,10 @@ __def('./src/zen/chain.js', function(module, __exp){
   			sat.on('in', tmp);
   		}
   	}
-  
+
   	link(msg, cat);
   }; Zen.on.in = input;
-  
+
   function link(msg, cat){ cat = cat || this.as || msg.$._;
   	if(msg.$$ && this !== Zen.on){ return } // $$ means we came from a link, so we are at the wrong level, thus ignore it unless overruled manually by being called directly.
   	if(!msg.put || cat.soul){ return } // But you cannot overrule being linked to nothing, or trying to link a soul chain - that must never happen.
@@ -3677,9 +3719,9 @@ __def('./src/zen/chain.js', function(module, __exp){
   	if((tat.echo || (tat.echo = {}))[cat.id] // we've already linked ourselves so we do not need to do it again. Except... (annoying implementation details)
   		&& !(root.pass||'')[cat.id]){ return } // if a new event listener was added, we need to make a pass through for it. The pass will be on the chain, not always the chain passed down. 
   	if(tmp = root.pass){ if(tmp[link+cat.id]){ return } tmp[link+cat.id] = 1 } // But the above edge case may "pass through" on a circular graph causing infinite passes, so we hackily add a temporary check for that.
-  
+
   	(tat.echo||(tat.echo={}))[cat.id] = cat; // set ourself up for the echo! // TODO: BUG? Echo to self no longer causes problems? Confirm.
-  
+
   	if(cat.has){ cat.link = link }
   	var sat = sget(root, tat.link = link)._; // grab what we're linking to.
   	(sat.echo || (sat.echo = {}))[tat.id] = tat; // link it.
@@ -3692,7 +3734,7 @@ __def('./src/zen/chain.js', function(module, __exp){
   		sat.on('out', {get: {'#': link, '.': get}}); // go get it.
   	},0,99);
   }; Zen.on.link = link;
-  
+
   function unlink(msg, cat){ // ugh, so much code for seemingly edge case behavior.
   	var put = msg.put||'', change = (u !== put['='])? put['='] : put[':'], root = cat.root, link, tmp;
   	if(u === change){ // 1st edge case: If we have a brand new database, no data will be found.
@@ -3725,7 +3767,7 @@ __def('./src/zen/chain.js', function(module, __exp){
   	tmp = msg.$._||'';
   	if(link === tmp.link || (cat.has && !tmp.link)){
   		if((root.pass||'')[cat.id] && 'string' !== typeof link){
-  
+
   		} else {
   			return;
   		}
@@ -3733,7 +3775,7 @@ __def('./src/zen/chain.js', function(module, __exp){
   	delete (tmp.echo||'')[cat.id];
   	unlink({get: cat.get, put: u, $: msg.$, linked: msg.linked = msg.linked || tmp.link}, cat); // unlink our sub chains.
   }; Zen.on.unlink = unlink;
-  
+
   function ack(msg, ev){
   	//if(!msg['%'] && (this||'').off){ this.off() } // do NOT memory leak, turn off listeners! Now handled by .ask itself
   	// manhattan:
@@ -3758,7 +3800,7 @@ __def('./src/zen/chain.js', function(module, __exp){
   	Zen.on.put(msg);
   	return; // eom
   }
-  
+
   var empty = {}, u, text_rand = String.random, valid = Zen.valid, obj_has = function(o, k){ return o && Object.prototype.hasOwnProperty.call(o, k) }, state = Zen.state, state_is = state.is, state_ify = state.ify;
   function sget(root, soul){ root._sl = 1; var g = root.$.get(soul); root._sl = 0; return g }
 });
@@ -3885,7 +3927,7 @@ __def('./src/zen/put.js', function(module, __exp){
   	walk();
   	return zen;
   }
-  
+
   function context(zen, data, cb, opt){
   	var ctx = {};
   	ctx[PUT_CONTEXT] = 1;
@@ -3899,12 +3941,12 @@ __def('./src/zen/put.js', function(module, __exp){
   	if(u !== ctx.opt.acks){ ctx.acks = ctx.opt.acks }
   	return ctx;
   }
-  
+
   function options(opt){
   	if(!opt || 'object' != typeof opt){ return {} }
   	return Object.assign({}, opt);
   }
-  
+
   function stun(as, id){
   	if(!id){ return } id = (id._||'').id||id;
   	var run = as.root.stun || (as.root.stun = {on: Zen.on}), test = {}, tmp;
@@ -3926,7 +3968,7 @@ __def('./src/zen/put.js', function(module, __exp){
   		test.stun = as.stun;
   	});
   }
-  
+
   function ran(as){
   	if(as.err){ ran.end(as.stun, as.root); return } // move log handle here.
   	if(as.todo.length || as.end || !Object.empty(as.wait)){ return } as.end = 1;
@@ -3955,7 +3997,7 @@ __def('./src/zen/put.js', function(module, __exp){
   	(as.ack||noop).call(as, as.out = { err: as.err = Zen.log(err) });
   	as.ran(as);
   }
-  
+
   function get(as){
   	var at = as.via._, tmp;
   	as.via = as.via.back(function(at){
@@ -3966,8 +4008,8 @@ __def('./src/zen/put.js', function(module, __exp){
   		as.via = at.root.$.get(((as.data||'')._||'')['#'] || at.$.back('opt.uuid')())
   	}
   	as.via.put(as.data, as.ack, as.opt, as);
-  
-  
+
+
   	return;
   	if(at.get && at.back.soul){
   		tmp = as.data;
@@ -3978,7 +4020,7 @@ __def('./src/zen/put.js', function(module, __exp){
   	}
   }
   function check(d, tmp){ return ((d && (tmp = d.constructor) && tmp.name) || typeof d) }
-  
+
   var u, empty = {}, noop = function(){}, turn = setTimeout.turn, valid = Zen.valid, state_ify = Zen.state.ify;
   var iife = function(fn,as){fn.call(as||empty)}
 });
@@ -4244,7 +4286,7 @@ __def('./src/zen/on.js', function(module, __exp){
   	chain._.lex = zen._.lex; // TODO: Better approach in future? This is quick for now.
   	return chain;
   }
-  
+
   Zen.chain.off = function(){
   	// make off more aggressive. Warning, it might backfire!
   	var zen = this, at = zen._, tmp;
@@ -4255,7 +4297,7 @@ __def('./src/zen/on.js', function(module, __exp){
   		if(tmp[at.get]){
   			delete tmp[at.get];
   		} else {
-  
+
   		}
   	}
   	// TODO: delete cat.one[map.id]?
@@ -4362,15 +4404,16 @@ __def('./src/zen/set.js', function(module, __exp){
 });
 
 __def('./src/zen/mesh.js', function(module, __exp){
-  __req('./src/zen/shim.js');var jsonAsync = __req('./src/zen/json.js').default;
+  __req('./src/zen/shim.js');
+  var jsonAsync = __req('./src/zen/json.js').default;
   let __defaultExport;
-  
+
       var noop = function(){}
       var pair = jsonAsync.createJsonPair(function(d){ return json.sucks(d) });
       var parse = pair.parse;
       var json = pair.json;
       json.sucks = function(d){ if(d > 99){ console.log("Warning: JSON blocking CPU detected. Add `zen/lib/yson.js` to fix."); json.sucks = noop } }
-  
+
       function Mesh(root){
           var mesh = function(){};
           var opt = root.opt || {};
@@ -4380,11 +4423,11 @@ __def('./src/zen/mesh.js', function(module, __exp){
           opt.pack = opt.pack || (opt.max * 0.01 * 0.01);
           opt.puff = opt.puff || 9; // IDEA: do a start/end benchmark, divide ops/result.
           var puff = setTimeout.turn || setTimeout;
-  
+
           var dup = root.dup, dup_check = dup.check, dup_track = dup.track;
-  
+
           var ST = +new Date, LT = ST;
-  
+
           var hear = mesh.hear = function(raw, peer){
               if(!raw){ return }
               if(opt.max <= raw.length){ return mesh.say({dam: '!', err: "Message too big!"}, peer) }
@@ -4392,7 +4435,7 @@ __def('./src/zen/mesh.js', function(module, __exp){
                   /*if('string' == typeof raw){ try{
                       var stat = console.STAT || {};
                       //console.log('HEAR:', peer.id, (raw||'').slice(0,250), ((raw||'').length / 1024 / 1024).toFixed(4));
-  
+
                       //console.log(setTimeout.turn.s.length, 'stacks', parseFloat((-(LT - (LT = +new Date))/1000).toFixed(3)), 'sec', parseFloat(((LT-ST)/1000 / 60).toFixed(1)), 'up', stat.peers||0, 'peers', stat.has||0, 'has', stat.memhused||0, stat.memused||0, stat.memax||0, 'heap mem max');
                   }catch(e){ console.log('DBG err', e) }}*/
                   hear.d += raw.length||0 ; ++hear.c } // STATS!
@@ -4466,7 +4509,7 @@ __def('./src/zen/mesh.js', function(module, __exp){
           }
           var tomap = function(k,i,m){m(k,true)};
           hear.c = hear.d = 0;
-  
+
           {
               var SMIA = 0;
               var loop;
@@ -4488,7 +4531,7 @@ __def('./src/zen/mesh.js', function(module, __exp){
                   Object.keys(v).sort().forEach(sorta, {to: tmp = {}, on: v});
                   return tmp;
               } function sorta(k){ this.to[k] = this.on[k] }
-  
+
               var say = mesh.say = function(msg, peer){ var tmp;
                   if((tmp = this) && (tmp = tmp.to) && tmp.next){ tmp.next(msg) } // compatible with middleware adapters.
                   if(!msg){ return false }
@@ -4602,7 +4645,7 @@ __def('./src/zen/mesh.js', function(module, __exp){
                   }
               }
           }
-  
+
           function flush(peer){
               var tmp = peer.batch, t = 'string' == typeof tmp, l;
               if(t){ tmp += ']' }// TODO: Prevent double JSON!
@@ -4627,7 +4670,7 @@ __def('./src/zen/mesh.js', function(module, __exp){
           }catch(e){
               (peer.queue = peer.queue || []).push(raw);
           }}
-  
+
           mesh.near = 0;
           mesh.hi = function(peer){
               var wire = peer.wire, tmp;
@@ -4674,13 +4717,13 @@ __def('./src/zen/mesh.js', function(module, __exp){
               mesh.bye(peer);
               mesh.hi(one);
           }
-  
+
           root.on('create', function(root){
               root.opt.pid = root.opt.pid || String.random(9);
               this.to.next(root);
               root.on('out', mesh.say);
           });
-  
+
           root.on('bye', function(peer, tmp){
               peer = opt.peers[peer.id || peer] || peer;
               this.to.next(peer);
@@ -4688,7 +4731,7 @@ __def('./src/zen/mesh.js', function(module, __exp){
               delete opt.peers[peer.id];
               peer.wire = null;
           });
-  
+
           var gets = {};
           root.on('bye', function(peer, tmp){ this.to.next(peer);
               if(tmp = console.STAT){ tmp.peers = mesh.near; }
@@ -4709,37 +4752,38 @@ __def('./src/zen/mesh.js', function(module, __exp){
                   })
               });
           });
-  
+
           return mesh;
       }
       var empty = {}, ok = true, u;
-  
+
       try{ __defaultExport = Mesh }catch(e){}
-  
+
   __exp.default = __defaultExport;
 });
 
 __def('./src/zen/websocket.js', function(module, __exp){
-  var __root = __req('./src/zen/root.js').default;var __mesh = __req('./src/zen/mesh.js').default;
+  var __root = __req('./src/zen/root.js').default;
+  var __mesh = __req('./src/zen/mesh.js').default;
   var Zen = __root;
   Zen.Mesh = __mesh;
-  
+
   // TODO: resync upon reconnect online/offline
   //window.ononline = window.onoffline = function(){ console.log('online?', navigator.onLine) }
-  
+
   Zen.on('opt', function(root){
   	this.to.next(root);
   	if(root.once){ return }
   	var opt = root.opt;
   	if(false === opt.WebSocket){ return }
-  
+
   	var env = Zen.window || {};
   	var websocket = opt.WebSocket || env.WebSocket || env.webkitWebSocket || env.mozWebSocket;
   	if(!websocket){ return }
   	opt.WebSocket = websocket;
-  
+
   	var mesh = opt.mesh = opt.mesh || Zen.Mesh(root);
-  
+
   	var wired = mesh.wire || opt.wire;
   	mesh.wire = opt.wire = open;
   	function open(peer){ try{
@@ -4762,9 +4806,9 @@ __def('./src/zen/websocket.js', function(module, __exp){
   		};
   		return wire;
   	}catch(e){ opt.mesh.bye(peer) }}
-  
+
   	setTimeout(function(){ !opt.super && root.on('out', {dam:'hi'}) },1); // it can take a while to open a socket, so maybe no longer lazy load for perf reasons?
-  
+
   	var wait = 2 * 999;
   	function reconnect(peer){
   		clearTimeout(peer.defer);
@@ -4782,9 +4826,10 @@ __def('./src/zen/websocket.js', function(module, __exp){
 });
 
 __def('./src/zen/locstore.js', function(module, __exp){
-  var Zen = __req('./src/zen/root.js').default;var jsonAsync = __req('./src/zen/json.js').default;
+  var Zen = __req('./src/zen/root.js').default;
+  var jsonAsync = __req('./src/zen/json.js').default;
   var env = (typeof process !== 'undefined' && process.env) || {};
-  
+
   var noop = function(){}, store, u;
   try{store = (Zen.window||noop).localStorage}catch(e){}
   if(!store){
@@ -4793,11 +4838,11 @@ __def('./src/zen/locstore.js', function(module, __exp){
   	}
   	store = {setItem: function(k,v){this[k]=v}, removeItem: function(k){delete this[k]}, getItem: function(k){return this[k]}};
   }
-  
+
   var pair = jsonAsync.createJsonPair();
   var parse = pair.parse;
   var json = pair.json;
-  
+
   Zen.on('create', function lg(root){
   	this.to.next(root);
   	var opt = root.opt, graph = root.graph, acks = [], disk, to, size, stop;
@@ -4813,7 +4858,7 @@ __def('./src/zen/locstore.js', function(module, __exp){
   	try{ disk = lg[opt.prefix] = lg[opt.prefix] || JSON.parse(size = store.getItem(opt.prefix)) || {}; // TODO: Perf! This will block, should we care, since limited to 5MB anyways?
   	}catch(e){ disk = lg[opt.prefix] = {}; }
   	size = (size||'').length;
-  
+
   	root.on('get', function(msg){
   		this.to.next(msg);
   		var lex = msg.get, soul, data, tmp, u;
@@ -4827,7 +4872,7 @@ __def('./src/zen/locstore.js', function(module, __exp){
   		Zen.on.get.ack(msg, data); //root.on('in', {'@': msg['#'], put: tmp, lS:1});// || root.$});
   		//}, Math.random() * 10); // FOR TESTING PURPOSES!
   	});
-  
+
   	root.on('put', function(msg){
   		this.to.next(msg); // remember to call next middleware adapter
   		var put = msg.put, soul = put['#'], key = put['.'], id = msg['#'], ok = msg.ok||'', tmp; // pull data off wire envelope
@@ -4849,19 +4894,30 @@ __def('./src/zen/locstore.js', function(module, __exp){
   				root.on('localStorage:error', {err: err, get: opt.prefix, put: disk});
   			}
   			size = tmp.length;
-  
+
   			//if(!err && !Object.empty(opt.peers)){ return } // only ack if there are no peers. // Switch this to probabilistic mode
   			setTimeout.each(ack, function(id){
   				root.on('in', {'@': id, err: err, ok: 0}); // localStorage isn't reliable, so make its `ok` code be a low number.
   			},0,99);
   		})
   	}
-  
+
   });
 });
 
 __def('./src/zen/graph.js', function(module, __exp){
-  __req('./src/zen/book.js');__req('./src/zen/chain.js');__req('./src/zen/back.js');__req('./src/zen/put.js');__req('./src/zen/get.js');__req('./src/zen/on.js');__req('./src/zen/map.js');__req('./src/zen/set.js');__req('./src/zen/mesh.js');__req('./src/zen/websocket.js');__req('./src/zen/locstore.js');var ZEN = __req('./src/zen/root.js').default;
+  __req('./src/zen/book.js');
+  __req('./src/zen/chain.js');
+  __req('./src/zen/back.js');
+  __req('./src/zen/put.js');
+  __req('./src/zen/get.js');
+  __req('./src/zen/on.js');
+  __req('./src/zen/map.js');
+  __req('./src/zen/set.js');
+  __req('./src/zen/mesh.js');
+  __req('./src/zen/websocket.js');
+  __req('./src/zen/locstore.js');
+  var ZEN = __req('./src/zen/root.js').default;
   if (!ZEN.chain.then) {
     ZEN.chain.then = function(cb, opt) {
       var zen = this;
@@ -4869,7 +4925,7 @@ __def('./src/zen/graph.js', function(module, __exp){
       return cb ? p.then(cb) : p;
     };
   }
-  
+
   const graph = {
     core: ZEN,
     chain: ZEN.chain,
@@ -4880,15 +4936,29 @@ __def('./src/zen/graph.js', function(module, __exp){
       return ZEN.is(value);
     }
   };
-  
-  
+
+
   __exp.default = graph;
 
   __exp.graph = graph;
 });
 
 __def('./src/zen/index.js', function(module, __exp){
-  var PEN = __req('./src/pen.js').default;var secp256k1 = __req('./src/zen/curves/secp256k1.js').default;var settings = __req('./src/zen/settings.js').default;var pair = __req('./src/zen/pair.js').default;var sign = __req('./src/zen/sign.js').default;var verify = __req('./src/zen/verify.js').default;var encrypt = __req('./src/zen/encrypt.js').default;var decrypt = __req('./src/zen/decrypt.js').default;var secret = __req('./src/zen/secret.js').default;var shim = __req('./src/zen/shim.js').default;var hash = __req('./src/zen/hash.js').default;var certify = __req('./src/zen/certify.js').default;var keyid = __req('./src/zen/keyid.js').default;var security = __req('./src/zen/runtime.js').default;var graph = __req('./src/zen/graph.js').default;
+  var PEN = __req('./src/pen.js').default;
+  var secp256k1 = __req('./src/zen/curves/secp256k1.js').default;
+  var settings = __req('./src/zen/settings.js').default;
+  var pair = __req('./src/zen/pair.js').default;
+  var sign = __req('./src/zen/sign.js').default;
+  var verify = __req('./src/zen/verify.js').default;
+  var encrypt = __req('./src/zen/encrypt.js').default;
+  var decrypt = __req('./src/zen/decrypt.js').default;
+  var secret = __req('./src/zen/secret.js').default;
+  var shim = __req('./src/zen/shim.js').default;
+  var hash = __req('./src/zen/hash.js').default;
+  var certify = __req('./src/zen/certify.js').default;
+  var keyid = __req('./src/zen/keyid.js').default;
+  var security = __req('./src/zen/runtime.js').default;
+  var graph = __req('./src/zen/graph.js').default;
   var hasOwn = Object.prototype.hasOwnProperty;
   var STATIC_SKIP = { length: 1, name: 1, prototype: 1 };
   var CHAIN_SKIP = { constructor: 1 };
@@ -4919,7 +4989,7 @@ __def('./src/zen/index.js', function(module, __exp){
     hash: hash,
     certify: certify
   };
-  
+
   function mirrorStatics(target, source) {
     Object.getOwnPropertyNames(source).forEach(function(name) {
       if (STATIC_SKIP[name] || ZEN_SKIP[name] || hasOwn.call(target, name)) { return }
@@ -4928,7 +4998,7 @@ __def('./src/zen/index.js', function(module, __exp){
       Object.defineProperty(target, name, desc);
     });
   }
-  
+
   function mirrorMethods(target, source, pick) {
     Object.getOwnPropertyNames(source).forEach(function(name) {
       if (ZEN_SKIP[name] || (pick && !pick(name)) || hasOwn.call(target, name)) { return }
@@ -4943,7 +5013,7 @@ __def('./src/zen/index.js', function(module, __exp){
       });
     });
   }
-  
+
   function mirrorChain(target, source) {
     Object.getOwnPropertyNames(source).forEach(function(name) {
       if (CHAIN_SKIP[name] || hasOwn.call(target, name)) { return }
@@ -4958,14 +5028,14 @@ __def('./src/zen/index.js', function(module, __exp){
       });
     });
   }
-  
+
   class ZEN {
     constructor(opt = {}) {
       this.OPT = opt;
       this._graphInstance = opt.graph || opt.zen || opt.ZEN || opt.GUN || opt.gun || null;
       this._graphOpt = this._graphInstance ? null : (opt.graphOpt || opt.zenOpt || opt.ZENOpt || opt.GUNOpt || opt.gunOpt || opt);
     }
-  
+
     static pen(spec = {}) { return PEN.pen(spec) }
     static candle(opts = {}) { return PEN.candle(opts) }
     static pair(...args) { return pair(...args) }
@@ -5008,22 +5078,22 @@ __def('./src/zen/index.js', function(module, __exp){
     static secret(...args) { return secret(...args) }
     static hash(...args) { return hash(...args) }
     static certify(...args) { return certify(...args) }
-  
+
     get _graph() {
       if (!this._graphInstance) {
         this._graphInstance = graph.create(this._graphOpt || {});
       }
       return this._graphInstance;
     }
-  
+
     get SECP256K1() { return SECP256K1 }
     get ready() { return PEN.ready }
-  
+
     use(runtime) {
       this._graphInstance = runtime;
       return this;
     }
-  
+
     chain() { return this._graph }
     pen(spec = {}) { return this.constructor.pen(spec) }
     candle(opts = {}) { return this.constructor.candle(opts) }
@@ -5035,7 +5105,7 @@ __def('./src/zen/index.js', function(module, __exp){
     secret(...args) { return this.constructor.secret(...args) }
     hash(...args) { return this.constructor.hash(...args) }
     certify(...args) { return this.constructor.certify(...args) }
-  
+
     get(...args) { return this._graph.get(...args) }
     put(...args) { return this._graph.put(...args) }
     on(...args) { return this._graph.on(...args) }
@@ -5044,12 +5114,12 @@ __def('./src/zen/index.js', function(module, __exp){
     set(...args) { return this._graph.set(...args) }
     back(...args) { return this._graph.back(...args) }
   }
-  
+
   mirrorStatics(ZEN, graph.core);
   mirrorStatics(ZEN, PEN);
   mirrorMethods(ZEN.prototype, PEN, function(name) { return !CHAIN_SKIP[name] });
   mirrorChain(ZEN.prototype, graph.chain);
-  
+
   ZEN.SECP256K1 = SECP256K1;
   ZEN.Buffer = shim.Buffer;
   ZEN.random = shim.random;
@@ -5058,8 +5128,8 @@ __def('./src/zen/index.js', function(module, __exp){
   ZEN.security = security;
   ZEN.check = security.check;
   ZEN.opt = security.opt;
-  
-  
+
+
   __exp.default = ZEN;
 
   __exp.ZEN = ZEN;

@@ -13,7 +13,7 @@
     "https": "HTTPS_KEY=test/https/server.key HTTPS_CERT=test/https/server.crt npm start",
     "build": "npm run buildRelease",
     "prepublishOnly": "npm run verifyRelease",
-    "clean": "node --input-type=module -e \"import fs from 'node:fs'; const drop = ['tmp','radata','data','radatatest','data.json']; for (const d of drop) { fs.rmSync(d,{recursive:true,force:true}); } for (const name of fs.readdirSync('.')) { if (name.startsWith('radatatest-') || name.startsWith('radata-')) { fs.rmSync(name,{recursive:true,force:true}); } }\"",
+    "clean": "node --input-type=module -e \"import fs from 'node:fs'; function rm(p){try{fs.rmSync(p,{recursive:true,force:true,maxRetries:5,retryDelay:200});}catch(e){if(e.code==='ENOTEMPTY'||e.code==='EBUSY'){try{fs.rmSync(p,{recursive:true,force:true,maxRetries:10,retryDelay:500});}catch(e2){}}}} const drop = ['tmp','radata','data','radatatest','data.json']; for (const d of drop) { rm(d); } for (const name of fs.readdirSync('.')) { if (name.startsWith('radatatest-') || name.startsWith('radata-')) { rm(name); } }\"",
     "test": "npm run buildZEN && npm run test:all",
     "test:browser": "playwright test",
     "test:browser:setup": "playwright install chromium",

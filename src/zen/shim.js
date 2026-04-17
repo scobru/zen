@@ -118,7 +118,14 @@ const drainTurnQueue = function() {
     turnQueue = turn.s = turnQueue.slice(turnIndex);
     turnIndex = 0;
   }
-  if (turnQueue.length) { pollApi(drainTurnQueue); }
+  if (turnQueue.length) {
+    // Bypass pollActive check for continuation: use direct call with spin-based yielding
+    if ((timeoutApi.hold >= (clockApi.now() - pollLast)) && pollSpin++ < 3333) {
+      drainTurnQueue();
+    } else {
+      immediateApi(function() { pollLast = clockApi.now(); pollSpin = 0; drainTurnQueue(); }, 0);
+    }
+  }
 };
 const turn = timeoutApi.turn = timeoutApi.turn || function(task) { 1 == turnQueue.push(task) && pollApi(drainTurnQueue); };
 turn.s = turnQueue;
