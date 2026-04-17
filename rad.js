@@ -3,7 +3,12 @@ import __fs from 'fs';
 import __node_fetch from 'node-fetch';
 
 let __defaultExport;
-(function(){ // RAD
+
+initRADCore();
+initNodeFsRADPlugin();
+initLocalStorageRADPlugin();
+
+function initRADCore(){
 	console.log("Warning: Experimental rewrite of RAD to use Book. It is not API compatible with RAD yet and is very alpha.");
 	var sT = setTimeout, Book = sT.Book || __book, RAD = sT.RAD || (sT.RAD = function(opt){
 		opt = opt || {};
@@ -120,17 +125,13 @@ let __defaultExport;
 	sT.each = sT.each || function(l,f){l.forEach(f)};
 
 	try { __defaultExport = RAD } catch (e){ }
-/*
-	The old Node-only RAD memory probe lived here.
-	It was never part of the public RAD API and stays removed in the ESM experiment.
-*/
 }
 
 
-(function(){ // temporary fs storage plugin, needs to be refactored to use the actual RAD plugin interface.
+	function initNodeFsRADPlugin(){
 	var fs;
 	try { fs = __fs } catch (e){ };
-	if(!fs){ return }
+		if(!fs){ return }
 
 	var sT = setTimeout, RAD = sT.RAD;
 	RAD.put = function(file, data, cb, opt){
@@ -145,7 +146,7 @@ let __defaultExport;
 }
 
 
-(function(){ // temporary fs storage plugin, needs to be refactored to use the actual RAD plugin interface.
+function initLocalStorageRADPlugin(){
 	var lS;
 	try { lS = localStorage } catch (e){ };
 	if(!lS){ return }
@@ -164,19 +165,25 @@ let __defaultExport;
 	}
 }
 
-(function(){ return;
-	var get;
-	try { get = fetch } catch (e){ console.log("WARNING! need `npm install node-fetch@2.6`"); get = fetch = __node_fetch };
-	if(!get){ return }
+/*
+	The old Node-only RAD memory probe lived here.
+	It was never part of the public RAD API and stays removed in the ESM experiment.
+*/
 
-	var sT = setTimeout, RAD = sT.RAD, put = RAD.put, get = RAD.get;
-	RAD.put = function(file, data, cb, opt){ put && put(file, data, cb, opt);
-		cb(401)
-	}
-	RAD.get = async function(file, cb, opt){ get && get(file, cb, opt);
-		var t = (await (await fetch('http://localhost:8765/gun/authorsData/'+file)).text());
-		if('404' == t){ cb(); return }
-		cb(null, t);
-	}
-}
+// (function(){ return;
+// 	var get;
+// 	try { get = fetch } catch (e){ console.log("WARNING! need `npm install node-fetch@2.6`"); get = fetch = __node_fetch };
+// 	if(!get){ return }
+
+// 	var sT = setTimeout, RAD = sT.RAD, put = RAD.put, get = RAD.get;
+// 	RAD.put = function(file, data, cb, opt){ put && put(file, data, cb, opt);
+// 		cb(401)
+// 	}
+// 	RAD.get = async function(file, cb, opt){ get && get(file, cb, opt);
+// 		var t = (await (await fetch('http://localhost:8765/gun/authorsData/'+file)).text());
+// 		if('404' == t){ cb(); return }
+// 		cb(null, t);
+// 	}
+// }
+
 export default __defaultExport;
