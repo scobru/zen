@@ -31,7 +31,8 @@
     "testPEN:unit": "npm run clean && mocha test/pen.js --timeout 10000",
     "testPEN": "npm run buildZEN && npm run testPEN:unit",
     "testRelease": "npm run test",
-    "verifyRelease": "npm run buildRelease && npm run test:all"
+    "verifyRelease": "npm run buildRelease && npm run test:all",
+    "format": "prettier --write \"src/**/*.js\""
   },
   "repository": {
     "type": "git",

@@ -1,4 +1,4 @@
-import PEN from '../pen.js';
+import PEN from './pen.js';
 import secp256k1 from './curves/secp256k1.js';
 import settings from './settings.js';
 import pair from './pair.js';

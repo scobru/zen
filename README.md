@@ -4,7 +4,7 @@
 
 ZEN is no longer "GUN plus wrappers". It is now a **ZEN-first codebase**:
 
-- **`src/zen/`** is the active runtime source tree.
+- **`src/`** is the active runtime source tree.
 - **`zen.js` / `zen.min.js`** are the main build artifacts.
 - the old parallel **`src/gun/`** and **`src/sea/`** trees have been removed from the active repo
 - the public entry is **ZEN-only**
@@ -18,7 +18,7 @@ ZEN has already moved well beyond yesterday's shape.
 
 | Area | Status |
 | --- | --- |
-| Graph runtime (HAM/CRDT, chain API, peers, storage) | Active in `src/zen/` |
+| Graph runtime (HAM/CRDT, chain API, peers, storage) | Active in `src/` |
 | Public runtime surface | `ZEN` only |
 | secp256k1 crypto | Implemented |
 | P-256 / secp256r1 crypto | Implemented |
@@ -54,7 +54,7 @@ ZEN is now a **fork-first successor**, not a greenfield experiment and not a thi
 ### Now
 
 - **single active runtime identity: ZEN**
-- `src/zen/` is the source of truth
+- `src/` is the source of truth
 - public entry exports **ZEN**
 - `gun.js` / `sea.js` are no longer the center of the repo
 - noisy test harness output has been cleaned up
@@ -235,7 +235,7 @@ npm run buildRelease
 
 ### Source of truth
 
-- runtime source: **`src/zen/`**
+- runtime source: **`src/`**
 - bundled output: **`zen.js`**, **`zen.min.js`**
 - policy runtime: **PEN**
 - active server path: **`lib/server.js`**

@@ -1,4 +1,4 @@
-import SecurityMod from './zen/security.js';
+import SecurityMod from './security.js';
 
 let __defaultExport;
 const __penWasmURL = new URL('./pen.wasm', import.meta.url);

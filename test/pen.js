@@ -12,7 +12,7 @@ var __gun;
   __gun = W;
 }
 import __pen from '../src/pen.js';
-import ZEN from '../src/zen/index.js';
+import ZEN from '../src/index.js';
 import assert from 'assert';
 'use strict';
 var Gun, SEA, pen;
