@@ -11,12 +11,14 @@ GUN is a realtime, decentralized, offline-first, graph data synchronization engi
 GUN is built as a modular system with the following structure:
 
 ### Entry Points
+
 - `index.js` - Server/Node.js entry point, loads lib/server.js
-- `gun.js` - Browser build with all core modules bundled  
+- `gun.js` - Browser build with all core modules bundled
 - `browser.js` - Browser-specific entry point
 - `sea.js` - Security, Encryption, Authorization module
 
 ### Core Modules (`src/`)
+
 - `root.js` - Core GUN constructor and base functionality
 - `core.js` - Core graph operations
 - `mesh.js` - Peer-to-peer networking layer
@@ -26,12 +28,14 @@ GUN is built as a modular system with the following structure:
 - `set.js` - Set operations for unordered lists
 
 ### Storage Adapters (`lib/`)
+
 - `rfs.js` - File system storage (Node.js)
 - `rs3.js` - AWS S3 storage adapter
 - `radisk.js` - RAD disk storage engine
 - `rindexed.js` - IndexedDB storage (browser)
 
 ### Key Libraries
+
 - `axe.js` - Automatic peering and DHT clustering
 - `src/sea/` - Cryptographic operations and user authentication
 - `lib/webrtc.js` - WebRTC peer connections
@@ -68,12 +72,14 @@ rm -rf *data* *radata*
 ## Testing
 
 Tests use Mocha. Before running tests again, clean the data directories as tests write persistent data:
+
 ```bash
 rm -rf *data* *radata*
 npm test
 ```
 
 For performance and stress testing:
+
 - Check `test/panic/` directory for various stress tests
 - PANIC tests include holy-grail, scale, latency tests
 
@@ -97,6 +103,7 @@ For performance and stress testing:
 ## Working with GUN
 
 When modifying GUN:
+
 1. Core logic is in `/src` - modifications here affect all builds
 2. Run `npm run buildGUN` after changes to regenerate browser builds
 3. Test changes with both Node.js and browser environments

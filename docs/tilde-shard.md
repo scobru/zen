@@ -7,6 +7,7 @@ This document introduces the `~` shard behavior in SEA firewall logic.
 `~` shard provides a deterministic, path-based index for public keys (pub), while keeping write rules strict and verifiable.
 
 Main goals:
+
 - Avoid oversized single-node indexes.
 - Enforce deterministic shard structure.
 - Reuse SEA signing/verification flow for shard leaf writes.
@@ -18,10 +19,12 @@ Main goals:
 ## Data model
 
 Shard namespace:
+
 - Root soul: `~`
 - Shard souls: `~/...`
 
 Config (current):
+
 - `pub` length: `88`
 - `cut` (segment size): `2`
 - leaf key min/max: `1..2`
@@ -32,6 +35,7 @@ Config (current):
 ### Path/segment constraints
 
 A shard soul is valid only when:
+
 - It is exactly `~`, or starts with `~/`.
 - It does not contain `//`.
 - It does not end with `/`.
@@ -39,6 +43,7 @@ A shard soul is valid only when:
 - Intermediate path segments are fixed length `2`.
 
 Key constraints:
+
 - For shard writes, key length must be `1..2`.
 
 ---
@@ -48,6 +53,7 @@ Key constraints:
 ### 1) Root + intermediate nodes
 
 For non-leaf shard nodes:
+
 - Value **must be a link**.
 - Link target **must equal** exact child soul (`check.$kid(soul, key)`).
 - An `authenticator` is **required**.
@@ -55,12 +61,15 @@ For non-leaf shard nodes:
 - The signature is generated fresh by `check.auth` via `SEA.opt.pack`, which embeds the Gun state timestamp into the signed message. Pre-signed proofs are not accepted.
 
 **Stored envelope for intermediate nodes:**
+
 ```json
-{ ":":  {"#": "~/ab"}, "~": "<sig>", "*": "<fullPub88chars>" }
+{ ":": { "#": "~/ab" }, "~": "<sig>", "*": "<fullPub88chars>" }
 ```
+
 The outer object is stored as a JSON string in the graph. `':'` holds the link, `'~'` holds the state-bound ECDSA signature, `'*'` holds the signer's full public key.
 
 Example:
+
 - Write to soul `~`, key `ab` => link must be `{"#":"~/ab"}` + `opt.authenticator` whose `.pub` starts with `ab`.
 
 **Peer re-read optimization:**  
@@ -71,6 +80,7 @@ When a peer propagates an intermediate node that already exists locally with the
 A write is considered leaf when `path + key` reconstructs a valid pub (length 88, base62 alphanumeric).
 
 Leaf rules:
+
 - Value **must not** be a link.
 - Leaf write reuses `check.pub` flow (pack/sign/verify/unpack), with shard-specific guard:
   - verified payload must equal leaf pub.
@@ -91,18 +101,24 @@ The simplest form. `pub` is read directly from the pair:
 const pair = await SEA.pair();
 
 // --- Intermediate node ---
-const key = pair.pub.slice(0, 2);  // first 2-char segment
-gun.get('~').get(key).put({'#': '~/' + key}, null, {
-  opt: { authenticator: pair }  // pair.pub starts with key ✓
-});
+const key = pair.pub.slice(0, 2); // first 2-char segment
+gun
+  .get("~")
+  .get(key)
+  .put({ "#": "~/" + key }, null, {
+    opt: { authenticator: pair }, // pair.pub starts with key ✓
+  });
 
 // --- Leaf node ---
 const chunks = pair.pub.match(/.{1,2}/g) || [];
 const leafKey = chunks.pop();
-const leafSoul = chunks.length ? '~/' + chunks.join('/') : '~';
-gun.get(leafSoul).get(leafKey).put(pair.pub, null, {
-  opt: { authenticator: pair }
-});
+const leafSoul = chunks.length ? "~/" + chunks.join("/") : "~";
+gun
+  .get(leafSoul)
+  .get(leafKey)
+  .put(pair.pub, null, {
+    opt: { authenticator: pair },
+  });
 ```
 
 ### 2. External function authenticator
@@ -117,17 +133,23 @@ const auth = async (data) => SEA.sign(data, pair);
 
 // --- Intermediate node — opt.pub is REQUIRED ---
 const key = pair.pub.slice(0, 2);
-gun.get('~').get(key).put({'#': '~/' + key}, null, {
-  opt: { authenticator: auth, pub: pair.pub }  // opt.pub required for function auth
-});
+gun
+  .get("~")
+  .get(key)
+  .put({ "#": "~/" + key }, null, {
+    opt: { authenticator: auth, pub: pair.pub }, // opt.pub required for function auth
+  });
 
 // --- Leaf node — opt.pub not needed ---
 const chunks = pair.pub.match(/.{1,2}/g) || [];
 const leafKey = chunks.pop();
-const leafSoul = chunks.length ? '~/' + chunks.join('/') : '~';
-gun.get(leafSoul).get(leafKey).put(pair.pub, null, {
-  opt: { authenticator: auth }  // pub derived from soul+key
-});
+const leafSoul = chunks.length ? "~/" + chunks.join("/") : "~";
+gun
+  .get(leafSoul)
+  .get(leafKey)
+  .put(pair.pub, null, {
+    opt: { authenticator: auth }, // pub derived from soul+key
+  });
 ```
 
 ---
@@ -174,10 +196,12 @@ gun.get(leafSoul).get(leafKey).put(pair.pub, null, {
 ## Canonicalization / graphify note
 
 Recommended leaf input contract:
+
 - Use scalar pub payload flow (signed through SEA pipeline at put time).
 - Avoid object-shaped leaf payloads.
 
 Reason:
+
 - Object-shaped values may be graphified into links by GUN, which violates leaf rule (`leaf cannot be link`).
 
 ---
@@ -187,6 +211,7 @@ Reason:
 Current ZEN security tests include shard checks for:
 
 **Intermediate node writes:**
+
 - Accept with pair authenticator (link matches child soul)
 - Accept with external async function authenticator + `pub`
 - Reject link target mismatch
@@ -196,11 +221,13 @@ Current ZEN security tests include shard checks for:
 - Reject wrong pub prefix (authenticator pub does not start with key)
 
 **Validation:**
+
 - Reject invalid key length (not 1–2 chars)
 - Reject depth exceeding max (44 segments)
 - Reject invalid soul path (double slash, trailing slash)
 
 **Leaf node writes:**
+
 - Reject link value
 - Reject pre-signed proof without authenticator
 - Accept with pair authenticator (and verify read-back)

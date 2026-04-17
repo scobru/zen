@@ -22,6 +22,7 @@ WebAuthn signatures are **normalized** to match SEA's signature format, allowing
 ## Prerequisites
 
 WebAuthn requires:
+
 - **HTTPS or localhost**: WebAuthn only works on secure contexts
 - **User gesture**: Most authenticators require a user interaction
 - **Browser support**: Modern browsers (Chrome 67+, Firefox 60+, Safari 13+)
@@ -33,27 +34,27 @@ WebAuthn requires:
 ```javascript
 // Create a credential (register)
 const credential = await navigator.credentials.create({
-    publicKey: {
-        challenge: new Uint8Array(16), // Random challenge
-        rp: { 
-            id: "localhost",  // or your domain
-            name: "My App" 
-        },
-        user: {
-            id: new TextEncoder().encode("user-123"),
-            name: "user@example.com",
-            displayName: "User Name"
-        },
-        pubKeyCredParams: [
-            { type: "public-key", alg: -7 },  // ES256 (P-256) - REQUIRED for SEA
-            { type: "public-key", alg: -25 }, // ECDH (P-256) - for encryption
-        ],
-        authenticatorSelection: {
-            userVerification: "preferred" // or "required" for stricter security
-        },
-        timeout: 60000,
-        attestation: "none"
-    }
+  publicKey: {
+    challenge: new Uint8Array(16), // Random challenge
+    rp: {
+      id: "localhost", // or your domain
+      name: "My App",
+    },
+    user: {
+      id: new TextEncoder().encode("user-123"),
+      name: "user@example.com",
+      displayName: "User Name",
+    },
+    pubKeyCredParams: [
+      { type: "public-key", alg: -7 }, // ES256 (P-256) - REQUIRED for SEA
+      { type: "public-key", alg: -25 }, // ECDH (P-256) - for encryption
+    ],
+    authenticatorSelection: {
+      userVerification: "preferred", // or "required" for stricter security
+    },
+    timeout: 60000,
+    attestation: "none",
+  },
 });
 
 console.log("Credential created:", credential);
@@ -88,22 +89,24 @@ console.log("Public key:", pub);
 ```javascript
 // Create an authenticator function
 const authenticator = async (data) => {
-    const challenge = new TextEncoder().encode(data);
-    
-    const assertion = await navigator.credentials.get({
-        publicKey: {
-            challenge,
-            rpId: window.location.hostname,
-            userVerification: "preferred",
-            allowCredentials: [{
-                type: "public-key",
-                id: credential.rawId  // From credential creation
-            }],
-            timeout: 60000
-        }
-    });
-    
-    return assertion.response;
+  const challenge = new TextEncoder().encode(data);
+
+  const assertion = await navigator.credentials.get({
+    publicKey: {
+      challenge,
+      rpId: window.location.hostname,
+      userVerification: "preferred",
+      allowCredentials: [
+        {
+          type: "public-key",
+          id: credential.rawId, // From credential creation
+        },
+      ],
+      timeout: 60000,
+    },
+  });
+
+  return assertion.response;
 };
 
 // Sign data using SEA with WebAuthn
@@ -124,9 +127,9 @@ console.log("Verified:", verified);
 // "Hello, World!"
 
 if (verified === data) {
-    console.log("✅ Signature valid!");
+  console.log("✅ Signature valid!");
 } else {
-    console.log("❌ Signature invalid!");
+  console.log("❌ Signature invalid!");
 }
 ```
 
@@ -139,83 +142,86 @@ let credential, pub, authenticator;
 
 // 1. Create credential (registration)
 async function register() {
-    credential = await navigator.credentials.create({
-        publicKey: {
-            challenge: new Uint8Array(16),
-            rp: { id: "localhost", name: "My App" },
-            user: {
-                id: new TextEncoder().encode("user-123"),
-                name: "user@example.com",
-                displayName: "User"
-            },
-            pubKeyCredParams: [
-                { type: "public-key", alg: -7 },  // ES256 - REQUIRED
-                { type: "public-key", alg: -25 }  // ECDH - optional
-            ],
-            authenticatorSelection: {
-                userVerification: "preferred"
-            },
-            timeout: 60000,
-            attestation: "none"
-        }
+  credential = await navigator.credentials.create({
+    publicKey: {
+      challenge: new Uint8Array(16),
+      rp: { id: "localhost", name: "My App" },
+      user: {
+        id: new TextEncoder().encode("user-123"),
+        name: "user@example.com",
+        displayName: "User",
+      },
+      pubKeyCredParams: [
+        { type: "public-key", alg: -7 }, // ES256 - REQUIRED
+        { type: "public-key", alg: -25 }, // ECDH - optional
+      ],
+      authenticatorSelection: {
+        userVerification: "preferred",
+      },
+      timeout: 60000,
+      attestation: "none",
+    },
+  });
+
+  // Extract public key
+  const publicKey = credential.response.getPublicKey();
+  const rawKey = new Uint8Array(publicKey);
+  const xCoord = rawKey.slice(27, 59);
+  const yCoord = rawKey.slice(59, 91);
+  // New base62 format: 88 alphanumeric chars (44 per coordinate)
+  pub = SEA.base62.bufToB62(xCoord) + SEA.base62.bufToB62(yCoord);
+
+  // Create authenticator function
+  authenticator = async (data) => {
+    const challenge = new TextEncoder().encode(data);
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        rpId: window.location.hostname,
+        userVerification: "preferred",
+        allowCredentials: [{ type: "public-key", id: credential.rawId }],
+        timeout: 60000,
+      },
     });
-    
-    // Extract public key
-    const publicKey = credential.response.getPublicKey();
-    const rawKey = new Uint8Array(publicKey);
-    const xCoord = rawKey.slice(27, 59);
-    const yCoord = rawKey.slice(59, 91);
-    // New base62 format: 88 alphanumeric chars (44 per coordinate)
-    pub = SEA.base62.bufToB62(xCoord) + SEA.base62.bufToB62(yCoord);
-    
-    // Create authenticator function
-    authenticator = async (data) => {
-        const challenge = new TextEncoder().encode(data);
-        const assertion = await navigator.credentials.get({
-            publicKey: {
-                challenge,
-                rpId: window.location.hostname,
-                userVerification: "preferred",
-                allowCredentials: [{ type: "public-key", id: credential.rawId }],
-                timeout: 60000
-            }
-        });
-        return assertion.response;
-    };
-    
-    console.log("Registration complete!");
-    console.log("Public key:", pub);
+    return assertion.response;
+  };
+
+  console.log("Registration complete!");
+  console.log("Public key:", pub);
 }
 
 // 2. Sign and verify
 async function signAndVerify() {
-    const message = "Hello from WebAuthn!";
-    
-    // Sign
-    const signature = await SEA.sign(message, authenticator);
-    console.log("Signature:", signature);
-    
-    // Verify
-    const verified = await SEA.verify(signature, pub);
-    console.log("Verified:", verified);
-    console.log("Valid:", verified === message);
+  const message = "Hello from WebAuthn!";
+
+  // Sign
+  const signature = await SEA.sign(message, authenticator);
+  console.log("Signature:", signature);
+
+  // Verify
+  const verified = await SEA.verify(signature, pub);
+  console.log("Verified:", verified);
+  console.log("Valid:", verified === message);
 }
 
 // 3. Use with GunDB
 async function useWithGun() {
-    const gun = Gun();
-    
-    // Put data to user graph (without traditional auth)
-    gun.get(`~${pub}`).get('profile').put('My profile data', null, {
-        opt: { authenticator }
-    });
-    
-    // Read data back
-    setTimeout(() => {
-        gun.get(`~${pub}`).get('profile').once(data => {
-            console.log("Retrieved:", data);
-        });
-    }, 1000);
+  const gun = Gun();
+
+  // Put data to user graph (without traditional auth)
+  gun.get(`~${pub}`).get("profile").put("My profile data", null, {
+    opt: { authenticator },
+  });
+
+  // Read data back
+  setTimeout(() => {
+    gun
+      .get(`~${pub}`)
+      .get("profile")
+      .once((data) => {
+        console.log("Retrieved:", data);
+      });
+  }, 1000);
 }
 
 // Usage
@@ -232,14 +238,17 @@ await useWithGun();
 const gun = Gun();
 
 // Put to your own graph
-gun.get(`~${pub}`).get('test').put('hello world', null, { 
-    opt: { authenticator } 
+gun.get(`~${pub}`).get("test").put("hello world", null, {
+  opt: { authenticator },
 });
 
 // Read it back
-gun.get(`~${pub}`).get('test').once(data => {
+gun
+  .get(`~${pub}`)
+  .get("test")
+  .once((data) => {
     console.log(data); // "hello world"
-});
+  });
 ```
 
 ### Put to Another User's Graph with Certificate
@@ -247,28 +256,30 @@ gun.get(`~${pub}`).get('test').once(data => {
 ```javascript
 // Alice's WebAuthn setup
 const alicePub = "...";
-const aliceAuthenticator = async (data) => { /* ... */ };
+const aliceAuthenticator = async (data) => {
+  /* ... */
+};
 
 // Bob creates a certificate for Alice
 const bob = await SEA.pair();
 const cert = await SEA.certify(
-    alicePub,  // Alice can write
-    { '*': 'messages' },  // to Bob's messages path
-    bob
+  alicePub, // Alice can write
+  { "*": "messages" }, // to Bob's messages path
+  bob,
 );
 
 // Alice writes to Bob's graph using her WebAuthn key
-gun.get(`~${bob.pub}`).get('messages').get('from-alice').put(
-    'Hello Bob!', 
-    null, 
-    { 
-        opt: { 
-            authenticator: aliceAuthenticator,
-            pub: alicePub,  // Alice's public key
-            cert: cert       // Certificate from Bob
-        } 
-    }
-);
+gun
+  .get(`~${bob.pub}`)
+  .get("messages")
+  .get("from-alice")
+  .put("Hello Bob!", null, {
+    opt: {
+      authenticator: aliceAuthenticator,
+      pub: alicePub, // Alice's public key
+      cert: cert, // Certificate from Bob
+    },
+  });
 ```
 
 ## Security Considerations
@@ -286,7 +297,6 @@ gun.get(`~${bob.pub}`).get('messages').get('from-alice').put(
 1. **Backup and Recovery**: WebAuthn credentials are device-specific
    - Users can lose access if device is lost/broken
    - Consider backup strategies (multiple authenticators, recovery keys)
-   
 2. **Browser/Platform Support**: Not all devices support WebAuthn
    - Provide fallback authentication methods
    - Test across target platforms
@@ -308,15 +318,17 @@ gun.get(`~${bob.pub}`).get('messages').get('from-alice').put(
 const authenticators = [];
 
 for (let i = 0; i < 2; i++) {
-    const cred = await navigator.credentials.create({
-        publicKey: { /* same config */ }
-    });
-    
-    authenticators.push({
-        credential: cred,
-        pub: extractPublicKey(cred),
-        authenticator: createAuthenticator(cred)
-    });
+  const cred = await navigator.credentials.create({
+    publicKey: {
+      /* same config */
+    },
+  });
+
+  authenticators.push({
+    credential: cred,
+    pub: extractPublicKey(cred),
+    authenticator: createAuthenticator(cred),
+  });
 }
 
 // Use any authenticator
@@ -330,10 +342,12 @@ const signature = await SEA.sign(data, authenticators[0].authenticator);
 const available = await PublicKeyCredential.isConditionalMediationAvailable();
 
 if (available) {
-    const credential = await navigator.credentials.get({
-        publicKey: { /* ... */ },
-        mediation: "conditional"  // Enables autofill
-    });
+  const credential = await navigator.credentials.get({
+    publicKey: {
+      /* ... */
+    },
+    mediation: "conditional", // Enables autofill
+  });
 }
 ```
 
@@ -342,21 +356,21 @@ if (available) {
 ```javascript
 // Create a resident key (stored on authenticator)
 const credential = await navigator.credentials.create({
-    publicKey: {
-        // ... other options
-        authenticatorSelection: {
-            residentKey: "required",  // Store credential on device
-            userVerification: "required"
-        }
-    }
+  publicKey: {
+    // ... other options
+    authenticatorSelection: {
+      residentKey: "required", // Store credential on device
+      userVerification: "required",
+    },
+  },
 });
 
 // Later, discover credentials without username
 const credentials = await navigator.credentials.get({
-    publicKey: {
-        challenge: new Uint8Array(16)
-        // No allowCredentials - will show all resident keys
-    }
+  publicKey: {
+    challenge: new Uint8Array(16),
+    // No allowCredentials - will show all resident keys
+  },
 });
 ```
 
@@ -365,24 +379,24 @@ const credentials = await navigator.credentials.get({
 ```javascript
 // Strict: Always require biometric/PIN
 const strictAuth = async (data) => {
-    return await navigator.credentials.get({
-        publicKey: {
-            challenge: new TextEncoder().encode(data),
-            userVerification: "required"  // ⬅️ Strict
-            // ...
-        }
-    });
+  return await navigator.credentials.get({
+    publicKey: {
+      challenge: new TextEncoder().encode(data),
+      userVerification: "required", // ⬅️ Strict
+      // ...
+    },
+  });
 };
 
 // Relaxed: Optional biometric
 const relaxedAuth = async (data) => {
-    return await navigator.credentials.get({
-        publicKey: {
-            challenge: new TextEncoder().encode(data),
-            userVerification: "preferred"  // ⬅️ Relaxed
-            // ...
-        }
-    });
+  return await navigator.credentials.get({
+    publicKey: {
+      challenge: new TextEncoder().encode(data),
+      userVerification: "preferred", // ⬅️ Relaxed
+      // ...
+    },
+  });
 };
 ```
 
@@ -415,22 +429,22 @@ const relaxedAuth = async (data) => {
 
 ## Browser Compatibility
 
-| Browser | Version | Notes |
-|---------|---------|-------|
-| Chrome | 67+ | Full support |
-| Firefox | 60+ | Full support |
-| Safari | 13+ | iOS 14+ for Face ID |
-| Edge | 18+ | Full support |
+| Browser | Version | Notes               |
+| ------- | ------- | ------------------- |
+| Chrome  | 67+     | Full support        |
+| Firefox | 60+     | Full support        |
+| Safari  | 13+     | iOS 14+ for Face ID |
+| Edge    | 18+     | Full support        |
 
 ## Platform Support
 
-| Platform | Support | Authenticators |
-|----------|---------|----------------|
-| Windows | ✅ | Windows Hello, security keys |
-| macOS | ✅ | Touch ID, security keys |
-| iOS | ✅ | Face ID, Touch ID |
-| Android | ✅ | Fingerprint, security keys |
-| Linux | ⚠️ | Security keys (limited biometric) |
+| Platform | Support | Authenticators                    |
+| -------- | ------- | --------------------------------- |
+| Windows  | ✅      | Windows Hello, security keys      |
+| macOS    | ✅      | Touch ID, security keys           |
+| iOS      | ✅      | Face ID, Touch ID                 |
+| Android  | ✅      | Fingerprint, security keys        |
+| Linux    | ⚠️      | Security keys (limited biometric) |
 
 ## Best Practices
 
@@ -455,8 +469,8 @@ await user.auth("alice", "password123");
 
 // NEW: WebAuthn
 const { credential, pub, authenticator } = await registerWebAuthn();
-gun.get(`~${pub}`).get('data').put('value', null, { 
-    opt: { authenticator } 
+gun.get(`~${pub}`).get("data").put("value", null, {
+  opt: { authenticator },
 });
 ```
 
@@ -465,14 +479,14 @@ gun.get(`~${pub}`).get('data').put('value', null, {
 ```javascript
 // Support both traditional and WebAuthn
 async function hybridAuth(gun, username, password, useWebAuthn) {
-    if (useWebAuthn) {
-        const { pub, authenticator } = await webAuthnLogin(username);
-        return { pub, authenticator };
-    } else {
-        const user = gun.user();
-        await user.auth(username, password);
-        return { pub: user.is.pub, authenticator: user._.sea };
-    }
+  if (useWebAuthn) {
+    const { pub, authenticator } = await webAuthnLogin(username);
+    return { pub, authenticator };
+  } else {
+    const user = gun.user();
+    await user.auth(username, password);
+    return { pub: user.is.pub, authenticator: user._.sea };
+  }
 }
 ```
 

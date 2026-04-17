@@ -7,19 +7,23 @@ GUN is a realtime, decentralized, offline-first, graph data synchronization engi
 ## Architecture & Build System
 
 ### Custom Module System (USE)
+
 GUN uses a **custom bundler** called "USE" (not CommonJS/ESM directly):
+
 - All modules wrapped in `USE(function(module){ ... }, './path')` pattern
 - Bundler processes `/* UNBUILD */` comments to generate browser builds
 - Source files in `/src`, bundled output in `gun.js` and `gun.min.js`
 - After modifying `/src` files, **always run** `npm run buildGUN` to regenerate builds
 
 ### Entry Points
+
 - `index.js` → Node.js (loads `lib/server.js`)
-- `browser.js` → Browser (loads `gun.js`)  
+- `browser.js` → Browser (loads `gun.js`)
 - `gun.js` → Pre-bundled browser build with all core modules
 - `sea.js` → Security/Encryption/Authorization module
 
 ### Core Modules (`/src`)
+
 - `root.js` - Core GUN constructor, `Gun.create()` initialization
 - `core.js` - Graph operations and internal messaging
 - `mesh.js` - P2P networking layer, peer synchronization
@@ -28,6 +32,7 @@ GUN uses a **custom bundler** called "USE" (not CommonJS/ESM directly):
 - `map.js`, `set.js` - Collection operations
 
 ### Storage Adapters (`/lib`)
+
 - `radisk.js` - RAD (Radix Atomic Disk) storage engine - **primary persistence**
 - `rfs.js` - Node.js filesystem adapter
 - `rs3.js` - AWS S3 adapter
@@ -36,6 +41,7 @@ GUN uses a **custom bundler** called "USE" (not CommonJS/ESM directly):
 ## Developer Workflows
 
 ### Build & Test
+
 ```bash
 npm run buildGUN       # Build gun.js after /src changes (CRITICAL)
 npm run unbuildGUN     # Extract gun.js back into /src
@@ -50,7 +56,9 @@ npm test               # Requires global mocha: npm install -g mocha
 ```
 
 ### PANIC Tests (Performance & Stress Testing)
+
 Located in `test/panic/` - critical for validating changes:
+
 - `holy-grail.js` - Core correctness test (RUN THIS FIRST)
 - `scale.js` - Multi-peer load testing
 - `on-recovery.js` - State recovery validation
@@ -59,13 +67,16 @@ Located in `test/panic/` - critical for validating changes:
 ## Project-Specific Patterns
 
 ### 1. HAM (Hypothetical Amnesia Machine)
+
 GUN's CRDT conflict resolution uses **state-based vector clocks**:
+
 - Every value has a `>` (state) timestamp
 - `Gun.state()` generates millisecond timestamps
 - Conflicts resolved by: later state wins, ties preserve existing value
 - Found in: `src/state.js`, validation in `src/valid.js`
 
 ### 2. Graph Node Structure
+
 ```javascript
 // Every node has special metadata on the `_` property:
 {
@@ -76,14 +87,18 @@ GUN's CRDT conflict resolution uses **state-based vector clocks**:
 ```
 
 ### 3. Internal Messaging Protocol
+
 All operations flow through `universe()` in `src/root.js`:
+
 - Messages have: `#` (message ID), `@` (reply-to), `put` (data), `get` (query)
 - Deduplication via `dup.track()` and `dup.check()`
 - Routing: `at.on('in')` for incoming, `at.on('out')` for outgoing
 - **Never modify `msg.out`** - it tracks middleware chain
 
 ### 4. SEA (Security, Encryption, Authorization)
+
 Located in `/sea`, extends GUN with cryptographic operations:
+
 - `SEA.pair()` - Generate key pairs (ECDSA + ECDH)
 - `SEA.sign/verify()` - Message signatures
 - `SEA.encrypt/decrypt()` - AES-GCM encryption
@@ -91,14 +106,18 @@ Located in `/sea`, extends GUN with cryptographic operations:
 - Verification runs on HAM diffs (`check()` in `src/sea/index.js`)
 
 ### 5. Radix Storage Format
+
 `radisk.js` uses Radix trees for efficient disk I/O:
+
 - Batches writes (default 250ms, 10k ops)
 - Each key stored as `encodeURIComponent(key)`
-- Manages multiple *.radata files, auto-sharding
+- Manages multiple \*.radata files, auto-sharding
 - **Critical**: Uses `JSON.parseAsync` to prevent UI blocking
 
 ### 6. Custom Shims & Utilities
+
 `src/shim.js` extends JavaScript natives:
+
 - `String.random(length)` - Generate random strings
 - `String.hash(s)` - DJB2 hash for deduplication
 - `setTimeout.turn(fn)` - CPU-scheduled async iteration
@@ -115,21 +134,27 @@ Located in `/sea`, extends GUN with cryptographic operations:
 ## Integration Points
 
 ### Adding Storage Adapters
+
 Follow `lib/rfs.js` pattern:
+
 ```javascript
-Gun.on('create', function(root) {
+Gun.on("create", function (root) {
   this.to.next(root);
-  root.opt.store && (function(){
-    // Implement: get(key, cb), put(key, data, cb)
-  }());
+  root.opt.store &&
+    (function () {
+      // Implement: get(key, cb), put(key, data, cb)
+    })();
 });
 ```
 
 ### Adding Chain Methods
+
 Extend `Gun.chain.myMethod` in a new module:
+
 ```javascript
-Gun.chain.myMethod = function(data) {
-  var gun = this, at = gun._;
+Gun.chain.myMethod = function (data) {
+  var gun = this,
+    at = gun._;
   // Implementation using gun.get(), gun.put(), etc.
   return gun; // Enable chaining
 };
@@ -138,6 +163,7 @@ Gun.chain.myMethod = function(data) {
 ## Advanced Features (New in this Fork)
 
 See `/docs` for enterprise features:
+
 - Seed-based key generation (`docs/seed-based-keys.md`)
 - Hierarchical deterministic wallets (`docs/additive-derivation.md`)
 - WebAuthn/passkey integration (`docs/webauthn.md`)
@@ -151,5 +177,6 @@ See `/docs` for enterprise features:
 - `nts.js` = "No Time Sync" mode (timestamp-free)
 
 ---
+
 **Before major changes**: Run `test/panic/holy-grail.js` to validate correctness.
 **After any change**: `npm run buildGUN && rm -rf *data* && npm test`

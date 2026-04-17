@@ -37,7 +37,7 @@ If OPFS is available and `root.opt.store` is not already set:
 <script src="/gun.js"></script>
 <script src="/lib/opfs.js"></script>
 <script>
-  var gun = Gun({ file: 'my-opfs-db' });
+  var gun = Gun({ file: "my-opfs-db" });
 </script>
 ```
 
@@ -46,7 +46,7 @@ If OPFS is available and `root.opt.store` is not already set:
 If you want to make the active store deterministic, select it manually:
 
 ```javascript
-var opt = { file: 'my-opfs-db' };
+var opt = { file: "my-opfs-db" };
 opt.store = ROPFS(opt);
 var gun = Gun(opt);
 ```
@@ -60,7 +60,7 @@ This is the safest way to avoid ambiguity when multiple browser storage plugins 
 Yes — developers can choose the persistent storage name with `opt.file`:
 
 ```javascript
-var gun = Gun({ file: 'orders-db' });
+var gun = Gun({ file: "orders-db" });
 ```
 
 For OPFS, this name becomes the **directory name** inside the origin-private filesystem.
@@ -74,22 +74,22 @@ RAD then stores its internal files inside that directory. So `opt.file` is the s
 `lib/opfs.js` works fine in ES module applications as a **side-effect import**:
 
 ```javascript
-import '/gun.js';
-import '/lib/opfs.js';
+import "/gun.js";
+import "/lib/opfs.js";
 
-const gun = Gun({ file: 'my-opfs-db' });
+const gun = Gun({ file: "my-opfs-db" });
 ```
 
 It does **not** currently export `ROPFS` with ESM syntax, so this is **not** supported:
 
 ```javascript
-import ROPFS from '/lib/opfs.js'; // not supported
+import ROPFS from "/lib/opfs.js"; // not supported
 ```
 
 Use the global instead:
 
 ```javascript
-const opt = { file: 'my-opfs-db' };
+const opt = { file: "my-opfs-db" };
 opt.store = ROPFS(opt);
 const gun = Gun(opt);
 ```
@@ -148,7 +148,7 @@ To prevent the plugin from auto-claiming `root.opt.store`:
 
 ```javascript
 var gun = Gun({
-  opfs: false
+  opfs: false,
 });
 ```
 

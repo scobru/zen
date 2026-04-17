@@ -1,46 +1,50 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1.0"
+    />
+    <title>Testing AXE</title>
+  </head>
 
-<head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
-  <title>Testing AXE</title>
-</head>
+  <body>
+    <h3 id="pid"></h3>
+    <script src="/zen.js"></script>
+    <script src="../axe.js"></script>
+    <script src="../lib/radix.js"></script>
+    <script src="../lib/webrtc.js"></script>
+    <!-- <script src="../sea.js"></script> -->
+    <script>
+      var pid = location.hash.slice(1);
 
-<body>
-<h3 id="pid"></h3>
-  <script src="/zen.js"></script>
-  <script src="../axe.js"></script>
-  <script src="../lib/radix.js"></script>
-  <script src="../lib/webrtc.js"></script>
-  <!-- <script src="../sea.js"></script> -->
-  <script>
-  var pid = location.hash.slice(1);
+      var opt = {
+        peers: [`${location.origin}/gun`],
+      };
 
-  var opt = ({
-    peers: [`${location.origin}/gun`]
-  });
+      if (pid) {
+        opt.pid = pid;
+      }
 
-  if (pid) { opt.pid = pid; }
-
-  Gun.on('opt', function(ctx) {
-    this.to.next(ctx);
-    ctx.on('hi', function(opt) {
-//       console.log('HI!! PEER', new Date(), opt.pid);
-        setTimeout(function() {
-            document.getElementById('pid').innerHTML = gun._.opt.pid;
+      Gun.on("opt", function (ctx) {
+        this.to.next(ctx);
+        ctx.on("hi", function (opt) {
+          //       console.log('HI!! PEER', new Date(), opt.pid);
+          setTimeout(function () {
+            document.getElementById("pid").innerHTML = gun._.opt.pid;
+          });
         });
-    });
-//     if (pid) {
-//     ctx.on('out', function(msg) {
-//       msg.pid = pid;
-//       this.to.next(msg);
-//     });
-//     }
-  });
+        //     if (pid) {
+        //     ctx.on('out', function(msg) {
+        //       msg.pid = pid;
+        //       this.to.next(msg);
+        //     });
+        //     }
+      });
 
-  var gun = ZEN(opt);
-  //var user = gun.user();
-  </script>
-</body>
+      var gun = ZEN(opt);
+      //var user = gun.user();
+    </script>
+  </body>
 </html>

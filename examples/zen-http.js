@@ -1,13 +1,13 @@
-import '../lib/crashed.js';
-import cluster from 'cluster';
-import fs from 'fs';
-import os from 'os';
-import http from 'http';
-import https from 'https';
-import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
-import ZEN from '../lib/server.js';
-import serve from '../lib/serve.js';
+import "../lib/crashed.js";
+import cluster from "cluster";
+import fs from "fs";
+import os from "os";
+import http from "http";
+import https from "https";
+import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
+import ZEN from "../lib/server.js";
+import serve from "../lib/serve.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,19 +18,19 @@ let zen;
 if (isMain && cluster.isPrimary) {
   cluster.setupPrimary({ exec: __filename });
   cluster.fork();
-  cluster.on('exit', () => {
+  cluster.on("exit", () => {
     cluster.fork();
   });
 } else if (isMain) {
   const env = process.env;
   const opt = {
     port: env.PORT || process.argv[2] || 8765,
-    peers: (env.PEERS && env.PEERS.split(',')) || [],
+    peers: (env.PEERS && env.PEERS.split(",")) || [],
   };
 
-  if (fs.existsSync((opt.home = os.homedir()) + '/cert.pem')) {
-    env.HTTPS_KEY = env.HTTPS_KEY || opt.home + '/key.pem';
-    env.HTTPS_CERT = env.HTTPS_CERT || opt.home + '/cert.pem';
+  if (fs.existsSync((opt.home = os.homedir()) + "/cert.pem")) {
+    env.HTTPS_KEY = env.HTTPS_KEY || opt.home + "/key.pem";
+    env.HTTPS_CERT = env.HTTPS_CERT || opt.home + "/cert.pem";
   }
 
   if (env.HTTPS_KEY) {
@@ -40,7 +40,9 @@ if (isMain && cluster.isPrimary) {
     opt.server = https.createServer(opt, serve(__dirname));
     http
       .createServer((req, res) => {
-        res.writeHead(301, { Location: 'https://' + req.headers.host + req.url });
+        res.writeHead(301, {
+          Location: "https://" + req.headers.host + req.url,
+        });
         res.end();
       })
       .listen(80);
@@ -50,7 +52,7 @@ if (isMain && cluster.isPrimary) {
 
   zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
   zen._graph; // initialize the relay
-  console.log('ZEN relay peer started on port ' + opt.port + ' with /zen');
+  console.log("ZEN relay peer started on port " + opt.port + " with /zen");
 }
 
 export default zen;

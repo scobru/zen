@@ -1,26 +1,44 @@
-import core from './curves/secp256k1.js';
+import core from "./curves/secp256k1.js";
 
 async function decrypt(data, pair, cb, opt) {
   try {
     opt = opt || {};
     const key = (pair || opt).epriv || pair;
-    if (!key) { throw new Error('No decryption key.'); }
+    if (!key) {
+      throw new Error("No decryption key.");
+    }
     const parsed = await core.settings.parse(data);
-    const salt = core.shim.Buffer.from(parsed.s, opt.encode || 'base64');
-    const iv = core.shim.Buffer.from(parsed.iv, opt.encode || 'base64');
-    const ct = core.shim.Buffer.from(parsed.ct, opt.encode || 'base64');
+    const salt = core.shim.Buffer.from(parsed.s, opt.encode || "base64");
+    const iv = core.shim.Buffer.from(parsed.iv, opt.encode || "base64");
+    const ct = core.shim.Buffer.from(parsed.ct, opt.encode || "base64");
     const aes = await core.aeskey(key, salt, opt);
-    const decrypted = await core.shim.subtle.decrypt({
-      name: opt.name || 'AES-GCM',
-      iv: new Uint8Array(iv),
-      tagLength: 128
-    }, aes, new Uint8Array(ct));
-    const out = await core.settings.parse(new core.shim.TextDecoder('utf8').decode(decrypted));
-    if (cb) { try { cb(out); } catch (e) { console.log(e); } }
+    const decrypted = await core.shim.subtle.decrypt(
+      {
+        name: opt.name || "AES-GCM",
+        iv: new Uint8Array(iv),
+        tagLength: 128,
+      },
+      aes,
+      new Uint8Array(ct),
+    );
+    const out = await core.settings.parse(
+      new core.shim.TextDecoder("utf8").decode(decrypted),
+    );
+    if (cb) {
+      try {
+        cb(out);
+      } catch (e) {
+        console.log(e);
+      }
+    }
     return out;
   } catch (e) {
     if (cb) {
-      try { cb(); } catch (cbErr) { console.log(cbErr); }
+      try {
+        cb();
+      } catch (cbErr) {
+        console.log(cbErr);
+      }
       return;
     }
     throw e;

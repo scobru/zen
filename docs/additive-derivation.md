@@ -33,9 +33,9 @@ Where `G` is the generator point on the P-256 elliptic curve and `n` is the curv
 const base = await SEA.pair();
 
 // Derive a new key pair using the private key + seed
-const derived = await SEA.pair(null, { 
-  priv: base.priv, 
-  seed: "child-key-1" 
+const derived = await SEA.pair(null, {
+  priv: base.priv,
+  seed: "child-key-1",
 });
 
 console.log(derived);
@@ -54,9 +54,9 @@ console.log(derived);
 const bobPublicKey = base.pub;
 
 // Alice can derive the same public key Bob derived
-const aliceDerived = await SEA.pair(null, { 
-  pub: bobPublicKey, 
-  seed: "child-key-1" 
+const aliceDerived = await SEA.pair(null, {
+  pub: bobPublicKey,
+  seed: "child-key-1",
 });
 
 console.log(aliceDerived.pub === derived.pub); // true!
@@ -68,15 +68,15 @@ For encryption key derivation, use `epriv` and `epub`:
 
 ```javascript
 // Derive encryption key pair from encryption private key
-const derivedEncrypt = await SEA.pair(null, { 
-  epriv: base.epriv, 
-  seed: "encryption-child-1" 
+const derivedEncrypt = await SEA.pair(null, {
+  epriv: base.epriv,
+  seed: "encryption-child-1",
 });
 
 // Or derive public encryption key only
-const aliceEncrypt = await SEA.pair(null, { 
-  epub: base.epub, 
-  seed: "encryption-child-1" 
+const aliceEncrypt = await SEA.pair(null, {
+  epub: base.epub,
+  seed: "encryption-child-1",
 });
 
 console.log(derivedEncrypt.epub === aliceEncrypt.epub); // true!
@@ -94,7 +94,7 @@ const derived1 = await SEA.pair(null, { priv: base.priv, seed });
 const derived2 = await SEA.pair(null, { priv: base.priv, seed });
 
 console.log(derived1.priv === derived2.priv); // true
-console.log(derived1.pub === derived2.pub);   // true
+console.log(derived1.pub === derived2.pub); // true
 ```
 
 ## Use Cases
@@ -112,8 +112,14 @@ const account0 = await SEA.pair(null, { priv: master.priv, seed: "account-0" });
 const account1 = await SEA.pair(null, { priv: master.priv, seed: "account-1" });
 
 // Derive sub-keys from accounts
-const account0Address0 = await SEA.pair(null, { priv: account0.priv, seed: "address-0" });
-const account0Address1 = await SEA.pair(null, { priv: account0.priv, seed: "address-1" });
+const account0Address0 = await SEA.pair(null, {
+  priv: account0.priv,
+  seed: "address-0",
+});
+const account0Address1 = await SEA.pair(null, {
+  priv: account0.priv,
+  seed: "address-1",
+});
 
 // Each key is independent but derivable from master
 ```
@@ -149,9 +155,9 @@ Rotate keys periodically without losing identity:
 
 ```javascript
 async function rotateKey(currentPair, rotationPeriod) {
-  const today = new Date().toISOString().split('T')[0]; // "2024-01-15"
+  const today = new Date().toISOString().split("T")[0]; // "2024-01-15"
   const seed = `rotation-${today}-${rotationPeriod}`;
-  
+
   return await SEA.pair(null, { priv: currentPair.priv, seed });
 }
 
@@ -174,8 +180,14 @@ const master = await SEA.pair(null, { seed: "my-master-identity" });
 
 // Different identities for different purposes
 const workIdentity = await SEA.pair(null, { priv: master.priv, seed: "work" });
-const socialIdentity = await SEA.pair(null, { priv: master.priv, seed: "social" });
-const gamingIdentity = await SEA.pair(null, { priv: master.priv, seed: "gaming" });
+const socialIdentity = await SEA.pair(null, {
+  priv: master.priv,
+  seed: "social",
+});
+const gamingIdentity = await SEA.pair(null, {
+  priv: master.priv,
+  seed: "gaming",
+});
 
 // Each identity is separate, but you can prove ownership of all from master
 ```
@@ -189,15 +201,15 @@ Create temporary or scoped authentication keys:
 const mainAccount = await SEA.pair();
 
 // Derive a temporary key for mobile app (expires after rotation)
-const mobileKey = await SEA.pair(null, { 
-  priv: mainAccount.priv, 
-  seed: "mobile-app-2024-02" 
+const mobileKey = await SEA.pair(null, {
+  priv: mainAccount.priv,
+  seed: "mobile-app-2024-02",
 });
 
 // Derive a read-only key for analytics
-const analyticsKey = await SEA.pair(null, { 
-  priv: mainAccount.priv, 
-  seed: "analytics-readonly" 
+const analyticsKey = await SEA.pair(null, {
+  priv: mainAccount.priv,
+  seed: "analytics-readonly",
 });
 
 // Each derived key can have different permissions
@@ -212,21 +224,21 @@ const base = await SEA.pair();
 
 // Derive signing keys only (priv → pub)
 const signOnly = await SEA.pair(null, { priv: base.priv, seed: "test" });
-console.log(signOnly.pub);   // ✅ Derived
-console.log(signOnly.priv);  // ✅ Derived
-console.log(signOnly.epub);  // ❌ undefined (no base.epub provided)
+console.log(signOnly.pub); // ✅ Derived
+console.log(signOnly.priv); // ✅ Derived
+console.log(signOnly.epub); // ❌ undefined (no base.epub provided)
 console.log(signOnly.epriv); // ❌ undefined (no base.epriv provided)
 
 // Derive public key only
 const pubOnly = await SEA.pair(null, { pub: base.pub, seed: "test" });
-console.log(pubOnly.pub);    // ✅ Derived
-console.log(pubOnly.priv);   // ❌ undefined (can't derive without base.priv)
+console.log(pubOnly.pub); // ✅ Derived
+console.log(pubOnly.priv); // ❌ undefined (can't derive without base.priv)
 
 // Derive encryption keys only (epriv → epub)
 const encryptOnly = await SEA.pair(null, { epriv: base.epriv, seed: "test" });
-console.log(encryptOnly.epub);  // ✅ Derived
+console.log(encryptOnly.epub); // ✅ Derived
 console.log(encryptOnly.epriv); // ✅ Derived
-console.log(encryptOnly.pub);   // ❌ undefined (no base.priv provided)
+console.log(encryptOnly.pub); // ❌ undefined (no base.priv provided)
 ```
 
 ## Security Validation
@@ -237,7 +249,7 @@ The implementation includes several security checks:
 
 ```javascript
 try {
-  await SEA.pair(null, { pub: 'invalid-format', seed: 'test' });
+  await SEA.pair(null, { pub: "invalid-format", seed: "test" });
 } catch (error) {
   console.log("Error: Invalid public key format");
 }
@@ -248,7 +260,7 @@ try {
 ```javascript
 try {
   // Coordinates that don't satisfy the curve equation
-  await SEA.pair(null, { pub: 'AA.AA', seed: 'test' });
+  await SEA.pair(null, { pub: "AA.AA", seed: "test" });
 } catch (error) {
   console.log("Error: Point not on curve");
 }
@@ -259,9 +271,11 @@ try {
 ```javascript
 try {
   // Coordinate values >= field prime P
-  const P = BigInt("0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff");
+  const P = BigInt(
+    "0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff",
+  );
   const invalidPub = encodeBase64(P) + "." + encodeBase64(1n);
-  await SEA.pair(null, { pub: invalidPub, seed: 'test' });
+  await SEA.pair(null, { pub: invalidPub, seed: "test" });
 } catch (error) {
   console.log("Error: Coordinate out of range");
 }
@@ -272,9 +286,11 @@ try {
 ```javascript
 try {
   // Private key >= curve order n
-  const n = BigInt("0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551");
+  const n = BigInt(
+    "0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551",
+  );
   const invalidPriv = encodeBase64(n);
-  await SEA.pair(null, { priv: invalidPriv, seed: 'test' });
+  await SEA.pair(null, { priv: invalidPriv, seed: "test" });
 } catch (error) {
   console.log("Error: Private key out of range");
 }
@@ -285,7 +301,7 @@ try {
 ```javascript
 try {
   const zeroPriv = encodeBase64(0n);
-  await SEA.pair(null, { priv: zeroPriv, seed: 'test' });
+  await SEA.pair(null, { priv: zeroPriv, seed: "test" });
 } catch (error) {
   console.log("Error: Private key cannot be zero");
 }
@@ -298,15 +314,15 @@ You can implement BIP44-style hierarchical paths:
 ```javascript
 async function derivePath(master, path) {
   // path format: "m/44'/0'/0'/0/0"
-  const parts = path.split('/').slice(1); // Remove 'm'
-  
+  const parts = path.split("/").slice(1); // Remove 'm'
+
   let current = master;
   for (const part of parts) {
     const index = part.replace("'", ""); // Hardened indicator
     const seed = `index-${index}`;
     current = await SEA.pair(null, { priv: current.priv, seed });
   }
-  
+
   return current;
 }
 
@@ -342,19 +358,31 @@ const gun = Gun();
 const master = await SEA.pair(null, { seed: "my-master-seed" });
 
 // Derive a key for public profile
-const publicProfile = await SEA.pair(null, { priv: master.priv, seed: "public" });
+const publicProfile = await SEA.pair(null, {
+  priv: master.priv,
+  seed: "public",
+});
 
 // Derive a key for private data
-const privateData = await SEA.pair(null, { priv: master.priv, seed: "private" });
+const privateData = await SEA.pair(null, {
+  priv: master.priv,
+  seed: "private",
+});
 
 // Use different derived keys for different data
-gun.get(`~${publicProfile.pub}`).get('bio').put('Hello world!', null, { 
-  opt: { authenticator: publicProfile } 
-});
+gun
+  .get(`~${publicProfile.pub}`)
+  .get("bio")
+  .put("Hello world!", null, {
+    opt: { authenticator: publicProfile },
+  });
 
-gun.get(`~${privateData.pub}`).get('secrets').put('My secrets', null, { 
-  opt: { authenticator: privateData } 
-});
+gun
+  .get(`~${privateData.pub}`)
+  .get("secrets")
+  .put("My secrets", null, {
+    opt: { authenticator: privateData },
+  });
 ```
 
 ## Best Practices
@@ -376,12 +404,12 @@ gun.get(`~${privateData.pub}`).get('secrets').put('My secrets', null, {
 
 ## Comparison with Standard Generation
 
-| Feature | Standard | Seed-Based | Additive Derivation |
-|---------|----------|------------|---------------------|
-| Reproducibility | ❌ Random | ✅ From seed | ✅ From base + seed |
-| Hierarchical | ❌ No | ❌ No | ✅ Yes |
-| Public derivation | ❌ No | ❌ No | ✅ Yes (pub → pub) |
-| Use case | Standard | Recovery | HD wallets, privacy |
+| Feature           | Standard  | Seed-Based   | Additive Derivation |
+| ----------------- | --------- | ------------ | ------------------- |
+| Reproducibility   | ❌ Random | ✅ From seed | ✅ From base + seed |
+| Hierarchical      | ❌ No     | ❌ No        | ✅ Yes              |
+| Public derivation | ❌ No     | ❌ No        | ✅ Yes (pub → pub)  |
+| Use case          | Standard  | Recovery     | HD wallets, privacy |
 
 ## See Also
 

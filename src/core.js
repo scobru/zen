@@ -1,12 +1,12 @@
-import './chain.js';
-import './back.js';
-import './put.js';
-import './get.js';
-import __root from './root.js';
+import "./chain.js";
+import "./back.js";
+import "./put.js";
+import "./get.js";
+import __root from "./root.js";
 
 let __defaultExport;
 
-  var Zen = __root;
-  __defaultExport = Zen;
+var Zen = __root;
+__defaultExport = Zen;
 
 export default __defaultExport;

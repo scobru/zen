@@ -16,20 +16,20 @@ ZEN is no longer "GUN plus wrappers". It is now a **ZEN-first codebase**:
 
 ZEN has already moved well beyond yesterday's shape.
 
-| Area | Status |
-| --- | --- |
-| Graph runtime (HAM/CRDT, chain API, peers, storage) | Active in `src/` |
-| Public runtime surface | `ZEN` only |
-| secp256k1 crypto | Implemented |
-| P-256 / secp256r1 crypto | Implemented |
-| EVM and BTC key formats | Implemented |
-| PEN / policy VM | Implemented with Zig -> WASM build pipeline |
-| OPFS support | Integrated |
-| RAD / Radisk / Radix | Integrated |
-| WebSocket transport | Integrated |
-| Internal WebSocket server adapter | Replaced `ws` dependency |
-| Vanilla HTTP form/body parsing | Replaced `formidable` dependency |
-| Internal S3 client | Replaced `aws-sdk` dependency |
+| Area                                                | Status                                      |
+| --------------------------------------------------- | ------------------------------------------- |
+| Graph runtime (HAM/CRDT, chain API, peers, storage) | Active in `src/`                            |
+| Public runtime surface                              | `ZEN` only                                  |
+| secp256k1 crypto                                    | Implemented                                 |
+| P-256 / secp256r1 crypto                            | Implemented                                 |
+| EVM and BTC key formats                             | Implemented                                 |
+| PEN / policy VM                                     | Implemented with Zig -> WASM build pipeline |
+| OPFS support                                        | Integrated                                  |
+| RAD / Radisk / Radix                                | Integrated                                  |
+| WebSocket transport                                 | Integrated                                  |
+| Internal WebSocket server adapter                   | Replaced `ws` dependency                    |
+| Vanilla HTTP form/body parsing                      | Replaced `formidable` dependency            |
+| Internal S3 client                                  | Replaced `aws-sdk` dependency               |
 
 Current test baseline:
 
@@ -81,24 +81,45 @@ ZEN keeps the strong graph and sync ideas from the GUN family, but pushes them t
 npm install
 ```
 
+### Developer onboarding
+
+If you are only consuming ZEN as a package, `npm install` is enough.
+
+If you are developing ZEN itself, you should also install the **Zig compiler** and make sure `zig` is available on your `PATH`.
+
+Why this matters:
+
+- ZEN is moving toward using more **Zig** over time
+- **PEN** already uses a Zig -> WASM build pipeline
+- the normal dev build path goes through `buildPEN`
+- `npm run build`, `npm test`, and release-oriented builds are expected to work best in an environment where Zig is installed
+
+Recommended dev setup:
+
+```bash
+npm install
+zig version
+npm run build
+```
+
 ---
 
 ## Quick start
 
 ```js
-import ZEN from '@akaoio/zen';
+import ZEN from "@akaoio/zen";
 
-const zen = new ZEN({ file: 'data' });
+const zen = new ZEN({ file: "data" });
 
-zen.get('user').put({ name: 'Alice' });
-zen.get('user').once(console.log);
+zen.get("user").put({ name: "Alice" });
+zen.get("user").once(console.log);
 ```
 
 ### Crypto
 
 ```js
 const pair = await ZEN.pair();
-const signed = await ZEN.sign('hello', pair);
+const signed = await ZEN.sign("hello", pair);
 const verified = await ZEN.verify(signed, pair.pub);
 ```
 
@@ -106,16 +127,16 @@ const verified = await ZEN.verify(signed, pair.pub);
 
 ```js
 const secp = await ZEN.pair();
-const p256 = await ZEN.pair(null, { curve: 'p256' });
-const evm = await ZEN.pair(null, { format: 'evm' });
-const btc = await ZEN.pair(null, { format: 'btc' });
+const p256 = await ZEN.pair(null, { curve: "p256" });
+const evm = await ZEN.pair(null, { format: "evm" });
+const btc = await ZEN.pair(null, { format: "btc" });
 ```
 
 ### Hashing
 
 ```js
-const sha = await ZEN.hash('hello');
-const keccak = await ZEN.hash('hello', { name: 'keccak256' });
+const sha = await ZEN.hash("hello");
+const keccak = await ZEN.hash("hello", { name: "keccak256" });
 ```
 
 ---
@@ -162,6 +183,8 @@ PEN is part of the ZEN direction, not an add-on.
 - WASM build output
 - integrated into the repo's release and test flow
 
+If you are contributing to ZEN, assume Zig is part of the toolchain, not an optional extra.
+
 Relevant scripts:
 
 ```bash
@@ -184,11 +207,11 @@ ZEN currently includes multiple persistence paths:
 Useful modules:
 
 ```js
-import '@akaoio/zen/lib/store';
-import '@akaoio/zen/lib/rfs';
-import '@akaoio/zen/lib/rindexed';
-import '@akaoio/zen/lib/opfs';
-import '@akaoio/zen/lib/rs3';
+import "@akaoio/zen/lib/store";
+import "@akaoio/zen/lib/rfs";
+import "@akaoio/zen/lib/rindexed";
+import "@akaoio/zen/lib/opfs";
+import "@akaoio/zen/lib/rs3";
 ```
 
 Recent cleanup:

@@ -27,10 +27,11 @@ await user.create("alice", "password");
 await user.auth("alice", "password");
 
 // 3. Put data (uses session)
-user.get('profile').put({ name: "Alice" });
+user.get("profile").put({ name: "Alice" });
 ```
 
 **Limitations:**
+
 - Requires maintaining an authenticated session
 - One identity per session
 - Password-based (unless using SEA.pair recovery)
@@ -45,14 +46,15 @@ const gun = Gun();
 const pair = await SEA.pair();
 
 // 2. Put data directly without session
-gun.get(`~${pair.pub}`).get('profile').put(
-    { name: "Alice" }, 
-    null,
-    { authenticator: pair }  // ⬅️ External authenticator
+gun.get(`~${pair.pub}`).get("profile").put(
+  { name: "Alice" },
+  null,
+  { authenticator: pair }, // ⬅️ External authenticator
 );
 ```
 
 **Benefits:**
+
 - No session required
 - Switch identities per operation
 - Integrate any signing mechanism
@@ -69,16 +71,18 @@ The simplest form - provide a SEA key pair:
 const pair = await SEA.pair();
 
 // Put data to the user's graph
-gun.get(`~${pair.pub}`).get('data').put(
-    'Hello World',
-    null,
-    { authenticator: pair }
-);
+gun
+  .get(`~${pair.pub}`)
+  .get("data")
+  .put("Hello World", null, { authenticator: pair });
 
 // Read it back
-gun.get(`~${pair.pub}`).get('data').once(data => {
+gun
+  .get(`~${pair.pub}`)
+  .get("data")
+  .once((data) => {
     console.log(data); // "Hello World"
-});
+  });
 ```
 
 ### 2. Using a Custom Signing Function
@@ -88,25 +92,26 @@ Implement your own signing logic:
 ```javascript
 // Custom authenticator function
 const customAuthenticator = async (data) => {
-    // `data` is the serialized put operation
-    
-    // Sign it with your custom logic
-    // (e.g., call to HSM, cloud KMS, hardware wallet, etc.)
-    const signature = await myCustomSigningService.sign(data);
-    
-    // Return in SEA signature format
-    return {
-        m: data,  // The message that was signed
-        s: signature  // The signature
-    };
+  // `data` is the serialized put operation
+
+  // Sign it with your custom logic
+  // (e.g., call to HSM, cloud KMS, hardware wallet, etc.)
+  const signature = await myCustomSigningService.sign(data);
+
+  // Return in SEA signature format
+  return {
+    m: data, // The message that was signed
+    s: signature, // The signature
+  };
 };
 
 // Use it
-gun.get(`~${myPublicKey}`).get('data').put(
-    'Signed by custom service',
-    null,
-    { authenticator: customAuthenticator }
-);
+gun
+  .get(`~${myPublicKey}`)
+  .get("data")
+  .put("Signed by custom service", null, {
+    authenticator: customAuthenticator,
+  });
 ```
 
 ### 3. WebAuthn Authenticator
@@ -116,28 +121,29 @@ Use hardware security keys or biometric authentication:
 ```javascript
 // Create WebAuthn authenticator function
 const webAuthnAuth = async (data) => {
-    const challenge = new TextEncoder().encode(data);
-    
-    const assertion = await navigator.credentials.get({
-        publicKey: {
-            challenge,
-            rpId: window.location.hostname,
-            allowCredentials: [{
-                type: "public-key",
-                id: credentialId  // From registration
-            }]
-        }
-    });
-    
-    return assertion.response;  // SEA will normalize this
+  const challenge = new TextEncoder().encode(data);
+
+  const assertion = await navigator.credentials.get({
+    publicKey: {
+      challenge,
+      rpId: window.location.hostname,
+      allowCredentials: [
+        {
+          type: "public-key",
+          id: credentialId, // From registration
+        },
+      ],
+    },
+  });
+
+  return assertion.response; // SEA will normalize this
 };
 
 // Use it
-gun.get(`~${webAuthnPub}`).get('data').put(
-    'Signed by Touch ID',
-    null,
-    { authenticator: webAuthnAuth }
-);
+gun
+  .get(`~${webAuthnPub}`)
+  .get("data")
+  .put("Signed by Touch ID", null, { authenticator: webAuthnAuth });
 ```
 
 ## Writing to Your Own Graph
@@ -148,14 +154,14 @@ When writing to your own graph (where graph soul `~pub` matches your public key)
 const pair = await SEA.pair();
 
 // ✅ Writing to own graph - just provide authenticator
-gun.get(`~${pair.pub}`).get('profile').put(
-    { bio: "I'm Alice" },
-    null,
-    { authenticator: pair }
-);
+gun
+  .get(`~${pair.pub}`)
+  .get("profile")
+  .put({ bio: "I'm Alice" }, null, { authenticator: pair });
 ```
 
 **Requirements:**
+
 - `authenticator`: Your key pair or signing function
 - That's it! No `pub` or `cert` needed
 
@@ -172,26 +178,27 @@ const bob = await SEA.pair();
 
 // Bob creates a certificate allowing Alice to write
 const cert = await SEA.certify(
-    alice.pub,  // Alice can write
-    { '*': 'messages' },  // to 'messages' path
-    bob  // Certificate signed by Bob
+  alice.pub, // Alice can write
+  { "*": "messages" }, // to 'messages' path
+  bob, // Certificate signed by Bob
 );
 
 // ✅ Alice writes to Bob's graph with certificate
-gun.get(`~${bob.pub}`).get('messages').get('alice').put(
-    'Hello Bob!',
-    null,
-    { 
-        opt: { 
-            authenticator: alice,  // Alice's keys
-            pub: alice.pub,        // Alice's public key
-            cert: cert             // Certificate from Bob
-        } 
-    }
-);
+gun
+  .get(`~${bob.pub}`)
+  .get("messages")
+  .get("alice")
+  .put("Hello Bob!", null, {
+    opt: {
+      authenticator: alice, // Alice's keys
+      pub: alice.pub, // Alice's public key
+      cert: cert, // Certificate from Bob
+    },
+  });
 ```
 
 **Requirements:**
+
 - `authenticator`: Your key pair or signing function
 - `pub`: Your public key (if authenticator is a function)
 - `cert`: Certificate from the graph owner
@@ -207,9 +214,12 @@ Intermediate nodes in the `~` shard namespace (`~/ab`, `~/ab/cd`, etc.) enforce 
 ```javascript
 const pair = await SEA.pair();
 const key = pair.pub.slice(0, 2);
-gun.get('~').get(key).put({'#': '~/' + key}, null, {
-  opt: { authenticator: pair }
-});
+gun
+  .get("~")
+  .get(key)
+  .put({ "#": "~/" + key }, null, {
+    opt: { authenticator: pair },
+  });
 ```
 
 - **Function authenticator** — a function has no `.pub`. You **must** pass `opt.pub` explicitly:
@@ -218,9 +228,12 @@ gun.get('~').get(key).put({'#': '~/' + key}, null, {
 const pair = await SEA.pair();
 const auth = async (data) => SEA.sign(data, pair);
 const key = pair.pub.slice(0, 2);
-gun.get('~').get(key).put({'#': '~/' + key}, null, {
-  opt: { authenticator: auth, pub: pair.pub }  // opt.pub required
-});
+gun
+  .get("~")
+  .get(key)
+  .put({ "#": "~/" + key }, null, {
+    opt: { authenticator: auth, pub: pair.pub }, // opt.pub required
+  });
 ```
 
 Omitting `opt.pub` when using a function authenticator on an intermediate shard node results in `"Invalid shard intermediate pub."` even if the signature itself would be valid.
@@ -234,18 +247,16 @@ const alicePair = await SEA.pair();
 const bobPair = await SEA.pair();
 
 // Write as Alice
-gun.get(`~${alicePair.pub}`).get('post1').put(
-    'Post by Alice',
-    null,
-    { authenticator: alicePair }
-);
+gun
+  .get(`~${alicePair.pub}`)
+  .get("post1")
+  .put("Post by Alice", null, { authenticator: alicePair });
 
 // Write as Bob (different identity, no session change)
-gun.get(`~${bobPair.pub}`).get('post1').put(
-    'Post by Bob',
-    null,
-    { authenticator: bobPair }
-);
+gun
+  .get(`~${bobPair.pub}`)
+  .get("post1")
+  .put("Post by Bob", null, { authenticator: bobPair });
 ```
 
 ### Nested Signing (Delegation)
@@ -257,19 +268,18 @@ const masterPair = await SEA.pair();
 
 // Create a delegated authenticator
 const delegatedAuth = async (data) => {
-    // First, sign with master key
-    const masterSig = await SEA.sign(data, masterPair);
-    
-    // Then, add additional context or transform
-    return masterSig;
+  // First, sign with master key
+  const masterSig = await SEA.sign(data, masterPair);
+
+  // Then, add additional context or transform
+  return masterSig;
 };
 
 // Use the delegated authenticator
-gun.get(`~${masterPair.pub}`).get('data').put(
-    'Delegated signature',
-    null,
-    { authenticator: delegatedAuth }
-);
+gun
+  .get(`~${masterPair.pub}`)
+  .get("data")
+  .put("Delegated signature", null, { authenticator: delegatedAuth });
 ```
 
 ### Derived Key Authenticators
@@ -285,17 +295,15 @@ const workKey = await SEA.pair(null, { priv: master.priv, seed: "work" });
 const socialKey = await SEA.pair(null, { priv: master.priv, seed: "social" });
 
 // Use different derived keys
-gun.get(`~${workKey.pub}`).get('documents').put(
-    'Work document',
-    null,
-    { authenticator: workKey }
-);
+gun
+  .get(`~${workKey.pub}`)
+  .get("documents")
+  .put("Work document", null, { authenticator: workKey });
 
-gun.get(`~${socialKey.pub}`).get('posts').put(
-    'Social post',
-    null,
-    { authenticator: socialKey }
-);
+gun
+  .get(`~${socialKey.pub}`)
+  .get("posts")
+  .put("Social post", null, { authenticator: socialKey });
 ```
 
 ### Temporary Authenticators
@@ -304,27 +312,26 @@ Create short-lived authenticators for specific operations:
 
 ```javascript
 async function createTempAuthenticator(masterPair, expiryMs) {
-    const tempPair = await SEA.pair(null, {
-        priv: masterPair.priv,
-        seed: `temp-${Date.now()}`
-    });
-    
-    // Auto-expire
-    setTimeout(() => {
-        console.log("Authenticator expired");
-        // Clear from memory
-    }, expiryMs);
-    
-    return tempPair;
+  const tempPair = await SEA.pair(null, {
+    priv: masterPair.priv,
+    seed: `temp-${Date.now()}`,
+  });
+
+  // Auto-expire
+  setTimeout(() => {
+    console.log("Authenticator expired");
+    // Clear from memory
+  }, expiryMs);
+
+  return tempPair;
 }
 
 // Use temporary authenticator
 const tempAuth = await createTempAuthenticator(masterPair, 5 * 60 * 1000);
-gun.get(`~${tempAuth.pub}`).get('temp-data').put(
-    'Expires in 5 minutes',
-    null,
-    { authenticator: tempAuth }
-);
+gun
+  .get(`~${tempAuth.pub}`)
+  .get("temp-data")
+  .put("Expires in 5 minutes", null, { authenticator: tempAuth });
 ```
 
 ### Conditional Signing
@@ -333,27 +340,27 @@ Only sign if certain conditions are met:
 
 ```javascript
 async function conditionalAuth(data, condition) {
-    if (!condition()) {
-        throw new Error("Condition not met, refusing to sign");
-    }
-    
-    const pair = await SEA.pair();
-    return await SEA.sign(data, pair);
+  if (!condition()) {
+    throw new Error("Condition not met, refusing to sign");
+  }
+
+  const pair = await SEA.pair();
+  return await SEA.sign(data, pair);
 }
 
 // Use with condition
-gun.get(`~${pub}`).get('sensitive').put(
-    'Sensitive data',
-    null,
-    {
-        opt: {
-            authenticator: (data) => conditionalAuth(data, () => {
-                // Only sign if user is verified
-                return userIsVerified;
-            })
-        }
-    }
-);
+gun
+  .get(`~${pub}`)
+  .get("sensitive")
+  .put("Sensitive data", null, {
+    opt: {
+      authenticator: (data) =>
+        conditionalAuth(data, () => {
+          // Only sign if user is verified
+          return userIsVerified;
+        }),
+    },
+  });
 ```
 
 ### Multi-Signature Authenticator
@@ -362,32 +369,31 @@ Require multiple signatures:
 
 ```javascript
 async function multiSigAuth(data, signers) {
-    const signatures = [];
-    
-    for (const signer of signers) {
-        const sig = await SEA.sign(data, signer);
-        signatures.push(sig);
-    }
-    
-    // Combine signatures (simplified example)
-    return {
-        m: data,
-        s: signatures,
-        type: 'multi-sig'
-    };
+  const signatures = [];
+
+  for (const signer of signers) {
+    const sig = await SEA.sign(data, signer);
+    signatures.push(sig);
+  }
+
+  // Combine signatures (simplified example)
+  return {
+    m: data,
+    s: signatures,
+    type: "multi-sig",
+  };
 }
 
 // Require 2-of-3 signatures
 const signers = [pair1, pair2, pair3];
-gun.get(`~${multisigPub}`).get('vault').put(
-    'Multi-sig data',
-    null,
-    {
-        opt: {
-            authenticator: (data) => multiSigAuth(data, signers.slice(0, 2))
-        }
-    }
-);
+gun
+  .get(`~${multisigPub}`)
+  .get("vault")
+  .put("Multi-sig data", null, {
+    opt: {
+      authenticator: (data) => multiSigAuth(data, signers.slice(0, 2)),
+    },
+  });
 ```
 
 ## Integration Examples
@@ -396,33 +402,34 @@ gun.get(`~${multisigPub}`).get('vault').put(
 
 ```javascript
 class HSMAuthenticator {
-    constructor(hsmClient, keyId) {
-        this.hsm = hsmClient;
-        this.keyId = keyId;
-    }
-    
-    async sign(data) {
-        // Sign using HSM
-        const signature = await this.hsm.sign({
-            keyId: this.keyId,
-            algorithm: 'ECDSA_SHA_256',
-            message: data
-        });
-        
-        return {
-            m: data,
-            s: signature
-        };
-    }
+  constructor(hsmClient, keyId) {
+    this.hsm = hsmClient;
+    this.keyId = keyId;
+  }
+
+  async sign(data) {
+    // Sign using HSM
+    const signature = await this.hsm.sign({
+      keyId: this.keyId,
+      algorithm: "ECDSA_SHA_256",
+      message: data,
+    });
+
+    return {
+      m: data,
+      s: signature,
+    };
+  }
 }
 
 // Use HSM authenticator
-const hsmAuth = new HSMAuthenticator(hsmClient, 'my-key-id');
-gun.get(`~${hsmPub}`).get('data').put(
-    'HSM-signed data',
-    null,
-    { authenticator: (data) => hsmAuth.sign(data) }
-);
+const hsmAuth = new HSMAuthenticator(hsmClient, "my-key-id");
+gun
+  .get(`~${hsmPub}`)
+  .get("data")
+  .put("HSM-signed data", null, {
+    authenticator: (data) => hsmAuth.sign(data),
+  });
 ```
 
 ### With Cloud KMS (AWS, GCP, Azure)
@@ -430,51 +437,53 @@ gun.get(`~${hsmPub}`).get('data').put(
 ```javascript
 // AWS KMS example
 async function kmsAuthenticator(data) {
-    const signature = await kmsClient.sign({
-        KeyId: 'arn:aws:kms:us-east-1:123456789012:key/...',
-        MessageType: 'RAW',
-        SigningAlgorithm: 'ECDSA_SHA_256',
-        Message: Buffer.from(data)
-    }).promise();
-    
-    return {
-        m: data,
-        s: signature.Signature.toString('base64')
-    };
+  const signature = await kmsClient
+    .sign({
+      KeyId: "arn:aws:kms:us-east-1:123456789012:key/...",
+      MessageType: "RAW",
+      SigningAlgorithm: "ECDSA_SHA_256",
+      Message: Buffer.from(data),
+    })
+    .promise();
+
+  return {
+    m: data,
+    s: signature.Signature.toString("base64"),
+  };
 }
 
-gun.get(`~${kmsPub}`).get('data').put(
-    'KMS-signed data',
-    null,
-    { authenticator: kmsAuthenticator }
-);
+gun
+  .get(`~${kmsPub}`)
+  .get("data")
+  .put("KMS-signed data", null, { authenticator: kmsAuthenticator });
 ```
 
 ### With Mobile Biometric (React Native)
 
 ```javascript
-import BiometricAuth from 'react-native-biometric';
+import BiometricAuth from "react-native-biometric";
 
 async function biometricAuthenticator(data) {
-    // Prompt for biometric
-    const result = await BiometricAuth.simplePrompt({
-        promptMessage: 'Sign this transaction'
-    });
-    
-    if (!result.success) {
-        throw new Error('Biometric authentication failed');
-    }
-    
-    // Get stored key after biometric verification
-    const pair = await getStoredKeyPair();
-    return await SEA.sign(data, pair);
+  // Prompt for biometric
+  const result = await BiometricAuth.simplePrompt({
+    promptMessage: "Sign this transaction",
+  });
+
+  if (!result.success) {
+    throw new Error("Biometric authentication failed");
+  }
+
+  // Get stored key after biometric verification
+  const pair = await getStoredKeyPair();
+  return await SEA.sign(data, pair);
 }
 
-gun.get(`~${pub}`).get('data').put(
-    'Biometric-signed data',
-    null,
-    { authenticator: biometricAuthenticator }
-);
+gun
+  .get(`~${pub}`)
+  .get("data")
+  .put("Biometric-signed data", null, {
+    authenticator: biometricAuthenticator,
+  });
 ```
 
 ## Authenticator Function Signature
@@ -485,8 +494,8 @@ Your authenticator function receives the serialized put operation and should ret
 type Authenticator = (data: string) => Promise<Signature>;
 
 type Signature = {
-    m: any;      // The message/data that was signed
-    s: string;   // The signature (base64-encoded)
+  m: any; // The message/data that was signed
+  s: string; // The signature (base64-encoded)
 };
 ```
 
@@ -496,10 +505,10 @@ Or simply return a SEA key pair, and SEA will handle signing:
 type Authenticator = SEAPair | ((data: string) => Promise<Signature>);
 
 type SEAPair = {
-    pub: string;
-    priv: string;
-    epub: string;
-    epriv: string;
+  pub: string;
+  priv: string;
+  epub: string;
+  epriv: string;
 };
 ```
 
@@ -523,65 +532,69 @@ type SEAPair = {
 
 ## Comparison: Session vs External Authenticator
 
-| Feature | Session (`user.auth()`) | External Authenticator |
-|---------|-------------------------|------------------------|
-| Setup | Login required | No session needed |
-| State | Stateful | Stateless |
-| Switching identities | Logout/login | Per-operation |
-| Custom signing | ❌ Not supported | ✅ Supported |
-| Hardware keys | ❌ Limited | ✅ Full support |
-| Complexity | Simple | More flexible |
-| Use case | Traditional apps | Modern, multi-identity |
+| Feature              | Session (`user.auth()`) | External Authenticator |
+| -------------------- | ----------------------- | ---------------------- |
+| Setup                | Login required          | No session needed      |
+| State                | Stateful                | Stateless              |
+| Switching identities | Logout/login            | Per-operation          |
+| Custom signing       | ❌ Not supported        | ✅ Supported           |
+| Hardware keys        | ❌ Limited              | ✅ Full support        |
+| Complexity           | Simple                  | More flexible          |
+| Use case             | Traditional apps        | Modern, multi-identity |
 
 ## Testing
 
 ### Unit Test Example
 
 ```javascript
-describe('External Authenticators', function() {
-    it('should put with external authenticator', async function() {
-        const gun = Gun();
-        const pair = await SEA.pair();
-        
-        // Put with external authenticator
-        gun.get(`~${pair.pub}`).get('test').put(
-            'test data',
-            null,
-            { authenticator: pair }
-        );
-        
-        // Verify
-        await new Promise(resolve => {
-            gun.get(`~${pair.pub}`).get('test').once(data => {
-                expect(data).to.equal('test data');
-                resolve();
-            });
+describe("External Authenticators", function () {
+  it("should put with external authenticator", async function () {
+    const gun = Gun();
+    const pair = await SEA.pair();
+
+    // Put with external authenticator
+    gun
+      .get(`~${pair.pub}`)
+      .get("test")
+      .put("test data", null, { authenticator: pair });
+
+    // Verify
+    await new Promise((resolve) => {
+      gun
+        .get(`~${pair.pub}`)
+        .get("test")
+        .once((data) => {
+          expect(data).to.equal("test data");
+          resolve();
         });
     });
-    
-    it('should work with custom signing function', async function() {
-        const gun = Gun();
-        const pair = await SEA.pair();
-        
-        // Custom authenticator
-        const customAuth = async (data) => {
-            return await SEA.sign(data, pair);
-        };
-        
-        gun.get(`~${pair.pub}`).get('custom').put(
-            'custom signed',
-            null,
-            { authenticator: customAuth }
-        );
-        
-        // Verify
-        await new Promise(resolve => {
-            gun.get(`~${pair.pub}`).get('custom').once(data => {
-                expect(data).to.equal('custom signed');
-                resolve();
-            });
+  });
+
+  it("should work with custom signing function", async function () {
+    const gun = Gun();
+    const pair = await SEA.pair();
+
+    // Custom authenticator
+    const customAuth = async (data) => {
+      return await SEA.sign(data, pair);
+    };
+
+    gun
+      .get(`~${pair.pub}`)
+      .get("custom")
+      .put("custom signed", null, { authenticator: customAuth });
+
+    // Verify
+    await new Promise((resolve) => {
+      gun
+        .get(`~${pair.pub}`)
+        .get("custom")
+        .once((data) => {
+          expect(data).to.equal("custom signed");
+          resolve();
         });
     });
+  });
 });
 ```
 
@@ -592,23 +605,22 @@ Enable debug logging to troubleshoot authenticator issues:
 ```javascript
 // Log authenticator calls
 const debugAuth = async (data) => {
-    console.log('Signing data:', data);
-    
-    try {
-        const sig = await SEA.sign(data, pair);
-        console.log('Signature:', sig);
-        return sig;
-    } catch (error) {
-        console.error('Signing failed:', error);
-        throw error;
-    }
+  console.log("Signing data:", data);
+
+  try {
+    const sig = await SEA.sign(data, pair);
+    console.log("Signature:", sig);
+    return sig;
+  } catch (error) {
+    console.error("Signing failed:", error);
+    throw error;
+  }
 };
 
-gun.get(`~${pub}`).get('debug').put(
-    'debug data',
-    null,
-    { authenticator: debugAuth }
-);
+gun
+  .get(`~${pub}`)
+  .get("debug")
+  .put("debug data", null, { authenticator: debugAuth });
 ```
 
 ## Migration from Session-Based Auth
@@ -619,23 +631,22 @@ gun.get(`~${pub}`).get('debug').put(
 const gun = Gun();
 const user = gun.user();
 
-await user.create('alice', 'password');
-await user.auth('alice', 'password');
+await user.create("alice", "password");
+await user.auth("alice", "password");
 
-user.get('profile').put({ name: 'Alice' });
+user.get("profile").put({ name: "Alice" });
 ```
 
 ### After (External Authenticator)
 
 ```javascript
 const gun = Gun();
-const pair = await SEA.pair(null, { seed: 'alice-recovery-seed' });
+const pair = await SEA.pair(null, { seed: "alice-recovery-seed" });
 
-gun.get(`~${pair.pub}`).get('profile').put(
-    { name: 'Alice' },
-    null,
-    { authenticator: pair }
-);
+gun
+  .get(`~${pair.pub}`)
+  .get("profile")
+  .put({ name: "Alice" }, null, { authenticator: pair });
 ```
 
 ### Hybrid Approach
@@ -644,16 +655,16 @@ Support both for backward compatibility:
 
 ```javascript
 async function hybridPut(gun, user, path, data, authenticator) {
-    if (authenticator) {
-        // New way: external authenticator
-        const pub = authenticator.pub || user.is?.pub;
-        gun.get(`~${pub}`).get(path).put(data, null, {
-            opt: { authenticator }
-        });
-    } else {
-        // Old way: authenticated session
-        user.get(path).put(data);
-    }
+  if (authenticator) {
+    // New way: external authenticator
+    const pub = authenticator.pub || user.is?.pub;
+    gun.get(`~${pub}`).get(path).put(data, null, {
+      opt: { authenticator },
+    });
+  } else {
+    // Old way: authenticated session
+    user.get(path).put(data);
+  }
 }
 ```
 

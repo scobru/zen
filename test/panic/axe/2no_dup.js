@@ -1,150 +1,199 @@
-import __ip from 'ip';
-import __panic_server from 'panic-server';
-import __fs from 'fs';
-import __panic_manager from 'panic-manager';
-import __fsrm from './lib/fsrm';
-import __http from 'http';
-import __index from './index.js';
-import __child_process from 'child_process';
-import __open from '../util/open.js';
-import { fileURLToPath } from 'node:url';
-import { dirname as __dirnameOf } from 'node:path';
+import __ip from "ip";
+import __panic_server from "panic-server";
+import __fs from "fs";
+import __panic_manager from "panic-manager";
+import __fsrm from "./lib/fsrm";
+import __http from "http";
+import __index from "./index.js";
+import __child_process from "child_process";
+import __open from "../util/open.js";
+import { fileURLToPath } from "node:url";
+import { dirname as __dirnameOf } from "node:path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = __dirnameOf(__filename);
 var ip;
-try{ ip = __ip.address() }catch(e){}
+try {
+  ip = __ip.address();
+} catch (e) {}
 
 var config = {
-	IP: ip || 'localhost',
-	port: 8765,
-	relays: 3,
-	route: {
-		'/': __dirname + '/index.html',
-		'/zen.js': __dirname + '/../../zen.js',
-		'/jquery.js': __dirname + '/../../examples/jquery.js'
-	}
+  IP: ip || "localhost",
+  port: 8765,
+  relays: 3,
+  route: {
+    "/": __dirname + "/index.html",
+    "/zen.js": __dirname + "/../../zen.js",
+    "/jquery.js": __dirname + "/../../examples/jquery.js",
+  },
 };
 
 var panic;
-try{ panic = __panic_server } catch(e){ console.log("PANIC not installed! `npm install panic-server panic-manager panic-client`") }
+try {
+  panic = __panic_server;
+} catch (e) {
+  console.log(
+    "PANIC not installed! `npm install panic-server panic-manager panic-client`",
+  );
+}
 
-panic.server().on('request', function(req, res){
-	config.route[req.url] && __fs.createReadStream(config.route[req.url]).pipe(res);
-}).listen(config.port);
+panic
+  .server()
+  .on("request", function (req, res) {
+    config.route[req.url] &&
+      __fs.createReadStream(config.route[req.url]).pipe(res);
+  })
+  .listen(config.port);
 
 var clients = panic.clients;
 var manager = __panic_manager();
 
 manager.start({
-    clients: Array(config.relays).fill().map(function(u, i){
-			return {
-				type: 'node',
-				port: config.port + (i + 1)
-			}
+  clients: Array(config.relays)
+    .fill()
+    .map(function (u, i) {
+      return {
+        type: "node",
+        port: config.port + (i + 1),
+      };
     }),
-    panic: 'http://' + config.IP + ':' + config.port
+  panic: "http://" + config.IP + ":" + config.port,
 });
 
-var relays = clients.filter('Node.js');
+var relays = clients.filter("Node.js");
 
 // continue boiler plate, tweak a few defaults if needed, but give descriptive test names...
-describe("Put ACK", function(){
-	//this.timeout(5 * 60 * 1000);
-	this.timeout(10 * 60 * 1000);
+describe("Put ACK", function () {
+  //this.timeout(5 * 60 * 1000);
+  this.timeout(10 * 60 * 1000);
 
-	it("Relays have joined!", function(){
-		return relays.atLeast(config.relays);
-	});
+  it("Relays have joined!", function () {
+    return relays.atLeast(config.relays);
+  });
 
-	it("GUN started!", function(){
-		var tests = [], i = 0;
-		relays.each(function(client){
-			tests.push(client.run(function(test){
-				var env = test.props;
-				test.async();
-				try{ __fs.unlinkSync(env.i+'data') }catch(e){}
-  				try{ __fsrm(env.i+'data') }catch(e){}
-				var server = __http.createServer(function(req, res){
-					res.end("I am "+ env.i +"!");
-				});
-				var port = env.config.port + env.i;
-				var Gun; try{ Gun = __index }catch(e){ console.log("GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.") }
-				var peers = [], i = env.config.relays;
-				while(i--){ // make sure to connect to self/same.
-					var tmp = (env.config.port + (i + 1));
-					peers.push('http://'+ env.config.IP + ':' + tmp + '/gun');
-				}
-				global.peerID = String.fromCharCode(64 + env.i);
-				console.log(env.i, port, " connect to ", peers);
+  it("GUN started!", function () {
+    var tests = [],
+      i = 0;
+    relays.each(function (client) {
+      tests.push(
+        client.run(
+          function (test) {
+            var env = test.props;
+            test.async();
+            try {
+              __fs.unlinkSync(env.i + "data");
+            } catch (e) {}
+            try {
+              __fsrm(env.i + "data");
+            } catch (e) {}
+            var server = __http.createServer(function (req, res) {
+              res.end("I am " + env.i + "!");
+            });
+            var port = env.config.port + env.i;
+            var Gun;
+            try {
+              Gun = __index;
+            } catch (e) {
+              console.log(
+                "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+              );
+            }
+            var peers = [],
+              i = env.config.relays;
+            while (i--) {
+              // make sure to connect to self/same.
+              var tmp = env.config.port + (i + 1);
+              peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+            }
+            global.peerID = String.fromCharCode(64 + env.i);
+            console.log(env.i, port, " connect to ", peers);
 
-				if (process.env.ROD_PATH) {
-					console.log('testing with rod');
-					var args = ['start', '--port', port, '--sled-storage=false'];
-					if (peers.length) {
-						args.push('--peers=' + peers.join(',').replaceAll('http', 'ws'));
-					}
-					const sp = __child_process.spawn(process.env.ROD_PATH, args);
-					sp.stdout.on('data', function(data){
-						console.log(data.toString());
-					});
-					sp.stderr.on('data', function(data){
-						console.log(data.toString());
-					});
-					test.done();
-					return;
-				}
-				// TODO what should gun be when testing on rod?
-				var gun = Gun({file: env.i+'data', pid: peerID, peers: peers, web: server});
-				global.gun = gun;
-				server.listen(port, function(){
-					test.done();
-				});
-			}, {i: i += 1, config: config})); 
-		});
-		return Promise.all(tests);
-	});
-// end PANIC template -->
+            if (process.env.ROD_PATH) {
+              console.log("testing with rod");
+              var args = ["start", "--port", port, "--sled-storage=false"];
+              if (peers.length) {
+                args.push(
+                  "--peers=" + peers.join(",").replaceAll("http", "ws"),
+                );
+              }
+              const sp = __child_process.spawn(process.env.ROD_PATH, args);
+              sp.stdout.on("data", function (data) {
+                console.log(data.toString());
+              });
+              sp.stderr.on("data", function (data) {
+                console.log(data.toString());
+              });
+              test.done();
+              return;
+            }
+            // TODO what should gun be when testing on rod?
+            var gun = Gun({
+              file: env.i + "data",
+              pid: peerID,
+              peers: peers,
+              web: server,
+            });
+            global.gun = gun;
+            server.listen(port, function () {
+              test.done();
+            });
+          },
+          { i: (i += 1), config: config },
+        ),
+      );
+    });
+    return Promise.all(tests);
+  });
+  // end PANIC template -->
 
-	it("Drop duplicates", function(){
-		var tests = [], i = 0;
-		relays.each(function(client){
-			tests.push(client.run(function(test){
-				var env = test.props;
-				test.async();
-				var peers = gun.back('opt.peers');
+  it("Drop duplicates", function () {
+    var tests = [],
+      i = 0;
+    relays.each(function (client) {
+      tests.push(
+        client.run(
+          function (test) {
+            var env = test.props;
+            test.async();
+            var peers = gun.back("opt.peers");
 
-				gun.get('test').on(function(a){ }); // connections are lazy, so trigger a read. A feature, tho also a bug in this case, should probably have its own tests to determine if this ought be intended or not.
+            gun.get("test").on(function (a) {}); // connections are lazy, so trigger a read. A feature, tho also a bug in this case, should probably have its own tests to determine if this ought be intended or not.
 
-				setTimeout(function(){
-					var p = [], o = {}, err; Object.keys(peers).forEach(function(id){
-						id = peers[id];
-						p.push(id.pid);
-						err = err || (o[id.pid] = (o[id.pid] || 0) + 1) - 1;
-					});
-					console.log(peerID, 'connected to:', p);
-					if(p.length > 2 || err){
-						console.log("FAIL: too_many_connections");
-						too_many_connections;
-						return;
-					}
-					test.done();
-				},2000);
-			}, {i: i += 1, config: config})); 
-		});
-		return Promise.all(tests);
-	});
+            setTimeout(function () {
+              var p = [],
+                o = {},
+                err;
+              Object.keys(peers).forEach(function (id) {
+                id = peers[id];
+                p.push(id.pid);
+                err = err || (o[id.pid] = (o[id.pid] || 0) + 1) - 1;
+              });
+              console.log(peerID, "connected to:", p);
+              if (p.length > 2 || err) {
+                console.log("FAIL: too_many_connections");
+                too_many_connections;
+                return;
+              }
+              test.done();
+            }, 2000);
+          },
+          { i: (i += 1), config: config },
+        ),
+      );
+    });
+    return Promise.all(tests);
+  });
 
-	it("All finished!", function(done){
-		console.log("Done! Cleaning things up...");
-		setTimeout(function(){
-			done();
-		},1);
-	});
+  it("All finished!", function (done) {
+    console.log("Done! Cleaning things up...");
+    setTimeout(function () {
+      done();
+    }, 1);
+  });
 
-	after("Everything shut down.", function(){
-		__open.cleanup();
-		return relays.run(function(){
-			process.exit();
-		});
-	});
+  after("Everything shut down.", function () {
+    __open.cleanup();
+    return relays.run(function () {
+      process.exit();
+    });
+  });
 });

@@ -32,7 +32,7 @@
     "testPEN": "npm run buildZEN && npm run testPEN:unit",
     "testRelease": "npm run test",
     "verifyRelease": "npm run buildRelease && npm run test:all",
-    "format": "prettier --write \"src/**/*.js\""
+    "format": "prettier --write ."
   },
   "repository": {
     "type": "git",
@@ -87,7 +87,7 @@
     "ganache": "^7.9.2",
     "ip": "^1.1.5",
     "mocha": "^6.2.0",
-    "prettify": "^0.1.7",
+    "prettier": "^3.8.3",
     "uglify-js": "^3.6.0"
   },
   "type": "module"

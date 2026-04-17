@@ -1,9 +1,23 @@
-<!DOCTYPE html>
-<style>html, body, textarea { width: 100%; height: 100%; padding: 0; margin: 0; }</style>
+<!doctype html>
+<style>
+  html,
+  body,
+  textarea {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+  }
+</style>
 <textarea id="view" placeholder="write here..."></textarea>
-<script src="/zen.js"></script><script>
-	gun = ZEN(location.origin + '/zen');
-	note = gun.get('note').get(location.hash.replace('#','')||1);
-	view.oninput = () => { note.put(view.value) };
-	note.on((data) => { view.value = data });
+<script src="/zen.js"></script>
+<script>
+  gun = ZEN(location.origin + "/zen");
+  note = gun.get("note").get(location.hash.replace("#", "") || 1);
+  view.oninput = () => {
+    note.put(view.value);
+  };
+  note.on((data) => {
+    view.value = data;
+  });
 </script>

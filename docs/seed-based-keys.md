@@ -68,7 +68,9 @@ The security of your keys depends entirely on the strength of your seed:
 const weakPair = await SEA.pair(null, { seed: "password123" });
 
 // ✅ STRONG - high entropy
-const strongPair = await SEA.pair(null, { seed: "correct horse battery staple quantum entropy flux" });
+const strongPair = await SEA.pair(null, {
+  seed: "correct horse battery staple quantum entropy flux",
+});
 ```
 
 ### Seed Storage
@@ -90,15 +92,15 @@ const strongPair = await SEA.pair(null, { seed: "correct horse battery staple qu
 async function registerUser(username, passphrase) {
   // Generate deterministic key pair from passphrase
   const pair = await SEA.pair(null, { seed: passphrase });
-  
+
   // Create user account
   const gun = Gun();
   const user = gun.user();
   await user.auth(pair);
-  
+
   // Store username alias
-  gun.get('~@').get(username).put(gun.user().is);
-  
+  gun.get("~@").get(username).put(gun.user().is);
+
   return pair.pub;
 }
 
@@ -106,12 +108,12 @@ async function registerUser(username, passphrase) {
 async function recoverUser(username, passphrase) {
   // Regenerate the same keys from passphrase
   const pair = await SEA.pair(null, { seed: passphrase });
-  
+
   // Login with recovered keys
   const gun = Gun();
   const user = gun.user();
   await user.auth(pair);
-  
+
   console.log("Account recovered:", user.is.pub);
   return user;
 }
@@ -121,16 +123,16 @@ async function recoverUser(username, passphrase) {
 
 ```javascript
 // In your test suite
-describe('User tests', function() {
+describe("User tests", function () {
   let testUser1, testUser2;
-  
-  beforeEach(async function() {
+
+  beforeEach(async function () {
     // Always use the same test keys
     testUser1 = await SEA.pair(null, { seed: "test-user-1" });
     testUser2 = await SEA.pair(null, { seed: "test-user-2" });
   });
-  
-  it('should send message between users', async function() {
+
+  it("should send message between users", async function () {
     // Test with deterministic keys
     const message = await SEA.encrypt("hello", testUser1, testUser2.epub);
     const decrypted = await SEA.decrypt(message, testUser2);
@@ -200,12 +202,12 @@ const proof = await SEA.hash("my hash", pair);
 
 ## Comparison: Random vs Seed-Based
 
-| Feature | Random Generation | Seed-Based Generation |
-|---------|------------------|----------------------|
-| Reproducibility | ❌ Different every time | ✅ Same seed = same keys |
-| Security | ✅ Maximally random | ⚠️ Depends on seed strength |
-| Use Case | Standard usage | Recovery, testing, deterministic apps |
-| Command | `SEA.pair()` | `SEA.pair(null, { seed })` |
+| Feature         | Random Generation       | Seed-Based Generation                 |
+| --------------- | ----------------------- | ------------------------------------- |
+| Reproducibility | ❌ Different every time | ✅ Same seed = same keys              |
+| Security        | ✅ Maximally random     | ⚠️ Depends on seed strength           |
+| Use Case        | Standard usage          | Recovery, testing, deterministic apps |
+| Command         | `SEA.pair()`            | `SEA.pair(null, { seed })`            |
 
 ## Best Practices
 
@@ -230,13 +232,19 @@ const oldPair = await SEA.pair();
 async function migrateToSeedBased(oldPair, newSeed) {
   // 1. Generate new seed-based keys
   const newPair = await SEA.pair(null, { seed: newSeed });
-  
+
   // 2. Re-encrypt your data with new keys
-  const data = await gun.get('~' + oldPair.pub).get('mydata').once();
-  
+  const data = await gun
+    .get("~" + oldPair.pub)
+    .get("mydata")
+    .once();
+
   // 3. Put to new graph
-  gun.get('~' + newPair.pub).get('mydata').put(data);
-  
+  gun
+    .get("~" + newPair.pub)
+    .get("mydata")
+    .put(data);
+
   return newPair;
 }
 ```

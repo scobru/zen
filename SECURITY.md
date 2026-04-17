@@ -9,18 +9,21 @@
 This fork addresses several critical security areas with substantial improvements:
 
 ### WebAuthn & Hardware Authentication
+
 - **Hardware Security Keys**: Full support for YubiKey, Titan, FIDO2 keys
 - **Biometric Authentication**: Face ID, Touch ID, Windows Hello integration
 - **Enhanced Authentication Flow**: Seamless WebAuthn integration with existing GUN user APIs
 - **Multi-Factor Authentication**: Hardware-backed second factor authentication
 
 ### Cryptographic Improvements
+
 - **Deterministic Key Generation**: Reproducible cryptographic keys from seeds
 - **Enhanced ECC Validation**: Complete elliptic curve point validation with missing B parameter fix
 - **ArrayBuffer Support**: Modern binary data operations for crypto functions
 - **PBKDF2 Hardening**: Improved salt handling and numeric conversion security
 
 ### Security Hardening Features
+
 - **Attack Prevention**: Enhanced user object destructuring to prevent common attacks
 - **Secure Options**: Localized options in SEA.check.pub to prevent manipulation
 - **Signature Validation**: Improved WebAuthn signature handling and verification
@@ -30,11 +33,11 @@ This fork addresses several critical security areas with substantial improvement
 
 We provide security updates for the following versions:
 
-| Version | Supported | Security Enhancements |
-| ------- | --------- | -------------------- |
-| @akaoio/gun 0.2020.x | ✅ **Recommended** | Full security suite + WebAuthn |
-| Original GUN 0.2020.x | ⚠️ Basic support | Original security only |
-| < 0.2020 | ❌ Not supported | Deprecated |
+| Version               | Supported          | Security Enhancements          |
+| --------------------- | ------------------ | ------------------------------ |
+| @akaoio/gun 0.2020.x  | ✅ **Recommended** | Full security suite + WebAuthn |
+| Original GUN 0.2020.x | ⚠️ Basic support   | Original security only         |
+| < 0.2020              | ❌ Not supported   | Deprecated                     |
 
 **Migration Recommendation**: For new projects and security-sensitive applications, use `@akaoio/gun` for enhanced security features while maintaining full compatibility.
 
@@ -62,6 +65,7 @@ If the vulnerability is confirmed, we will work on a fix and plan a release. We 
 ## Security Practices
 
 ### Enhanced Security Implementation
+
 We follow industry-standard security practices with additional enhancements:
 
 - **Cryptographic Best Practices**: All crypto operations use vetted algorithms and implementations
@@ -71,8 +75,9 @@ We follow industry-standard security practices with additional enhancements:
 - **Secure Development**: Security-first approach to all new features and improvements
 
 ### Technical Security Measures
+
 - **ECC Curve Validation**: Complete point validation prevents invalid curve attacks
-- **Deterministic Security**: Reproducible key generation with cryptographically secure seeds  
+- **Deterministic Security**: Reproducible key generation with cryptographically secure seeds
 - **Memory Safety**: Proper handling of sensitive cryptographic material
 - **Timing Attack Prevention**: Constant-time operations where cryptographically relevant
 

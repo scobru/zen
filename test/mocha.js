@@ -1,4 +1,4 @@
-import Mocha from 'mocha';
+import Mocha from "mocha";
 
 const {
   Context,
@@ -12,7 +12,7 @@ const {
   utils,
 } = Mocha;
 
-if (typeof globalThis !== 'undefined') {
+if (typeof globalThis !== "undefined") {
   globalThis.Mocha = Mocha;
 }
 

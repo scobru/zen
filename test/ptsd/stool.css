@@ -1,64 +1,69 @@
 body {
-	width: 90%;
-	max-width: 800px;
-	margin: 4em auto;
-	font: 12pt Helvetia, Arial, sans-serif;
+  width: 90%;
+  max-width: 800px;
+  margin: 4em auto;
+  font:
+    12pt Helvetia,
+    Arial,
+    sans-serif;
 }
 
 section {
-	margin: 0 0 4em;
+  margin: 0 0 4em;
 }
 
 table {
-	border-spacing: 0;
-	width: 100%;
+  border-spacing: 0;
+  width: 100%;
 }
 
-th, td {
-	vertical-align: top;
-	padding: 0 0 1em 0;
+th,
+td {
+  vertical-align: top;
+  padding: 0 0 1em 0;
 }
 
 th {
-	text-align: left;
+  text-align: left;
 }
 
 th.th-result {
-	width: 200px;
+  width: 200px;
 }
 
 th.th-remove {
-	width: 0;
+  width: 0;
 }
 
 td.inputs {
-	padding-right: 1em;
+  padding-right: 1em;
 }
 
 .remove {
-	position: absolute;
-	margin-left: -6em;
-	width: 5em;
+  position: absolute;
+  margin-left: -6em;
+  width: 5em;
 }
 
-input, textarea {
-	margin: 0 0 1em 0;
-	width: 100%;
-	display: block;
-	resize: vertical;
+input,
+textarea {
+  margin: 0 0 1em 0;
+  width: 100%;
+  display: block;
+  resize: vertical;
 }
 
 .result.running {
-	color: #ccc;
+  color: #ccc;
 }
 
 #abort {
-	display: none;
+  display: none;
 }
 .running #abort {
-	display: initial;
+  display: initial;
 }
 
 .running #run {
-	display: none;
+  display: none;
 }

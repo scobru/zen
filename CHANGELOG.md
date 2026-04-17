@@ -2,15 +2,15 @@
 
 ## 0.2020.x
 
-`>0.2020.520` may break in-process `gun1` `gun2` message passing. Check `test/common.js` "Check multi instance message passing" for a hint and/or complain on community chat. 
+`>0.2020.520` may break in-process `gun1` `gun2` message passing. Check `test/common.js` "Check multi instance message passing" for a hint and/or complain on community chat.
 
- - No breaking changes to core API.
- - Storage adapter `put` event breaking change (temporary?), RAD is official now and storage adapters should be RAD plugins instead of GUN adapters.
- - GUN soul format changed from being a random UUID to being a more predictable graph path (of where initially created) to support even better offline behavior. This means `null`ing & replacing an object will not create a new but re-merge.
- - Pretty much all internal GUN utility will be deleted, these are mostly undocumented but will affect some people - they will still be available as a separate file but deprecated.
- - As the DHT gets implemented, your relay peers may automatically connect to it, so do not assume your peer is standalone. `Gun({axe: false` should help prevent this but loses you most scaling properties.
- - The 2019 -> 2020 "changes" are happening gradually, based on experimental in-production tests.
- - As always, **most important** is to ask in the [community chat](http://chat.gun.eco) if you have any issues, and to keep up to date with changes.
+- No breaking changes to core API.
+- Storage adapter `put` event breaking change (temporary?), RAD is official now and storage adapters should be RAD plugins instead of GUN adapters.
+- GUN soul format changed from being a random UUID to being a more predictable graph path (of where initially created) to support even better offline behavior. This means `null`ing & replacing an object will not create a new but re-merge.
+- Pretty much all internal GUN utility will be deleted, these are mostly undocumented but will affect some people - they will still be available as a separate file but deprecated.
+- As the DHT gets implemented, your relay peers may automatically connect to it, so do not assume your peer is standalone. `Gun({axe: false` should help prevent this but loses you most scaling properties.
+- The 2019 -> 2020 "changes" are happening gradually, based on experimental in-production tests.
+- As always, **most important** is to ask in the [community chat](http://chat.gun.eco) if you have any issues, and to keep up to date with changes.
 
 ## 0.2019.x
 
@@ -59,21 +59,21 @@ GUN 0.3 -> 0.4 -> 0.5 Migration Guide:
 
 ## 0.3.7
 
- - Catch localStorage errors.
+- Catch localStorage errors.
 
 ## 0.3.6
 
- - Fixed S3 typo.
+- Fixed S3 typo.
 
 ## 0.3.5
 
- - Fixed server push.
+- Fixed server push.
 
 ## 0.3.4
 
- - Breaking Change! `list.set(item)` returns the item's chain now, not the list chain.
- - Client and Server GUN servers are now more up to spec, trimmed excess HTTP/REST header data.
- - Gun.is.lex added.
+- Breaking Change! `list.set(item)` returns the item's chain now, not the list chain.
+- Client and Server GUN servers are now more up to spec, trimmed excess HTTP/REST header data.
+- Gun.is.lex added.
 
 ## 0.3.3
 

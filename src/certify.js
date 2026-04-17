@@ -1,4 +1,4 @@
-import sign from './sign.js';
+import sign from "./sign.js";
 
 /*
   The Certify Protocol was made out of love by a Vietnamese code enthusiast.
@@ -8,35 +8,52 @@ import sign from './sign.js';
 */
 
 // RAD/LEX object key detection
-var RAD = ['+', '#', '.', '=', '*', '>', '<'];
+var RAD = ["+", "#", ".", "=", "*", ">", "<"];
 function israd(obj) {
-  if (!obj || typeof obj !== 'object') { return false; }
-  for (var i = 0; i < RAD.length; i++) { if (RAD[i] in obj) { return true; } }
+  if (!obj || typeof obj !== "object") {
+    return false;
+  }
+  for (var i = 0; i < RAD.length; i++) {
+    if (RAD[i] in obj) {
+      return true;
+    }
+  }
   return false;
 }
 
 // Normalize certificants → '*' | pub_string | [pub_string, ...]
 function normcerts(raw) {
-  if (!raw) { return null; }
-  if (typeof raw === 'string') {
-    return raw.indexOf('*') > -1 ? '*' : raw;
+  if (!raw) {
+    return null;
   }
-  if (!Array.isArray(raw) && typeof raw === 'object' && raw.pub) {
+  if (typeof raw === "string") {
+    return raw.indexOf("*") > -1 ? "*" : raw;
+  }
+  if (!Array.isArray(raw) && typeof raw === "object" && raw.pub) {
     return raw.pub;
   }
   if (Array.isArray(raw)) {
-    if (raw.indexOf('*') > -1) { return '*'; }
+    if (raw.indexOf("*") > -1) {
+      return "*";
+    }
     // single element short-circuit
     if (raw.length === 1 && raw[0]) {
       var x = raw[0];
-      if (typeof x === 'string') { return x; }
-      if (typeof x === 'object' && x.pub) { return x.pub; }
+      if (typeof x === "string") {
+        return x;
+      }
+      if (typeof x === "object" && x.pub) {
+        return x.pub;
+      }
       return null;
     }
     var list = [];
-    raw.forEach(function(x) {
-      if (typeof x === 'string') { list.push(x); }
-      else if (x && typeof x === 'object' && x.pub) { list.push(x.pub); }
+    raw.forEach(function (x) {
+      if (typeof x === "string") {
+        list.push(x);
+      } else if (x && typeof x === "object" && x.pub) {
+        list.push(x.pub);
+      }
     });
     return list.length > 0 ? list : null;
   }
@@ -49,40 +66,70 @@ async function certify(certs, pol, auth, cb, opt) {
     pol = pol || {};
 
     var c = normcerts(certs);
-    if (!c) { console.log('No certificant found.'); return; }
+    if (!c) {
+      console.log("No certificant found.");
+      return;
+    }
 
-    var r = (pol.read) ? pol.read : null;
-    var w = (pol.write) ? pol.write
-          : (typeof pol === 'string' || Array.isArray(pol) || israd(pol)) ? pol
-          : null;
+    var r = pol.read ? pol.read : null;
+    var w = pol.write
+      ? pol.write
+      : typeof pol === "string" || Array.isArray(pol) || israd(pol)
+        ? pol
+        : null;
 
-    if (!r && !w) { console.log('No policy found.'); return; }
+    if (!r && !w) {
+      console.log("No policy found.");
+      return;
+    }
 
-    var expiry = (opt.expiry !== undefined && opt.expiry !== null)
-      ? parseFloat(opt.expiry) : null;
+    var expiry =
+      opt.expiry !== undefined && opt.expiry !== null
+        ? parseFloat(opt.expiry)
+        : null;
 
     var blk = opt.block || opt.blacklist || opt.ban || {};
-    var rb = (blk.read && (typeof blk.read === 'string' || (blk.read || {})['#']))
-      ? blk.read : null;
-    var wb = typeof blk === 'string' ? blk
-      : (blk.write && (typeof blk.write === 'string' || (blk.write || {})['#']))
-        ? blk.write : null;
+    var rb =
+      blk.read && (typeof blk.read === "string" || (blk.read || {})["#"])
+        ? blk.read
+        : null;
+    var wb =
+      typeof blk === "string"
+        ? blk
+        : blk.write && (typeof blk.write === "string" || (blk.write || {})["#"])
+          ? blk.write
+          : null;
 
-    var data = JSON.stringify(Object.assign(
-      { c: c },
-      expiry ? { e: expiry } : {},
-      r ? { r: r } : {},
-      w ? { w: w } : {},
-      rb ? { rb: rb } : {},
-      wb ? { wb: wb } : {}
-    ));
+    var data = JSON.stringify(
+      Object.assign(
+        { c: c },
+        expiry ? { e: expiry } : {},
+        r ? { r: r } : {},
+        w ? { w: w } : {},
+        rb ? { rb: rb } : {},
+        wb ? { wb: wb } : {},
+      ),
+    );
 
     var cert = await sign(data, auth, null, { raw: 1 });
     var out = opt.raw ? cert : JSON.stringify(cert);
-    if (cb) { try { cb(out); } catch (e) { console.log(e); } }
+    if (cb) {
+      try {
+        cb(out);
+      } catch (e) {
+        console.log(e);
+      }
+    }
     return out;
   } catch (e) {
-    if (cb) { try { cb(); } catch (x) { console.log(x); } return; }
+    if (cb) {
+      try {
+        cb();
+      } catch (x) {
+        console.log(x);
+      }
+      return;
+    }
     throw e;
   }
 }

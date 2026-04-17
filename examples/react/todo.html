@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <body>
     <div id="app"></div>
@@ -9,26 +9,33 @@
     <script type="text/babel">
       const gun = Gun();
       const App = () => {
-        const newTodo = React.useRef()
-        const [todos, setTodos] = React.useState({})
+        const newTodo = React.useRef();
+        const [todos, setTodos] = React.useState({});
 
         React.useEffect(() => {
           return gun
             .get("todos")
             .map()
-            .on((todo, id) => setTodos(todos => ({...todos, [id]: todo }))).off;
-        }, [])
+            .on((todo, id) => setTodos((todos) => ({ ...todos, [id]: todo })))
+            .off;
+        }, []);
 
         return (
           <div>
             <title>TODOs</title>
-            <ul>{Object.values(todos).map(({title}, i) => <li key={i}>{title}</li>)}</ul>
-            <form onSubmit={e => {
+            <ul>
+              {Object.values(todos).map(({ title }, i) => (
+                <li key={i}>{title}</li>
+              ))}
+            </ul>
+            <form
+              onSubmit={(e) => {
                 e.preventDefault();
                 gun.get("todos").set({ title: newTodo.current.value });
-                newTodo.current.value = ''
-              }}>
-              <input ref={newTodo} placeholder="new todo"/>
+                newTodo.current.value = "";
+              }}
+            >
+              <input ref={newTodo} placeholder="new todo" />
             </form>
           </div>
         );

@@ -1,4 +1,4 @@
-import security from './security.js';
+import security from "./security.js";
 
 export { security };
 export default security;

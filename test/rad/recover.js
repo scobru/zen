@@ -1,112 +1,151 @@
-import __ZEN from '../../zen.js';
-import '../../lib/store.js';
-import '../../lib/rfs.js';
-import __fs from 'fs';
-import __fsrm from '../../lib/fsrm.js';
+import __ZEN from "../../zen.js";
+import "../../lib/store.js";
+import "../../lib/rfs.js";
+import __fs from "fs";
+import __fsrm from "../../lib/fsrm.js";
 var __gun;
 {
-  var W = function(o){return new __ZEN(o)};
+  var W = function (o) {
+    return new __ZEN(o);
+  };
   Object.setPrototypeOf(W, __ZEN);
   W.prototype = __ZEN.prototype;
   __gun = W;
 }
-import __expect from '../expect.js';
-import __radisk from '../../lib/radisk.js';
-import __rfs from '../../lib/rfs.js';
+import __expect from "../expect.js";
+import __radisk from "../../lib/radisk.js";
+import __rfs from "../../lib/rfs.js";
 var root;
 var Gun;
 {
   var env;
-  if(typeof global !== 'undefined'){ env = global }
-  if(typeof window !== 'undefined'){ env = window }
-  root = env.window? env.window : global;
-  try{ env.window && root.localStorage && root.localStorage.clear() }catch(e){}
-  try{ indexedDB.deleteDatabase('radatatest') }catch(e){}
-  if(root.Gun){
+  if (typeof global !== "undefined") {
+    env = global;
+  }
+  if (typeof window !== "undefined") {
+    env = window;
+  }
+  root = env.window ? env.window : global;
+  try {
+    env.window && root.localStorage && root.localStorage.clear();
+  } catch (e) {}
+  try {
+    indexedDB.deleteDatabase("radatatest");
+  } catch (e) {}
+  if (root.Gun) {
     root.Gun = root.Gun;
     root.Gun.TESTING = true;
   } else {
-      try{ __fs.unlinkSync('tmp/data.json') }catch(e){}
-      try{ __fsrm('tmp/radatatest') }catch(e){}
-      root.Gun = __gun;
-      root.Gun.TESTING = true;
+    try {
+      __fs.unlinkSync("tmp/data.json");
+    } catch (e) {}
+    try {
+      __fsrm("tmp/radatatest");
+    } catch (e) {}
+    root.Gun = __gun;
+    root.Gun.TESTING = true;
   }
- 
-  try{ var expect = global.expect = __expect }catch(e){}
- 
-}(this);
+
+  try {
+    var expect = (global.expect = __expect);
+  } catch (e) {}
+}
+this;
 
 {
-Gun = root.Gun
+  Gun = root.Gun;
 
-if(Gun.window && !Gun.window.RindexedDB){ return }
- 
-var opt = {};
-opt.file = 'radatatest';
-var Radisk = (Gun.window && Gun.window.Radisk) || __radisk;
-opt.store = ((Gun.window && Gun.window.RindexedDB) || __rfs)(opt);
-opt.chunk = 170;
-var Radix = Radisk.Radix;
-var rad = Radisk(opt), esc = String.fromCharCode(27);
- 
-describe('RAD Crashes', function(){
- 
-  describe('If No File Added to Index, Recover', function(){
-    var gun = Gun({chunk: opt.chunk});
- 
-    it('write initial', function(done){
-        var all = {}, to, start, tmp;
-        var names = ['al', 'alex', 'alexander', 'alice'];
-        names.forEach(function(v,i){
-            all[++i] = true;
-            tmp = v.toLowerCase();
-            gun.get('names').get(tmp).put(i, function(ack){
-                expect(ack.err).to.not.be.ok();
-                delete all[i];
-                if(!Gun.obj.empty(all)){ return }
-                done();
-            })
+  if (Gun.window && !Gun.window.RindexedDB) {
+    return;
+  }
+
+  var opt = {};
+  opt.file = "radatatest";
+  var Radisk = (Gun.window && Gun.window.Radisk) || __radisk;
+  opt.store = ((Gun.window && Gun.window.RindexedDB) || __rfs)(opt);
+  opt.chunk = 170;
+  var Radix = Radisk.Radix;
+  var rad = Radisk(opt),
+    esc = String.fromCharCode(27);
+
+  describe("RAD Crashes", function () {
+    describe("If No File Added to Index, Recover", function () {
+      var gun = Gun({ chunk: opt.chunk });
+
+      it("write initial", function (done) {
+        var all = {},
+          to,
+          start,
+          tmp;
+        var names = ["al", "alex", "alexander", "alice"];
+        names.forEach(function (v, i) {
+          all[++i] = true;
+          tmp = v.toLowerCase();
+          gun
+            .get("names")
+            .get(tmp)
+            .put(i, function (ack) {
+              expect(ack.err).to.not.be.ok();
+              delete all[i];
+              if (!Gun.obj.empty(all)) {
+                return;
+              }
+              done();
+            });
         });
-    });
+      });
 
-    it('write alan', function(done){
-        var all = {}, to, start, tmp;
-        var names = ['alan'];
-        console.log("DID YOU ADD `Gun.CRASH` != 1%C to Radisk f.write list.add callback?");
+      it("write alan", function (done) {
+        var all = {},
+          to,
+          start,
+          tmp;
+        var names = ["alan"];
+        console.log(
+          "DID YOU ADD `Gun.CRASH` != 1%C to Radisk f.write list.add callback?",
+        );
         Gun.CRASH = true; // add check for this in f.swap!
-        names.forEach(function(v,i){
-            all[++i] = true;
-            tmp = v.toLowerCase();
-            gun.get('names').get(tmp).put(i);
+        names.forEach(function (v, i) {
+          all[++i] = true;
+          tmp = v.toLowerCase();
+          gun.get("names").get(tmp).put(i);
         });
-        setTimeout(function(){
-            Gun.CRASH = false;
-            done();
+        setTimeout(function () {
+          Gun.CRASH = false;
+          done();
         }, 1000);
-    });
+      });
 
-    it('write zach', function(done){
-        gun.get('names').get('zach').put(9, function(ack){
+      it("write zach", function (done) {
+        gun
+          .get("names")
+          .get("zach")
+          .put(9, function (ack) {
             expect(ack.err).to.not.be.ok();
-            done() ;
-        });
-    });
-
-    it('read names', function(done){
-        console.log("Better to .skip 1st run, .only 2nd run & prevent clearing radatatest.");
-        var g = Gun();
-        var all = {al: 1, alex: 2, alexander: 3, alice: 4, zach: 9};
-        //g.get('names').get('zach').put(9, function(ack){ done() }); return;
-        g.get('names').map().on(function(v,k){
-            //console.log("DATA:", k, v);
-            if(all[k] === v){ delete all[k] }
-            if(!Gun.obj.empty(all)){ return }
             done();
-        });
+          });
+      });
+
+      it("read names", function (done) {
+        console.log(
+          "Better to .skip 1st run, .only 2nd run & prevent clearing radatatest.",
+        );
+        var g = Gun();
+        var all = { al: 1, alex: 2, alexander: 3, alice: 4, zach: 9 };
+        //g.get('names').get('zach').put(9, function(ack){ done() }); return;
+        g.get("names")
+          .map()
+          .on(function (v, k) {
+            //console.log("DATA:", k, v);
+            if (all[k] === v) {
+              delete all[k];
+            }
+            if (!Gun.obj.empty(all)) {
+              return;
+            }
+            done();
+          });
+      });
     });
- 
   });
- 
-});
- 
 }

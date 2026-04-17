@@ -42,130 +42,140 @@ What I want?
 When putting with authenticator (webauthn), the device doesn't provide public key. So user must provide pub via opt.pub if he wants to put data to someone else's graph. If opt.pub doesn't exist, he can only writes to his own graph.
 */
 
-console.log("WEB AUTHN EXAMPLE")
+console.log("WEB AUTHN EXAMPLE");
 
 const base64url = {
-    encode: function(buffer) {
-        return btoa(String.fromCharCode(...new Uint8Array(buffer)));
-    },
-    decode: function(str) {
-        return atob(str);
-    }
+  encode: function (buffer) {
+    return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+  },
+  decode: function (str) {
+    return atob(str);
+  },
 };
 
-const data = "Hello, World!"
-let credential, pub, signature
+const data = "Hello, World!";
+let credential, pub, signature;
 
-document.getElementById('create').onclick = async () => {
-    try {
-        credential = await navigator.credentials.create({
-            publicKey: {
-                challenge: new Uint8Array(16),
-                rp: { id: "localhost", name: "Example Inc." },
-                user: {
-                    id: new TextEncoder().encode("example-user-id"),
-                    name: "Example User",
-                    displayName: "Example User"
-                },
-                // See the list of algos: https://www.iana.org/assignments/cose/cose.xhtml#algorithms
-                // The 2 algos below are required in order to work with SEA
-                pubKeyCredParams: [
-                    { type: "public-key", alg: -7 }, // ECDSA, P-256 curve, for signing
-                    { type: "public-key", alg: -25 }, // ECDH, P-256 curve, for creating shared secrets using SEA.secret
-                    { type: "public-key", alg: -257 }
-                ],
-                authenticatorSelection: {
-                    userVerification: "preferred"
-                },
-                timeout: 60000,
-                attestation: "none"
-            }
-        });
-        
-        console.log("Credential:", credential);
-        
-        const publicKey = credential.response.getPublicKey();
-        const rawKey = new Uint8Array(publicKey);
-        
-        console.log("Raw public key bytes:", rawKey);
-        
-        const xCoord = rawKey.slice(27, 59);
-        const yCoord = rawKey.slice(59, 91);
-        
-        console.log("X coordinate (32 bytes):", base64url.encode(xCoord));
-        console.log("Y coordinate (32 bytes):", base64url.encode(yCoord));
-        
-        pub = `${base64url.encode(xCoord)}.${base64url.encode(yCoord)}`;
-        console.log("Final pub format:", pub);
-        
-    } catch(err) {
-        console.error('Create credential error:', err);
-    }
-}
+document.getElementById("create").onclick = async () => {
+  try {
+    credential = await navigator.credentials.create({
+      publicKey: {
+        challenge: new Uint8Array(16),
+        rp: { id: "localhost", name: "Example Inc." },
+        user: {
+          id: new TextEncoder().encode("example-user-id"),
+          name: "Example User",
+          displayName: "Example User",
+        },
+        // See the list of algos: https://www.iana.org/assignments/cose/cose.xhtml#algorithms
+        // The 2 algos below are required in order to work with SEA
+        pubKeyCredParams: [
+          { type: "public-key", alg: -7 }, // ECDSA, P-256 curve, for signing
+          { type: "public-key", alg: -25 }, // ECDH, P-256 curve, for creating shared secrets using SEA.secret
+          { type: "public-key", alg: -257 },
+        ],
+        authenticatorSelection: {
+          userVerification: "preferred",
+        },
+        timeout: 60000,
+        attestation: "none",
+      },
+    });
+
+    console.log("Credential:", credential);
+
+    const publicKey = credential.response.getPublicKey();
+    const rawKey = new Uint8Array(publicKey);
+
+    console.log("Raw public key bytes:", rawKey);
+
+    const xCoord = rawKey.slice(27, 59);
+    const yCoord = rawKey.slice(59, 91);
+
+    console.log("X coordinate (32 bytes):", base64url.encode(xCoord));
+    console.log("Y coordinate (32 bytes):", base64url.encode(yCoord));
+
+    pub = `${base64url.encode(xCoord)}.${base64url.encode(yCoord)}`;
+    console.log("Final pub format:", pub);
+  } catch (err) {
+    console.error("Create credential error:", err);
+  }
+};
 
 const authenticator = async (data) => {
-    const challenge = new TextEncoder().encode(data);
-    const options = {
-        publicKey: {
-            challenge,
-            rpId: window.location.hostname,
-            userVerification: "preferred",
-            allowCredentials: [{
-                type: "public-key",
-                id: credential.rawId
-            }],
-            timeout: 60000
-        }
-    };
-    
-    const assertion = await navigator.credentials.get(options);
-    console.log("SIGNED:", {options, assertion});
-    return assertion.response;
+  const challenge = new TextEncoder().encode(data);
+  const options = {
+    publicKey: {
+      challenge,
+      rpId: window.location.hostname,
+      userVerification: "preferred",
+      allowCredentials: [
+        {
+          type: "public-key",
+          id: credential.rawId,
+        },
+      ],
+      timeout: 60000,
+    },
+  };
+
+  const assertion = await navigator.credentials.get(options);
+  console.log("SIGNED:", { options, assertion });
+  return assertion.response;
 };
 
-document.getElementById('sign').onclick = async () => {
-    if (!credential) {
-        console.error("Create credential first");
-        return;
-    }
-    
-    try {
-        signature = await SEA.sign(data, authenticator);
-        console.log("Signature:", signature);
-    } catch(err) {
-        console.error('Signing error:', err);
-    }
-}
+document.getElementById("sign").onclick = async () => {
+  if (!credential) {
+    console.error("Create credential first");
+    return;
+  }
 
-document.getElementById('verify').onclick = async () => {
-    if (!signature) {
-        console.error("Sign message first");
-        return;
-    }
+  try {
+    signature = await SEA.sign(data, authenticator);
+    console.log("Signature:", signature);
+  } catch (err) {
+    console.error("Signing error:", err);
+  }
+};
 
-    try {
-        const verified = await SEA.verify(signature, pub);
-        console.log("Verified:", verified);
-    } catch(err) {
-        console.error('Verification error:', err);
-    }
-}
+document.getElementById("verify").onclick = async () => {
+  if (!signature) {
+    console.error("Sign message first");
+    return;
+  }
 
-document.getElementById('put').onclick = async () => {
-    gun.get(`~${pub}`).get('test').put("hello world", null, { authenticator })
-    setTimeout(() => {
-        gun.get(`~${pub}`).get('test').once((data) => {
-            console.log("Data:", data);
-        })
-    }, 2000)
-}
+  try {
+    const verified = await SEA.verify(signature, pub);
+    console.log("Verified:", verified);
+  } catch (err) {
+    console.error("Verification error:", err);
+  }
+};
 
-document.getElementById('put-with-pair').onclick = async () => {
-    const bob = await SEA.pair()
-    gun.get(`~${bob.pub}`).get('test').put("this is bob", null, { authenticator: bob })
-    setTimeout(() => {
-        gun.get(`~${bob.pub}`).get('test').once((data) => {
-            console.log("Data:", data);
-        })
-    }, 2000)
-}
+document.getElementById("put").onclick = async () => {
+  gun.get(`~${pub}`).get("test").put("hello world", null, { authenticator });
+  setTimeout(() => {
+    gun
+      .get(`~${pub}`)
+      .get("test")
+      .once((data) => {
+        console.log("Data:", data);
+      });
+  }, 2000);
+};
+
+document.getElementById("put-with-pair").onclick = async () => {
+  const bob = await SEA.pair();
+  gun
+    .get(`~${bob.pub}`)
+    .get("test")
+    .put("this is bob", null, { authenticator: bob });
+  setTimeout(() => {
+    gun
+      .get(`~${bob.pub}`)
+      .get("test")
+      .once((data) => {
+        console.log("Data:", data);
+      });
+  }, 2000);
+};

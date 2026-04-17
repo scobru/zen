@@ -1,30 +1,36 @@
 // Format converters for zen.pair() output.
 // Receives raw BigInt scalars and {x,y} curve points; returns {curve, pub, epub, priv, epriv}.
-import keccak256 from './keccak256.js';
-import ripemd160 from './ripemd160.js';
-import shim from './shim.js';
+import keccak256 from "./keccak256.js";
+import ripemd160 from "./ripemd160.js";
+import shim from "./shim.js";
 
 // ── shared helpers ────────────────────────────────────────────────────────────
 
 function bigIntToBytes32(n) {
-  let hex = n.toString(16).padStart(64, '0');
+  let hex = n.toString(16).padStart(64, "0");
   const out = new Uint8Array(32);
-  for (let i = 0; i < 32; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  for (let i = 0; i < 32; i++)
+    out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
   return out;
 }
 
 function toHex(bytes) {
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // Binary SHA-256 — uses WebCrypto directly on raw bytes (NOT via sha256.js JSON path)
 async function sha256Bytes(bytes) {
-  const hash = await shim.subtle.digest('SHA-256', bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+  const hash = await shim.subtle.digest(
+    "SHA-256",
+    bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes),
+  );
   return new Uint8Array(hash);
 }
 
 // Base58Check encode
-const B58_ALPHA = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+const B58_ALPHA = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 function base58Encode(bytes) {
   const digits = [0];
@@ -35,10 +41,13 @@ function base58Encode(bytes) {
       digits[j] = carry % 58;
       carry = Math.floor(carry / 58);
     }
-    while (carry) { digits.push(carry % 58); carry = Math.floor(carry / 58); }
+    while (carry) {
+      digits.push(carry % 58);
+      carry = Math.floor(carry / 58);
+    }
   }
-  let result = '';
-  for (let i = 0; i < bytes.length && bytes[i] === 0; i++) result += '1';
+  let result = "";
+  for (let i = 0; i < bytes.length && bytes[i] === 0; i++) result += "1";
   for (let i = digits.length - 1; i >= 0; i--) result += B58_ALPHA[digits[i]];
   return result;
 }
@@ -47,7 +56,8 @@ async function base58Check(payload) {
   const h1 = await sha256Bytes(payload);
   const h2 = await sha256Bytes(h1);
   const out = new Uint8Array(payload.length + 4);
-  out.set(payload); out.set(h2.slice(0, 4), payload.length);
+  out.set(payload);
+  out.set(h2.slice(0, 4), payload.length);
   return base58Encode(out);
 }
 
@@ -57,21 +67,23 @@ async function evmAddress(pub) {
   const xBytes = bigIntToBytes32(pub.x);
   const yBytes = bigIntToBytes32(pub.y);
   const raw = new Uint8Array(64);
-  raw.set(xBytes, 0); raw.set(yBytes, 32);
+  raw.set(xBytes, 0);
+  raw.set(yBytes, 32);
   // keccak256 of raw 64-byte uncompressed key (without 04 prefix)
   const hash = await keccak256(raw);
   const addrHex = toHex(hash.slice(-20));
   // EIP-55 checksum
   const ckHash = toHex(await keccak256(addrHex));
-  let addr = '0x';
+  let addr = "0x";
   for (let i = 0; i < 40; i++) {
-    addr += parseInt(ckHash[i], 16) >= 8 ? addrHex[i].toUpperCase() : addrHex[i];
+    addr +=
+      parseInt(ckHash[i], 16) >= 8 ? addrHex[i].toUpperCase() : addrHex[i];
   }
   return addr;
 }
 
 function evmPrivHex(priv) {
-  return '0x' + toHex(bigIntToBytes32(priv));
+  return "0x" + toHex(bigIntToBytes32(priv));
 }
 
 function evmEncPub(pub) {
@@ -80,7 +92,7 @@ function evmEncPub(pub) {
   out[0] = 0x04;
   out.set(bigIntToBytes32(pub.x), 1);
   out.set(bigIntToBytes32(pub.y), 33);
-  return '0x' + toHex(out);
+  return "0x" + toHex(out);
 }
 
 // ── BTC format ────────────────────────────────────────────────────────────────
@@ -114,7 +126,7 @@ async function btcWIF(priv) {
 }
 
 function btcCompressedHex(pub) {
-  return '0x' + toHex(compressedPubBytes(pub));
+  return "0x" + toHex(compressedPubBytes(pub));
 }
 
 // ── main export ───────────────────────────────────────────────────────────────
@@ -123,29 +135,53 @@ export default async function applyFormat(format, curveName, core, raw) {
   const { signPriv, signPub, encPriv, encPub } = raw;
   const out = { curve: curveName };
 
-  if (format === 'zen') {
-    if (signPriv) { out.priv = core.scalarToString(signPriv); }
-    if (signPub)  { out.pub  = core.pointToPub(signPub); }
-    if (encPriv)  { out.epriv = core.scalarToString(encPriv); }
-    if (encPub)   { out.epub  = core.pointToPub(encPub); }
+  if (format === "zen") {
+    if (signPriv) {
+      out.priv = core.scalarToString(signPriv);
+    }
+    if (signPub) {
+      out.pub = core.pointToPub(signPub);
+    }
+    if (encPriv) {
+      out.epriv = core.scalarToString(encPriv);
+    }
+    if (encPub) {
+      out.epub = core.pointToPub(encPub);
+    }
     return out;
   }
 
-  if (format === 'evm') {
-    if (signPub)  { out.pub   = await evmAddress(signPub); }
-    if (signPriv) { out.priv  = evmPrivHex(signPriv); }
-    if (encPub)   { out.epub  = evmEncPub(encPub); }
-    if (encPriv)  { out.epriv = evmPrivHex(encPriv); }
+  if (format === "evm") {
+    if (signPub) {
+      out.pub = await evmAddress(signPub);
+    }
+    if (signPriv) {
+      out.priv = evmPrivHex(signPriv);
+    }
+    if (encPub) {
+      out.epub = evmEncPub(encPub);
+    }
+    if (encPriv) {
+      out.epriv = evmPrivHex(encPriv);
+    }
     return out;
   }
 
-  if (format === 'btc') {
-    if (signPub)  { out.pub   = await btcAddress(signPub); }
-    if (signPriv) { out.priv  = await btcWIF(signPriv); }
-    if (encPub)   { out.epub  = btcCompressedHex(encPub); }
-    if (encPriv)  { out.epriv = await btcWIF(encPriv); }
+  if (format === "btc") {
+    if (signPub) {
+      out.pub = await btcAddress(signPub);
+    }
+    if (signPriv) {
+      out.priv = await btcWIF(signPriv);
+    }
+    if (encPub) {
+      out.epub = btcCompressedHex(encPub);
+    }
+    if (encPriv) {
+      out.epriv = await btcWIF(encPriv);
+    }
     return out;
   }
 
-  throw new Error('Unknown format: ' + format + '. Supported: zen, evm, btc');
+  throw new Error("Unknown format: " + format + ". Supported: zen, evm, btc");
 }
