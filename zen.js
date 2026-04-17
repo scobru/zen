@@ -1362,8 +1362,290 @@ __def('./src/root.js', function(module, __exp){
   __exp.default = __defaultExport;
 });
 
+__def('./src/crypto_wasm_bridge.js', function(module, __exp){
+  // src/crypto_wasm_bridge.js — Lazy loader and JS bridge for crypto.wasm.
+  //
+  // Usage:
+  //   import bridge from "./crypto_wasm_bridge.js";
+  //   await bridge.ready;
+  //   const hash = bridge.keccak256(bytes);  // synchronous once ready
+  //
+  // All primitive calls are synchronous after the initial WASM load.
+  // The module exposes typed wrappers that handle WASM memory management.
+
+  const __cryptoWasmURL = new URL("./crypto.wasm", import.meta.url);
+
+  let _wasm = null;
+
+  function _load() {
+    if (
+      typeof process !== "undefined" &&
+      process.versions &&
+      process.versions.node
+    ) {
+      return import("node:fs/promises")
+        .then((mod) => (mod.readFile || (mod.default || {}).readFile)(__cryptoWasmURL))
+        .then((bytes) => WebAssembly.instantiate(bytes, {}))
+        .then((r) => {
+          _wasm = r;
+        });
+    }
+    if (typeof fetch !== "undefined") {
+      return fetch(__cryptoWasmURL)
+        .then((r) => {
+          if (!r.ok)
+            throw new Error("crypto.wasm fetch failed: " + r.status + " " + r.url);
+          return r.arrayBuffer();
+        })
+        .then((buf) => WebAssembly.instantiate(buf, {}))
+        .then((r) => {
+          _wasm = r;
+        });
+    }
+    return Promise.reject(new Error("crypto_wasm_bridge: cannot load crypto.wasm"));
+  }
+
+  // ── Internal helpers ─────────────────────────────────────────────────────────
+
+  function _exports() {
+    return _wasm.instance.exports;
+  }
+
+  function _view() {
+    return new Uint8Array(_wasm.instance.exports.memory.buffer);
+  }
+
+  function _write(bytes) {
+    const ex = _exports();
+    ex.alloc_reset();
+    const ptr = ex.alloc(bytes.length);
+    _view().set(bytes, ptr);
+    return ptr;
+  }
+
+  function _alloc(size) {
+    return _exports().alloc(size);
+  }
+
+  function _read(ptr, len) {
+    return _view().slice(ptr, ptr + len);
+  }
+
+  // ── Public typed wrappers ────────────────────────────────────────────────────
+
+  const bridge = {
+    ready: _load(),
+
+    /** SHA-256: Uint8Array → Uint8Array (32 bytes) */
+    sha256(data) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const inPtr = ex.alloc(data.length);
+      _view().set(data, inPtr);
+      const outPtr = ex.alloc(32);
+      ex.sha256(inPtr, data.length, outPtr);
+      return _view().slice(outPtr, outPtr + 32);
+    },
+
+    /** Keccak-256: Uint8Array → Uint8Array (32 bytes) */
+    keccak256(data) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const inPtr = ex.alloc(data.length);
+      _view().set(data, inPtr);
+      const outPtr = ex.alloc(32);
+      ex.keccak256(inPtr, data.length, outPtr);
+      return _view().slice(outPtr, outPtr + 32);
+    },
+
+    /** RIPEMD-160: Uint8Array → Uint8Array (20 bytes) */
+    ripemd160(data) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const inPtr = ex.alloc(data.length);
+      _view().set(data, inPtr);
+      const outPtr = ex.alloc(20);
+      ex.ripemd160(inPtr, data.length, outPtr);
+      return _view().slice(outPtr, outPtr + 20);
+    },
+
+    /** HMAC-SHA-256: (key: Uint8Array, data: Uint8Array) → Uint8Array (32 bytes) */
+    hmacSha256(key, data) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const kPtr = ex.alloc(key.length);
+      _view().set(key, kPtr);
+      const dPtr = ex.alloc(data.length);
+      _view().set(data, dPtr);
+      const outPtr = ex.alloc(32);
+      ex.hmac_sha256(kPtr, key.length, dPtr, data.length, outPtr);
+      return _view().slice(outPtr, outPtr + 32);
+    },
+
+    /** Base62 encode: 32-byte Uint8Array → 44-char Uint8Array (ASCII) */
+    b62Encode(bytes32) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const inPtr = ex.alloc(32);
+      _view().set(bytes32, inPtr);
+      const outPtr = ex.alloc(44);
+      ex.b62_enc(inPtr, outPtr);
+      return _view().slice(outPtr, outPtr + 44);
+    },
+
+    /** Base62 decode: 44-char string/Uint8Array → 32-byte Uint8Array or null */
+    b62Decode(input44) {
+      const ex = _exports();
+      const bytes =
+        typeof input44 === "string"
+          ? new TextEncoder().encode(input44)
+          : input44;
+      ex.alloc_reset();
+      const inPtr = ex.alloc(44);
+      _view().set(bytes.subarray(0, 44), inPtr);
+      const outPtr = ex.alloc(32);
+      const ok = ex.b62_dec(inPtr, outPtr);
+      return ok === 0 ? _view().slice(outPtr, outPtr + 32) : null;
+    },
+
+    // ── secp256k1 ──────────────────────────────────────────────────────────────
+
+    /** scalar × G → {x: Uint8Array(32), y: Uint8Array(32)} or null */
+    k1MultG(scalar32) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const sPtr = ex.alloc(32);
+      _view().set(scalar32, sPtr);
+      const outPtr = ex.alloc(64);
+      if (!ex.k1_mult_g(sPtr, outPtr)) return null;
+      const v = _view();
+      return { x: v.slice(outPtr, outPtr + 32), y: v.slice(outPtr + 32, outPtr + 64) };
+    },
+
+    /** scalar × point → {x, y} or null */
+    k1Mult(scalar32, px32, py32) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const sPtr = ex.alloc(32);
+      _view().set(scalar32, sPtr);
+      const pxPtr = ex.alloc(32);
+      _view().set(px32, pxPtr);
+      const pyPtr = ex.alloc(32);
+      _view().set(py32, pyPtr);
+      const outPtr = ex.alloc(64);
+      if (!ex.k1_mult(sPtr, pxPtr, pyPtr, outPtr)) return null;
+      const v = _view();
+      return { x: v.slice(outPtr, outPtr + 32), y: v.slice(outPtr + 32, outPtr + 64) };
+    },
+
+    /** point + point → {x, y} or null */
+    k1Add(ax32, ay32, bx32, by32) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const axPtr = ex.alloc(32); _view().set(ax32, axPtr);
+      const ayPtr = ex.alloc(32); _view().set(ay32, ayPtr);
+      const bxPtr = ex.alloc(32); _view().set(bx32, bxPtr);
+      const byPtr = ex.alloc(32); _view().set(by32, byPtr);
+      const outPtr = ex.alloc(64);
+      if (!ex.k1_add(axPtr, ayPtr, bxPtr, byPtr, outPtr)) return null;
+      const v = _view();
+      return { x: v.slice(outPtr, outPtr + 32), y: v.slice(outPtr + 32, outPtr + 64) };
+    },
+
+    /** RFC 6979 deterministic k for secp256k1 → Uint8Array(32) */
+    k1DetK(priv32, hash32, attempt) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const privPtr = ex.alloc(32); _view().set(priv32, privPtr);
+      const hashPtr = ex.alloc(32); _view().set(hash32, hashPtr);
+      const outPtr = ex.alloc(32);
+      ex.k1_det_k(privPtr, hashPtr, attempt || 0, outPtr);
+      return _view().slice(outPtr, outPtr + 32);
+    },
+
+    // ── P-256 ──────────────────────────────────────────────────────────────────
+
+    p2MultG(scalar32) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const sPtr = ex.alloc(32); _view().set(scalar32, sPtr);
+      const outPtr = ex.alloc(64);
+      if (!ex.p2_mult_g(sPtr, outPtr)) return null;
+      const v = _view();
+      return { x: v.slice(outPtr, outPtr + 32), y: v.slice(outPtr + 32, outPtr + 64) };
+    },
+
+    p2Mult(scalar32, px32, py32) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const sPtr = ex.alloc(32); _view().set(scalar32, sPtr);
+      const pxPtr = ex.alloc(32); _view().set(px32, pxPtr);
+      const pyPtr = ex.alloc(32); _view().set(py32, pyPtr);
+      const outPtr = ex.alloc(64);
+      if (!ex.p2_mult(sPtr, pxPtr, pyPtr, outPtr)) return null;
+      const v = _view();
+      return { x: v.slice(outPtr, outPtr + 32), y: v.slice(outPtr + 32, outPtr + 64) };
+    },
+
+    p2Add(ax32, ay32, bx32, by32) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const axPtr = ex.alloc(32); _view().set(ax32, axPtr);
+      const ayPtr = ex.alloc(32); _view().set(ay32, ayPtr);
+      const bxPtr = ex.alloc(32); _view().set(bx32, bxPtr);
+      const byPtr = ex.alloc(32); _view().set(by32, byPtr);
+      const outPtr = ex.alloc(64);
+      if (!ex.p2_add(axPtr, ayPtr, bxPtr, byPtr, outPtr)) return null;
+      const v = _view();
+      return { x: v.slice(outPtr, outPtr + 32), y: v.slice(outPtr + 32, outPtr + 64) };
+    },
+
+    p2DetK(priv32, hash32, attempt) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const privPtr = ex.alloc(32); _view().set(priv32, privPtr);
+      const hashPtr = ex.alloc(32); _view().set(hash32, hashPtr);
+      const outPtr = ex.alloc(32);
+      ex.p2_det_k(privPtr, hashPtr, attempt || 0, outPtr);
+      return _view().slice(outPtr, outPtr + 32);
+    },
+
+    // ── Shared ──────────────────────────────────────────────────────────────────
+
+    /** Compressed point encoding: (x32, y32) → Uint8Array(33) */
+    compactPoint(x32, y32) {
+      const ex = _exports();
+      ex.alloc_reset();
+      const xPtr = ex.alloc(32); _view().set(x32, xPtr);
+      const yPtr = ex.alloc(32); _view().set(y32, yPtr);
+      const outPtr = ex.alloc(33);
+      ex.compact_point(xPtr, yPtr, outPtr);
+      return _view().slice(outPtr, outPtr + 33);
+    },
+  };
+
+  __exp.default = bridge;
+});
+
 __def('./src/base62.js', function(module, __exp){
   var shim = __req('./src/shim.js').default;
+  var bridge = __req('./src/crypto_wasm_bridge.js').default;
+  let _wasmReady = false;
+  bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});
+
+  function _biTo32(n) {
+    const hex = n.toString(16).padStart(64, "0");
+    const out = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    return out;
+  }
+
+  function _32ToBi(arr) {
+    let hex = "";
+    for (let i = 0; i < 32; i++) hex += arr[i].toString(16).padStart(2, "0");
+    return BigInt("0x" + hex);
+  }
+
   const ALPHA = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   const ALPHA_MAP = {};
   for (let i = 0; i < ALPHA.length; i++) {
@@ -1374,6 +1656,12 @@ __def('./src/base62.js', function(module, __exp){
   function biToB62(n) {
     if (typeof n !== "bigint" || n < 0n) {
       throw new Error("biToB62: input must be non-negative BigInt");
+    }
+    if (_wasmReady) {
+      const out = bridge.b62Encode(_biTo32(n));
+      let s = "";
+      for (let i = 0; i < 44; i++) s += String.fromCharCode(out[i]);
+      return s;
     }
     let out = "";
     let value = n;
@@ -1396,6 +1684,11 @@ __def('./src/base62.js', function(module, __exp){
     }
     if (!/^[A-Za-z0-9]+$/.test(s)) {
       throw new Error("b62ToBI: invalid base62 characters");
+    }
+    if (_wasmReady) {
+      const decoded = bridge.b62Decode(s);
+      if (!decoded) throw new Error("b62ToBI: invalid base62");
+      return _32ToBi(decoded);
     }
     let n = 0n;
     for (let i = 0; i < s.length; i++) {
@@ -1444,6 +1737,17 @@ __def('./src/base62.js', function(module, __exp){
   }
 
   function bufToB62(buf) {
+    if (_wasmReady) {
+      let out = "";
+      for (let i = 0; i < buf.length; i += 32) {
+        const chunk = new Uint8Array(32);
+        const slice = buf.slice(i, Math.min(i + 32, buf.length));
+        chunk.set(slice, 32 - slice.length);
+        const enc = bridge.b62Encode(chunk);
+        for (let j = 0; j < 44; j++) out += String.fromCharCode(enc[j]);
+      }
+      return out;
+    }
     let out = "";
     for (let i = 0; i < buf.length; i += 32) {
       const end = Math.min(i + 32, buf.length);
@@ -1578,94 +1882,7 @@ __def('./src/aeskey.js', function(module, __exp){
 
 __def('./src/keccak256.js', function(module, __exp){
   var shim = __req('./src/shim.js').default;
-  const MASK64 = (1n << 64n) - 1n;
-  const RATE = 136;
-  const OUTPUT_BYTES = 32;
-  const SUFFIX = 0x01;
-  const ROT = [
-    0, 1, 62, 28, 27, 36, 44, 6, 55, 20, 3, 10, 43, 25, 39, 41, 45, 15, 21, 8, 18,
-    2, 61, 56, 14,
-  ];
-  const RC = [
-    0x0000000000000001n,
-    0x0000000000008082n,
-    0x800000000000808an,
-    0x8000000080008000n,
-    0x000000000000808bn,
-    0x0000000080000001n,
-    0x8000000080008081n,
-    0x8000000000008009n,
-    0x000000000000008an,
-    0x0000000000000088n,
-    0x0000000080008009n,
-    0x000000008000000an,
-    0x000000008000808bn,
-    0x800000000000008bn,
-    0x8000000000008089n,
-    0x8000000000008003n,
-    0x8000000000008002n,
-    0x8000000000000080n,
-    0x000000000000800an,
-    0x800000008000000an,
-    0x8000000080008081n,
-    0x8000000000008080n,
-    0x0000000080000001n,
-    0x8000000080008008n,
-  ];
-
-  function rotl64(value, shift) {
-    const amount = BigInt(shift & 63);
-    if (!amount) {
-      return value & MASK64;
-    }
-    return ((value << amount) | (value >> (64n - amount))) & MASK64;
-  }
-
-  function keccakF(state) {
-    for (let round = 0; round < 24; round++) {
-      const c = new Array(5);
-      const d = new Array(5);
-      const b = new Array(25);
-
-      for (let x = 0; x < 5; x++) {
-        c[x] =
-          state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
-      }
-      for (let x = 0; x < 5; x++) {
-        d[x] = c[(x + 4) % 5] ^ rotl64(c[(x + 1) % 5], 1);
-      }
-      for (let y = 0; y < 5; y++) {
-        for (let x = 0; x < 5; x++) {
-          state[x + 5 * y] ^= d[x];
-        }
-      }
-
-      for (let y = 0; y < 5; y++) {
-        for (let x = 0; x < 5; x++) {
-          const idx = x + 5 * y;
-          b[y + 5 * ((2 * x + 3 * y) % 5)] = rotl64(state[idx], ROT[idx]);
-        }
-      }
-
-      for (let y = 0; y < 5; y++) {
-        for (let x = 0; x < 5; x++) {
-          state[x + 5 * y] =
-            b[x + 5 * y] ^ (~b[((x + 1) % 5) + 5 * y] & b[((x + 2) % 5) + 5 * y]);
-        }
-      }
-
-      state[0] ^= RC[round];
-    }
-  }
-
-  function xorBlock(state, block) {
-    for (let i = 0; i < block.length; i++) {
-      const lane = Math.floor(i / 8);
-      const shift = BigInt((i % 8) * 8);
-      state[lane] ^= BigInt(block[i]) << shift;
-    }
-  }
-
+  var bridge = __req('./src/crypto_wasm_bridge.js').default;
   function toBytes(data) {
     if (typeof data === "string") {
       return new shim.TextEncoder().encode(data);
@@ -1683,29 +1900,9 @@ __def('./src/keccak256.js', function(module, __exp){
   }
 
   async function keccak256(data) {
+    await bridge.ready;
     const bytes = toBytes(data);
-    const state = new Array(25).fill(0n);
-    let offset = 0;
-
-    while (offset + RATE <= bytes.length) {
-      xorBlock(state, bytes.subarray(offset, offset + RATE));
-      keccakF(state);
-      offset += RATE;
-    }
-
-    const finalBlock = new Uint8Array(RATE);
-    finalBlock.set(bytes.subarray(offset));
-    finalBlock[bytes.length - offset] ^= SUFFIX;
-    finalBlock[RATE - 1] ^= 0x80;
-    xorBlock(state, finalBlock);
-    keccakF(state);
-
-    const out = new Uint8Array(OUTPUT_BYTES);
-    for (let i = 0; i < OUTPUT_BYTES; i++) {
-      const lane = state[Math.floor(i / 8)];
-      out[i] = Number((lane >> BigInt((i % 8) * 8)) & 0xffn);
-    }
-    return shim.Buffer.from(out);
+    return shim.Buffer.from(bridge.keccak256(bytes));
   }
 
   __exp.default = keccak256;
@@ -4343,6 +4540,9 @@ __def('./src/pen.js', function(module, __exp){
 __def('./src/ripemd160.js', function(module, __exp){
   // Pure RIPEMD-160 implementation — no dependencies, no WebCrypto.
   // Spec: https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
+  var bridge = __req('./src/crypto_wasm_bridge.js').default;
+  let _wasmReady = false;
+  bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});
 
   const KL = [0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e];
   const KR = [0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000];
@@ -4396,6 +4596,10 @@ __def('./src/ripemd160.js', function(module, __exp){
         : data instanceof ArrayBuffer
           ? new Uint8Array(data)
           : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+
+    if (_wasmReady) {
+      return bridge.ripemd160(bytes);
+    }
 
     const len = bytes.length;
     const bitLen = len * 8;

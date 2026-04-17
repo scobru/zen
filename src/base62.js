@@ -1,4 +1,21 @@
 import shim from "./shim.js";
+import bridge from "./crypto_wasm_bridge.js";
+
+let _wasmReady = false;
+bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});
+
+function _biTo32(n) {
+  const hex = n.toString(16).padStart(64, "0");
+  const out = new Uint8Array(32);
+  for (let i = 0; i < 32; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+function _32ToBi(arr) {
+  let hex = "";
+  for (let i = 0; i < 32; i++) hex += arr[i].toString(16).padStart(2, "0");
+  return BigInt("0x" + hex);
+}
 
 const ALPHA = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const ALPHA_MAP = {};
@@ -10,6 +27,12 @@ const PUB_LEN = 44;
 function biToB62(n) {
   if (typeof n !== "bigint" || n < 0n) {
     throw new Error("biToB62: input must be non-negative BigInt");
+  }
+  if (_wasmReady) {
+    const out = bridge.b62Encode(_biTo32(n));
+    let s = "";
+    for (let i = 0; i < 44; i++) s += String.fromCharCode(out[i]);
+    return s;
   }
   let out = "";
   let value = n;
@@ -32,6 +55,11 @@ function b62ToBI(s) {
   }
   if (!/^[A-Za-z0-9]+$/.test(s)) {
     throw new Error("b62ToBI: invalid base62 characters");
+  }
+  if (_wasmReady) {
+    const decoded = bridge.b62Decode(s);
+    if (!decoded) throw new Error("b62ToBI: invalid base62");
+    return _32ToBi(decoded);
   }
   let n = 0n;
   for (let i = 0; i < s.length; i++) {
@@ -80,6 +108,17 @@ function pubToJwkXY(pub) {
 }
 
 function bufToB62(buf) {
+  if (_wasmReady) {
+    let out = "";
+    for (let i = 0; i < buf.length; i += 32) {
+      const chunk = new Uint8Array(32);
+      const slice = buf.slice(i, Math.min(i + 32, buf.length));
+      chunk.set(slice, 32 - slice.length);
+      const enc = bridge.b62Encode(chunk);
+      for (let j = 0; j < 44; j++) out += String.fromCharCode(enc[j]);
+    }
+    return out;
+  }
   let out = "";
   for (let i = 0; i < buf.length; i += 32) {
     const end = Math.min(i + 32, buf.length);

@@ -1,100 +1,30 @@
-# ZEN — Zen Entropy Network
+﻿# ZEN
 
-**ZEN** is an **offline-first graph database and cryptographic runtime** built from the `amark/gun -> akaoio/gun -> ZEN` lineage.
+**ZEN** is an offline-first, decentralized graph database with a built-in cryptographic runtime.
 
-ZEN is no longer "GUN plus wrappers". It is now a **ZEN-first codebase**:
-
-- **`src/`** is the active runtime source tree.
-- **`zen.js` / `zen.min.js`** are the main build artifacts.
-- the old parallel **`src/gun/`** and **`src/sea/`** trees have been removed from the active repo
-- the public entry is **ZEN-only**
-- the relay/server path is centered on **`lib/server.js`**
+It is the production successor to the `amark/gun → akaoio/gun → ZEN` lineage, now consolidated around a single ZEN-first identity, build target, and runtime architecture.
 
 ---
 
-## Current status
+## What it does
 
-ZEN has already moved well beyond yesterday's shape.
-
-| Area                                                | Status                                      |
-| --------------------------------------------------- | ------------------------------------------- |
-| Graph runtime (HAM/CRDT, chain API, peers, storage) | Active in `src/`                            |
-| Public runtime surface                              | `ZEN` only                                  |
-| secp256k1 crypto                                    | Implemented                                 |
-| P-256 / secp256r1 crypto                            | Implemented                                 |
-| EVM and BTC key formats                             | Implemented                                 |
-| PEN / policy VM                                     | Implemented with Zig -> WASM build pipeline |
-| OPFS support                                        | Integrated                                  |
-| RAD / Radisk / Radix                                | Integrated                                  |
-| WebSocket transport                                 | Integrated                                  |
-| Internal WebSocket server adapter                   | Replaced `ws` dependency                    |
-| Vanilla HTTP form/body parsing                      | Replaced `formidable` dependency            |
-| Internal S3 client                                  | Replaced `aws-sdk` dependency               |
-
-Current test baseline:
-
-- `npm test` -> **145 passing, 10 pending**
-- `npm run testZEN` -> green
-- `npm run testPEN` -> green
-
----
-
-## What changed
-
-ZEN is now a **fork-first successor**, not a greenfield experiment and not a thin rebrand.
-
-### Before
-
-- parallel `gun` / `sea` / `zen` identity
-- legacy wrappers and compatibility layers
-- extra dependency weight (`ws`, `formidable`, `aws-sdk`)
-- noisy test harness output
-- lingering architecture drift such as duplicate server identity
-
-### Now
-
-- **single active runtime identity: ZEN**
-- `src/` is the source of truth
-- public entry exports **ZEN**
-- `gun.js` / `sea.js` are no longer the center of the repo
-- noisy test harness output has been cleaned up
-- transport/storage helpers were simplified and purified
-- several legacy IIFE-style wrappers were removed or rewritten safely
-
----
-
-## Why ZEN exists
-
-ZEN keeps the strong graph and sync ideas from the GUN family, but pushes them toward a cleaner, more production-focused architecture:
-
-1. **ZEN-first runtime identity** instead of multi-entry confusion.
-2. **ESM-oriented structure** instead of old CommonJS-era habits.
-3. **Multi-curve crypto** instead of a narrow single-curve worldview.
-4. **Policy as a first-class runtime concern** through PEN.
-5. **Smaller dependency surface** with more internal control over critical adapters.
+- **Graph database** — realtime, decentralized, offline-first, CRDT-based conflict resolution
+- **Crypto runtime** — key pairs, signing, verification, encryption, shared secrets, hashing
+- **Multi-curve** — secp256k1 and P-256 / secp256r1 support
+- **Key formats** — native base62, EVM (0x checksummed), BTC (P2PKH / WIF)
+- **Policy VM** — PEN: a bytecode policy engine compiled from Zig to WASM
+- **Storage adapters** — RAD/Radisk, filesystem, IndexedDB, OPFS, S3
+- **Transport** — WebSocket (internal, no `ws` dependency)
 
 ---
 
 ## Install
 
 ```bash
-npm install
+npm install @akaoio/zen
 ```
 
-### Developer onboarding
-
-If you are only consuming ZEN as a package, `npm install` is enough.
-
-If you are developing ZEN itself, you should also install the **Zig compiler** and make sure `zig` is available on your `PATH`.
-
-Why this matters:
-
-- ZEN is moving toward using more **Zig** over time
-- **PEN** already uses a Zig -> WASM build pipeline
-- the normal dev build path goes through `buildPEN`
-- `npm run build`, `npm test`, and release-oriented builds are expected to work best in an environment where Zig is installed
-
-Recommended dev setup:
+Development requires [Zig](https://ziglang.org/) on your `PATH` (for the WASM build pipelines):
 
 ```bash
 npm install
@@ -115,127 +45,140 @@ zen.get("user").put({ name: "Alice" });
 zen.get("user").once(console.log);
 ```
 
-### Crypto
+### Key pairs and crypto
 
 ```js
+// Default: secp256k1
 const pair = await ZEN.pair();
 const signed = await ZEN.sign("hello", pair);
-const verified = await ZEN.verify(signed, pair.pub);
+const ok = await ZEN.verify(signed, pair.pub);
+
+// Encrypt / decrypt
+const enc = await ZEN.encrypt("secret", pair);
+const dec = await ZEN.decrypt(enc, pair);
+
+// Shared secret (ECDH)
+const alicePair = await ZEN.pair();
+const secret = await ZEN.secret(alicePair.epub, pair);
 ```
 
 ### Multi-curve
 
 ```js
-const secp = await ZEN.pair();
-const p256 = await ZEN.pair(null, { curve: "p256" });
-const evm = await ZEN.pair(null, { format: "evm" });
-const btc = await ZEN.pair(null, { format: "btc" });
+const secp = await ZEN.pair();                        // secp256k1 (default)
+const p256 = await ZEN.pair(null, { curve: "p256" }); // P-256 / secp256r1
+const evm  = await ZEN.pair(null, { format: "evm" }); // 0x EVM address
+const btc  = await ZEN.pair(null, { format: "btc" }); // P2PKH mainnet
 ```
 
 ### Hashing
 
 ```js
-const sha = await ZEN.hash("hello");
-const keccak = await ZEN.hash("hello", { name: "keccak256" });
+const sha     = await ZEN.hash("hello");                        // SHA-256
+const keccak  = await ZEN.hash("hello", { name: "keccak256" }); // Keccak-256
+```
+
+### Seed-based deterministic keys
+
+```js
+const pair1 = await ZEN.pair(null, { seed: "my-deterministic-seed" });
+const pair2 = await ZEN.pair(null, { seed: "my-deterministic-seed" });
+// pair1.pub === pair2.pub — always
+```
+
+### Additive key derivation
+
+```js
+// Bob derives child key pair from his private key + shared seed
+const child = await ZEN.derive(pair, "shared-namespace");
+
+// Alice derives the same child public key from Bob's public key + same seed
+const childPub = await ZEN.derive({ pub: pair.pub }, "shared-namespace");
+// child.pub === childPub.pub — without either party revealing private keys
 ```
 
 ---
 
-## Public API
+## API
 
-### Instance API
+### Graph (instance)
 
 ```js
 const zen = new ZEN(opt);
 
-zen.get(key);
-zen.put(data);
-zen.on(cb);
-zen.once(cb);
-zen.map();
-zen.set(data);
-zen.back(n);
+zen.get(key)        // navigate to a node
+zen.put(data)       // write data
+zen.on(cb)          // subscribe to realtime updates
+zen.once(cb)        // read once
+zen.map()           // iterate a set
+zen.set(data)       // add to a set (unordered collection)
+zen.back(n)         // navigate up the chain
 ```
 
-### Static / mirrored crypto API
+### Crypto (static + instance mirror)
 
 ```js
-ZEN.pair(cb, opt);
-ZEN.sign(data, pair);
-ZEN.verify(data, pub);
-ZEN.encrypt(data, pair);
-ZEN.decrypt(data, pair);
-ZEN.secret(pub, pair);
-ZEN.hash(data, opt);
-ZEN.certify(certs, policy, pair);
+ZEN.pair(cb, opt)                // generate key pair
+ZEN.sign(data, pair)             // sign data
+ZEN.verify(data, pub)            // verify signature
+ZEN.encrypt(data, pair)          // encrypt
+ZEN.decrypt(data, pair)          // decrypt
+ZEN.secret(pub, pair)            // ECDH shared secret
+ZEN.hash(data, opt)              // hash (SHA-256 or keccak256)
+ZEN.certify(certs, policy, pair) // create a certificate
 ```
 
-These helpers are also mirrored onto ZEN instances.
-
----
-
-## PEN
-
-PEN is part of the ZEN direction, not an add-on.
-
-- policy bytecode VM
-- Zig source
-- WASM build output
-- integrated into the repo's release and test flow
-
-If you are contributing to ZEN, assume Zig is part of the toolchain, not an optional extra.
-
-Relevant scripts:
-
-```bash
-npm run buildPEN
-npm run testPEN
-```
+All static methods are also available as instance methods: `zen.pair()`, `zen.sign()`, etc.
 
 ---
 
 ## Storage
 
-ZEN currently includes multiple persistence paths:
-
-- **RAD / Radisk / Radix**
-- **filesystem storage**
-- **IndexedDB**
-- **OPFS**
-- **S3**
-
-Useful modules:
-
 ```js
-import "@akaoio/zen/lib/store";
-import "@akaoio/zen/lib/rfs";
-import "@akaoio/zen/lib/rindexed";
-import "@akaoio/zen/lib/opfs";
-import "@akaoio/zen/lib/rs3";
+import "@akaoio/zen/lib/store";    // RAD / Radisk (default)
+import "@akaoio/zen/lib/rfs";      // filesystem (Node.js)
+import "@akaoio/zen/lib/rindexed"; // IndexedDB (browser)
+import "@akaoio/zen/lib/opfs";     // OPFS (browser)
+import "@akaoio/zen/lib/rs3";      // AWS S3
 ```
-
-Recent cleanup:
-
-- direct `ws` dependency removed
-- direct `formidable` dependency removed
-- direct `aws-sdk` dependency removed
 
 ---
 
-## Relay / server
+## PEN — policy VM
 
-The repo now treats **`lib/server.js`** as the server identity for ZEN.
+PEN is a bytecode policy engine integrated into ZEN. It compiles Zig source to WASM and runs verifiable access policies over graph writes.
 
-Start the example relay:
-
-```bash
-npm start
+```js
+const soul = ZEN.pen({ val: { type: "string" }, sign: true });
+// soul is a bytecode-encoded access policy string
 ```
 
-That currently runs:
+```bash
+npm run buildPEN     # rebuild pen.wasm from src/pen.zig
+npm run testPEN      # run PEN unit tests
+```
+
+---
+
+## WASM crypto pipeline
+
+ZEN ships a second WASM module — `crypto.wasm` — compiled from Zig for the algorithms where native WASM compute beats JavaScript:
+
+| Algorithm | Runtime | Why |
+|-----------|---------|-----|
+| SHA-256 | WebCrypto (`subtle.digest`) | Hardware SHA-NI |
+| AES-GCM | WebCrypto (`subtle.encrypt`) | Hardware AES-NI |
+| HMAC-SHA-256 | WebCrypto (`subtle.sign`) | Hardware SHA-NI |
+| secp256k1 point multiply | V8 BigInt (native C++) | V8 JIT > WASM32 emulated wide mul |
+| P-256 point multiply | V8 BigInt (native C++) | same reason |
+| **Keccak-256** | **WASM** (`crypto.wasm`) | 25-lane u64, no WebCrypto equivalent |
+| **RIPEMD-160** | **WASM** (`crypto.wasm`) | No WebCrypto equivalent |
+| **base62** encode/decode | **WASM** (`crypto.wasm`) | Faster than BigInt for encoding |
+
+The principle: use whatever is fastest. Platform hardware wins for SHA/AES/HMAC. WASM wins for algorithms the platform does not expose natively.
 
 ```bash
-node --prof examples/zen-http.js
+npm run buildCrypto  # rebuild crypto.wasm from src/crypto_wasm.zig
 ```
 
 ---
@@ -243,56 +186,60 @@ node --prof examples/zen-http.js
 ## Build and test
 
 ```bash
-npm test
-npm run testZEN
-npm run testPEN
-npm run buildZEN
-npm run buildRelease
+npm test             # build zen.js + run full suite (PEN + ZEN unit + core)
+npm run testZEN      # build + ZEN unit tests only
+npm run testPEN      # build + PEN unit tests only
+npm run buildZEN     # buildPEN + buildCrypto + bundle + minify
+npm run buildRelease # buildZEN + uglify all lib adapters
+npm start            # start example relay (examples/zen-http.js)
 ```
 
-`npm test` rebuilds `zen.js`, rebuilds/minifies artifacts, cleans local test data, and runs the active graph/runtime suite.
+Current baseline: **171 passing**.
 
 ---
 
-## Architecture notes
+## Architecture
 
-### Source of truth
+```
+src/                  — runtime source (source of truth)
+  root.js             — ZEN constructor
+  core.js             — graph operations
+  mesh.js             — P2P networking
+  sea/                — crypto: pair, sign, verify, encrypt, hash, certify
+  curves/             — ECC (secp256k1, P-256) BigInt + Zig sources
+  keccak256.js        — WASM-accelerated Keccak-256
+  ripemd160.js        — WASM-accelerated RIPEMD-160
+  base62.js           — WASM-accelerated base62
+  crypto_wasm_bridge.js — lazy WASM loader + typed wrappers
+  pen.js              — PEN policy VM
 
-- runtime source: **`src/`**
-- bundled output: **`zen.js`**, **`zen.min.js`**
-- policy runtime: **PEN**
-- active server path: **`lib/server.js`**
+zen.js               — bundled browser/Node.js artifact
+zen.min.js           — minified
+crypto.wasm          — 66KB WASM crypto module
+pen.wasm             — ~27KB WASM policy engine
 
-### Project direction
+lib/                 — storage adapters, build scripts
+  server.js          — ZEN relay / server identity
+  build-zen.js       — bundle script
+  build-pen.js       — PEN WASM build
+  build-crypto.js    — crypto WASM build
+  radisk.js / rfs.js / rindexed.js / rs3.js / ...
 
-ZEN aims for:
-
-- cleaner module boundaries
-- less architecture drift
-- fewer legacy wrappers
-- fewer oversized dependencies
-- tighter ownership over critical runtime layers
+test/
+  zen/               — ZEN unit tests (instance, crypto, multicurve, certify)
+  pen.js             — PEN unit tests
+  zen.js             — core graph integration tests
+  rad/               — RAD storage tests
+```
 
 ---
 
 ## Lineage
 
-```text
+```
 amark/gun
-  ->
-akaoio/gun
-  ->
-ZEN
+  → akaoio/gun
+    → ZEN
 ```
 
-ZEN keeps the graph/sync inheritance, but its repo identity and runtime architecture are now explicitly ZEN-centered.
-
----
-
-## Repository reality
-
-If you knew this project yesterday, the important update is simple:
-
-**ZEN is now materially different.**
-
-It is no longer best described as a side experiment beside GUN/SEA. The repo has been consolidated around ZEN as the primary runtime, build target, test target, and architectural direction.
+ZEN keeps the graph and sync inheritance but has a separate runtime identity, build system, and architectural direction. It is not a thin rebrand — the source has been materially rewritten.

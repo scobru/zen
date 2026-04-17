@@ -23,6 +23,9 @@ zen.js
 zen.min.js
 zen.min.js.current
 zen.min.js.old
+# Zig source and WASM binaries — not JS, prettier will reject them
+*.zig
+*.wasm
 examples/chat/index.html
 examples/contact/index.html
 examples/game/furball.html

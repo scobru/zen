@@ -1,5 +1,9 @@
 // Pure RIPEMD-160 implementation — no dependencies, no WebCrypto.
 // Spec: https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
+import bridge from "./crypto_wasm_bridge.js";
+
+let _wasmReady = false;
+bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});
 
 const KL = [0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e];
 const KR = [0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000];
@@ -53,6 +57,10 @@ export default function ripemd160(data) {
       : data instanceof ArrayBuffer
         ? new Uint8Array(data)
         : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+
+  if (_wasmReady) {
+    return bridge.ripemd160(bytes);
+  }
 
   const len = bytes.length;
   const bitLen = len * 8;
