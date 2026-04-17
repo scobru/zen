@@ -38,5 +38,5 @@ export default function(port, file, cb, inject){
 
 	server.listen(port, cb);
 
-	console.log('Server started on port ' + port + ' with /gun');
+	console.log('Server started on port ' + port + ' with /zen');
 }

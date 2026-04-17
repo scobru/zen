@@ -14,7 +14,6 @@ describe('PANIC!', function(){
 	this.timeout(1000 * 100);
 
 	var Gun = __index;
-	var gun = Gun();
 
 	var panic = __panic_server;
 
@@ -23,15 +22,18 @@ describe('PANIC!', function(){
 		if (req.url === '/') {
 			req.url = '/panic.html';
 		}
-		if(gun.wsp.server(req, res)){ 
-			return; // filters gun requests!
-		}
-		__fs.createReadStream(path.join(__dirname, req.url))
+		var file = req.url === '/panic.html'
+			? path.join(__dirname, '..', 'panic.html')
+			: path.join(__dirname, req.url);
+		__fs.createReadStream(file)
 		.on('error',function(){}).pipe(res); // stream
 	});
 
+	var gun = Gun({
+		web: server
+	});
+
 	panic.server(server);
-	gun.wsp(server);
 	server.listen(8765);
 
 	var clients = panic.clients;

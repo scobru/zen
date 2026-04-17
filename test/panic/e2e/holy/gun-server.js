@@ -3,13 +3,11 @@ import ports from './ports';
 import Gun from '../../../zen.js';
 import http from 'http';
 
+var server = new http.Server();
 var gun = new Gun({
-	file: 'delete-me.json'
+	file: 'delete-me.json',
+	web: server
 });
-
-var server = new http.Server(gun.wsp.server);
-
-gun.wsp(server);
 
 server.listen(ports.gun);
 

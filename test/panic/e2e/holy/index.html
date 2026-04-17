@@ -16,7 +16,7 @@
 			req.open('GET', 'ports.json');
 			req.addEventListener('load', function () {
 				var ports = JSON.parse(req.responseText);
-				var server = 'http://localhost:' + ports.gun + '/gun';
+				var server = 'http://localhost:' + ports.gun + '/zen';
 				window.gun = new Gun(server);
 				panic.server('http://localhost:' + ports.panic);
 			});
