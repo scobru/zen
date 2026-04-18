@@ -122,9 +122,9 @@ import "/lib/opfs.js"; // OPFS — Worker-safe where supported
 import "/lib/radisk.js"; // RAD storage — now Worker-safe
 import "/lib/rindexed.js"; // IndexedDB — now Worker-safe
 
-const gun = ZEN({ peers: ["https://relay.example.com/gun"] });
+const zen = new ZEN({ peers: ["https://relay.example.com/gun"] });
 
-gun
+zen
   .get("~")
   .map()
   .once((data, key) => {

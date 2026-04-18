@@ -517,7 +517,7 @@ ZEN.pen({ pow: { field: 1, difficulty: 3 } });
 
 `lib/pen.js` là một file duy nhất chứa toàn bộ PEN stack cho ZEN: WASM loader, pack/unpack encoding, bytecode builder (bc), treeskip/scanpolicy, penStage pipeline, và compiler (`ZEN.pen` / `ZEN.candle`).
 
-> **Không phải standalone.** `lib/pen.js` require ZEN + ZEN để đăng ký vào pipeline.
+> **Không phải standalone.** `lib/pen.js` require ZEN để đăng ký vào pipeline.
 > PEN Core thuần túy là `lib/pen.wasm` — không import gì, không phụ thuộc vào JS runtime.
 
 ### 5.1 API công khai

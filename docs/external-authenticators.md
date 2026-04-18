@@ -244,7 +244,7 @@ zen
   .put("Post by Alice", null, { authenticator: alicePair });
 
 // Write as Bob (different identity, no session change)
-gun
+zen
   .get(`~${bobPair.pub}`)
   .get("post1")
   .put("Post by Bob", null, { authenticator: bobPair });
@@ -267,7 +267,7 @@ const delegatedAuth = async (data) => {
 };
 
 // Use the delegated authenticator
-gun
+zen
   .get(`~${masterPair.pub}`)
   .get("data")
   .put("Delegated signature", null, { authenticator: delegatedAuth });
@@ -286,12 +286,12 @@ const workKey = await ZEN.pair(null, { priv: master.priv, seed: "work" });
 const socialKey = await ZEN.pair(null, { priv: master.priv, seed: "social" });
 
 // Use different derived keys
-gun
+zen
   .get(`~${workKey.pub}`)
   .get("documents")
   .put("Work document", null, { authenticator: workKey });
 
-gun
+zen
   .get(`~${socialKey.pub}`)
   .get("posts")
   .put("Social post", null, { authenticator: socialKey });
@@ -319,7 +319,7 @@ async function createTempAuthenticator(masterPair, expiryMs) {
 
 // Use temporary authenticator
 const tempAuth = await createTempAuthenticator(masterPair, 5 * 60 * 1000);
-gun
+zen
   .get(`~${tempAuth.pub}`)
   .get("temp-data")
   .put("Expires in 5 minutes", null, { authenticator: tempAuth });
@@ -340,7 +340,7 @@ async function conditionalAuth(data, condition) {
 }
 
 // Use with condition
-gun
+zen
   .get(`~${pub}`)
   .get("sensitive")
   .put("Sensitive data", null, {
@@ -377,7 +377,7 @@ async function multiSigAuth(data, signers) {
 
 // Require 2-of-3 signatures
 const signers = [pair1, pair2, pair3];
-gun
+zen
   .get(`~${multisigPub}`)
   .get("vault")
   .put("Multi-sig data", null, {
@@ -415,7 +415,7 @@ class HSMAuthenticator {
 
 // Use HSM authenticator
 const hsmAuth = new HSMAuthenticator(hsmClient, "my-key-id");
-gun
+zen
   .get(`~${hsmPub}`)
   .get("data")
   .put("HSM-signed data", null, {
@@ -443,7 +443,7 @@ async function kmsAuthenticator(data) {
   };
 }
 
-gun
+zen
   .get(`~${kmsPub}`)
   .get("data")
   .put("KMS-signed data", null, { authenticator: kmsAuthenticator });
@@ -469,7 +469,7 @@ async function biometricAuthenticator(data) {
   return await ZEN.sign(data, pair);
 }
 
-gun
+zen
   .get(`~${pub}`)
   .get("data")
   .put("Biometric-signed data", null, {
@@ -608,7 +608,7 @@ const debugAuth = async (data) => {
   }
 };
 
-gun
+zen
   .get(`~${pub}`)
   .get("debug")
   .put("debug data", null, { authenticator: debugAuth });
@@ -634,7 +634,7 @@ user.get("profile").put({ name: "Alice" });
 const zen = new ZEN();
 const pair = await ZEN.pair(null, { seed: "alice-recovery-seed" });
 
-gun
+zen
   .get(`~${pair.pub}`)
   .get("profile")
   .put({ name: "Alice" }, null, { authenticator: pair });
