@@ -2,7 +2,7 @@
 
 ## Overview
 
-**External Authenticators** provide a flexible way to integrate custom signing mechanisms with GunDB. Instead of using the traditional authenticated user session (`user.auth()`), you can provide your own signing function or key pair directly in the `put` operation.
+**External Authenticators** provide a flexible way to integrate custom signing mechanisms with ZEN. Instead of using the traditional authenticated user session, you can provide your own signing function or key pair directly in the `put` operation.
 
 This enables:
 
@@ -17,36 +17,27 @@ This enables:
 ### Traditional Approach (Session-Based)
 
 ```javascript
-const gun = Gun();
-const user = gun.user();
-
-// 1. Create account (stores credentials)
-await user.create("alice", "password");
-
-// 2. Login (establishes session)
-await user.auth("alice", "password");
-
-// 3. Put data (uses session)
-user.get("profile").put({ name: "Alice" });
+// ZEN doesn't require traditional session-based authentication
+// You can use key pairs directly for each operation
 ```
 
-**Limitations:**
+**Limitations of session-based approaches:**
 
 - Requires maintaining an authenticated session
 - One identity per session
-- Password-based (unless using SEA.pair recovery)
+- Password-based (unless using ZEN.pair recovery)
 - State management complexity
 
 ### External Authenticator Approach (Stateless)
 
 ```javascript
-const gun = Gun();
+const zen = new ZEN();
 
 // 1. Have a key pair (from anywhere)
-const pair = await SEA.pair();
+const pair = await ZEN.pair();
 
 // 2. Put data directly without session
-gun.get(`~${pair.pub}`).get("profile").put(
+zen.get(`~${pair.pub}`).get("profile").put(
   { name: "Alice" },
   null,
   { authenticator: pair }, // ⬅️ External authenticator
@@ -62,22 +53,22 @@ gun.get(`~${pair.pub}`).get("profile").put(
 
 ## Usage Patterns
 
-### 1. Using a SEA Key Pair
+### 1. Using a ZEN Key Pair
 
-The simplest form - provide a SEA key pair:
+The simplest form - provide a ZEN key pair:
 
 ```javascript
 // Generate or load a key pair
-const pair = await SEA.pair();
+const pair = await ZEN.pair();
 
 // Put data to the user's graph
-gun
+zen
   .get(`~${pair.pub}`)
   .get("data")
   .put("Hello World", null, { authenticator: pair });
 
 // Read it back
-gun
+zen
   .get(`~${pair.pub}`)
   .get("data")
   .once((data) => {
@@ -98,7 +89,7 @@ const customAuthenticator = async (data) => {
   // (e.g., call to HSM, cloud KMS, hardware wallet, etc.)
   const signature = await myCustomSigningService.sign(data);
 
-  // Return in SEA signature format
+  // Return in ZEN signature format
   return {
     m: data, // The message that was signed
     s: signature, // The signature
@@ -106,7 +97,7 @@ const customAuthenticator = async (data) => {
 };
 
 // Use it
-gun
+zen
   .get(`~${myPublicKey}`)
   .get("data")
   .put("Signed by custom service", null, {
@@ -136,11 +127,11 @@ const webAuthnAuth = async (data) => {
     },
   });
 
-  return assertion.response; // SEA will normalize this
+  return assertion.response; // ZEN will normalize this
 };
 
 // Use it
-gun
+zen
   .get(`~${webAuthnPub}`)
   .get("data")
   .put("Signed by Touch ID", null, { authenticator: webAuthnAuth });
@@ -151,10 +142,10 @@ gun
 When writing to your own graph (where graph soul `~pub` matches your public key):
 
 ```javascript
-const pair = await SEA.pair();
+const pair = await ZEN.pair();
 
 // ✅ Writing to own graph - just provide authenticator
-gun
+zen
   .get(`~${pair.pub}`)
   .get("profile")
   .put({ bio: "I'm Alice" }, null, { authenticator: pair });
@@ -171,20 +162,20 @@ When writing to someone else's graph, you need a certificate:
 
 ```javascript
 // Alice's key pair
-const alice = await SEA.pair();
+const alice = await ZEN.pair();
 
 // Bob's key pair
-const bob = await SEA.pair();
+const bob = await ZEN.pair();
 
 // Bob creates a certificate allowing Alice to write
-const cert = await SEA.certify(
+const cert = await ZEN.certify(
   alice.pub, // Alice can write
   { "*": "messages" }, // to 'messages' path
   bob, // Certificate signed by Bob
 );
 
 // ✅ Alice writes to Bob's graph with certificate
-gun
+zen
   .get(`~${bob.pub}`)
   .get("messages")
   .get("alice")
@@ -212,9 +203,9 @@ Intermediate nodes in the `~` shard namespace (`~/ab`, `~/ab/cd`, etc.) enforce 
 - **Pair object authenticator** — `pub` is read from `authenticator.pub` automatically:
 
 ```javascript
-const pair = await SEA.pair();
+const pair = await ZEN.pair();
 const key = pair.pub.slice(0, 2);
-gun
+zen
   .get("~")
   .get(key)
   .put({ "#": "~/" + key }, null, {
@@ -225,10 +216,10 @@ gun
 - **Function authenticator** — a function has no `.pub`. You **must** pass `opt.pub` explicitly:
 
 ```javascript
-const pair = await SEA.pair();
-const auth = async (data) => SEA.sign(data, pair);
+const pair = await ZEN.pair();
+const auth = async (data) => ZEN.sign(data, pair);
 const key = pair.pub.slice(0, 2);
-gun
+zen
   .get("~")
   .get(key)
   .put({ "#": "~/" + key }, null, {
@@ -243,11 +234,11 @@ Omitting `opt.pub` when using a function authenticator on an intermediate shard 
 ### Switch Identities Per Operation
 
 ```javascript
-const alicePair = await SEA.pair();
-const bobPair = await SEA.pair();
+const alicePair = await ZEN.pair();
+const bobPair = await ZEN.pair();
 
 // Write as Alice
-gun
+zen
   .get(`~${alicePair.pub}`)
   .get("post1")
   .put("Post by Alice", null, { authenticator: alicePair });
