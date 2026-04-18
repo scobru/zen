@@ -1,9 +1,9 @@
-# Hashgraph Layer on GunDB (Draft)
+# Hashgraph Layer on ZEN (Draft)
 
 ## Overview
 
-This document sketches a **Hashgraph-inspired consensus/event layer** built on top of GunDB + SEA.
-The goal is to keep Gun's realtime graph sync model while adding:
+This document sketches a **Hashgraph-inspired consensus/event layer** built on top of ZEN + ZEN.
+The goal is to keep ZEN's realtime graph sync model while adding:
 
 - deterministic event ordering for contract/runtime execution,
 - stronger finality semantics for financial/accounting use cases,
@@ -13,9 +13,9 @@ This is a **discussion draft** for future iterations.
 
 ## Goals
 
-- Keep compatibility with Gun's graph-first replication model.
-- Reuse SEA signing and verification flows already used in `~pub` data.
-- Use compact symbolic keys consistent with SEA conventions (`~`, `#`, `.`, `:`, `>`, `+`, `*`).
+- Keep compatibility with ZEN's graph-first replication model.
+- Reuse ZEN signing and verification flows already used in `~pub` data.
+- Use compact symbolic keys consistent with ZEN conventions (`~`, `#`, `.`, `:`, `>`, `+`, `*`).
 - Reserve `!` prefix for protocol/system namespaces (not user business data).
 - Support browser and Node peers with role differences only by capability (validator, observer, relay).
 
@@ -27,7 +27,7 @@ This is a **discussion draft** for future iterations.
 
 ## Layered Architecture
 
-1. **Transport/Gossip Layer (existing Gun mesh)**
+1. **Transport/Gossip Layer (existing ZEN mesh)**
    - Event propagation, anti-entropy, peer discovery.
 2. **Event DAG Layer (`!hg/...`)**
    - Immutable events with parent references and metadata.
@@ -46,7 +46,7 @@ Protocol data uses `!`-prefixed souls, for example:
 - `!hg/f/<epochId>`: finalized checkpoint
 - `!hg/s/<shardOrScope>`: summary/state commitments
 
-Use SEA-style symbolic field keys where possible:
+Use ZEN-style symbolic field keys where possible:
 
 - `#`: id/link/hash anchor
 - `.`: field/key selector context
@@ -95,7 +95,7 @@ To avoid cross-platform mismatch:
 - Canonical serialize event body (excluding signature field) before hashing.
 - Use fixed hash function (`SHA-256`) and clear encoding rules.
 - Validate hash fragment when a `#` suffix rule is used.
-- Reuse SEA hash verification principles already applied in signed writes.
+- Reuse ZEN hash verification principles already applied in signed writes.
 
 ## Finality Strategy (Draft)
 
@@ -110,9 +110,9 @@ Threshold policy can be configured (e.g., 2/3 weighted stake) and must be encode
 
 ## Validator Identity & Authorization
 
-- Validator identities are SEA public keys.
+- Validator identities are ZEN public keys.
 - Membership and weights stored in protocol namespace (`!hg/p/validators`).
-- Optional delegation via SEA certificates (`+`) with explicit scope and expiry.
+- Optional delegation via ZEN certificates (`+`) with explicit scope and expiry.
 - Every vote must bind:
   - validator pub,
   - target event/round,

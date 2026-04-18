@@ -255,12 +255,12 @@ gun
 Create an authenticator that delegates to another signing mechanism:
 
 ```javascript
-const masterPair = await SEA.pair();
+const masterPair = await ZEN.pair();
 
 // Create a delegated authenticator
 const delegatedAuth = async (data) => {
   // First, sign with master key
-  const masterSig = await SEA.sign(data, masterPair);
+  const masterSig = await ZEN.sign(data, masterPair);
 
   // Then, add additional context or transform
   return masterSig;
@@ -279,11 +279,11 @@ Use with [additive derivation](./additive-derivation.md):
 
 ```javascript
 // Master key
-const master = await SEA.pair(null, { seed: "master-seed" });
+const master = await ZEN.pair(null, { seed: "master-seed" });
 
 // Derive child keys for different contexts
-const workKey = await SEA.pair(null, { priv: master.priv, seed: "work" });
-const socialKey = await SEA.pair(null, { priv: master.priv, seed: "social" });
+const workKey = await ZEN.pair(null, { priv: master.priv, seed: "work" });
+const socialKey = await ZEN.pair(null, { priv: master.priv, seed: "social" });
 
 // Use different derived keys
 gun
@@ -303,7 +303,7 @@ Create short-lived authenticators for specific operations:
 
 ```javascript
 async function createTempAuthenticator(masterPair, expiryMs) {
-  const tempPair = await SEA.pair(null, {
+  const tempPair = await ZEN.pair(null, {
     priv: masterPair.priv,
     seed: `temp-${Date.now()}`,
   });
@@ -335,8 +335,8 @@ async function conditionalAuth(data, condition) {
     throw new Error("Condition not met, refusing to sign");
   }
 
-  const pair = await SEA.pair();
-  return await SEA.sign(data, pair);
+  const pair = await ZEN.pair();
+  return await ZEN.sign(data, pair);
 }
 
 // Use with condition
@@ -363,7 +363,7 @@ async function multiSigAuth(data, signers) {
   const signatures = [];
 
   for (const signer of signers) {
-    const sig = await SEA.sign(data, signer);
+    const sig = await ZEN.sign(data, signer);
     signatures.push(sig);
   }
 
@@ -466,7 +466,7 @@ async function biometricAuthenticator(data) {
 
   // Get stored key after biometric verification
   const pair = await getStoredKeyPair();
-  return await SEA.sign(data, pair);
+  return await ZEN.sign(data, pair);
 }
 
 gun
@@ -540,8 +540,8 @@ type SEAPair = {
 ```javascript
 describe("External Authenticators", function () {
   it("should put with external authenticator", async function () {
-    const gun = Gun();
-    const pair = await SEA.pair();
+    const zen = new ZEN();
+    const pair = await ZEN.pair();
 
     // Put with external authenticator
     gun
@@ -562,12 +562,12 @@ describe("External Authenticators", function () {
   });
 
   it("should work with custom signing function", async function () {
-    const gun = Gun();
-    const pair = await SEA.pair();
+    const zen = new ZEN();
+    const pair = await ZEN.pair();
 
     // Custom authenticator
     const customAuth = async (data) => {
-      return await SEA.sign(data, pair);
+      return await ZEN.sign(data, pair);
     };
 
     gun
@@ -599,7 +599,7 @@ const debugAuth = async (data) => {
   console.log("Signing data:", data);
 
   try {
-    const sig = await SEA.sign(data, pair);
+    const sig = await ZEN.sign(data, pair);
     console.log("Signature:", sig);
     return sig;
   } catch (error) {
@@ -619,8 +619,8 @@ gun
 ### Before (Session-based)
 
 ```javascript
-const gun = Gun();
-const user = gun.user();
+const zen = new ZEN();
+const user = zen.user();
 
 await user.create("alice", "password");
 await user.auth("alice", "password");
@@ -631,8 +631,8 @@ user.get("profile").put({ name: "Alice" });
 ### After (External Authenticator)
 
 ```javascript
-const gun = Gun();
-const pair = await SEA.pair(null, { seed: "alice-recovery-seed" });
+const zen = new ZEN();
+const pair = await ZEN.pair(null, { seed: "alice-recovery-seed" });
 
 gun
   .get(`~${pair.pub}`)
@@ -649,7 +649,7 @@ async function hybridPut(gun, user, path, data, authenticator) {
   if (authenticator) {
     // New way: external authenticator
     const pub = authenticator.pub || user.is?.pub;
-    gun.get(`~${pub}`).get(path).put(data, null, {
+    zen.get(`~${pub}`).get(path).put(data, null, {
       opt: { authenticator },
     });
   } else {
@@ -664,4 +664,4 @@ async function hybridPut(gun, user, path, data, authenticator) {
 - [WebAuthn Integration](./webauthn.md) - Hardware authenticators and biometrics
 - [Seed-Based Keys](./seed-based-keys.md) - Deterministic key generation
 - [Additive Derivation](./additive-derivation.md) - Hierarchical key derivation
-- [SEA Certificates](https://gun.eco/docs/SEA.certify) - Permission management
+- [Tilde Shard](./tilde-shard.md) - Understanding `~` namespace rules

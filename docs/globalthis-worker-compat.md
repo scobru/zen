@@ -18,7 +18,7 @@ All modules in `lib/` have been migrated from `window` to `globalThis` as the un
 | Node.js               | ❌ undefined | ✅ `global`                   |
 | Deno / Bun            | ❌ undefined | ✅ defined                    |
 
-Before this migration, loading any `lib/*.js` module inside a Web Worker would silently break — environment detection failed, storage adapters couldn't initialise, and the `Gun` class couldn't be resolved from the global scope.
+Before this migration, loading any `lib/*.js` module inside a Web Worker would silently break — environment detection failed, storage adapters couldn't initialise, and the `ZEN` class couldn't be resolved from the global scope.
 
 ---
 
@@ -26,19 +26,19 @@ Before this migration, loading any `lib/*.js` module inside a Web Worker would s
 
 Every occurrence of `window` in `lib/*.js` has been replaced with `globalThis`. The affected categories:
 
-### 1. Module bootstrapping (`Gun` resolution)
+### 1. Module bootstrapping (`ZEN` resolution)
 
 All adapters and extensions detect whether they're running in browser or Node.js by checking the global scope. The pattern changed from:
 
 ```js
 // Before
-var Gun = typeof window !== "undefined" ? window.Gun : require("../gun");
+var ZEN = typeof window !== "undefined" ? window.ZEN : require("../gun");
 ```
 
 ```js
 // After
-var Gun =
-  typeof globalThis !== "undefined" ? globalThis.Gun : require("../gun");
+var ZEN =
+  typeof globalThis !== "undefined" ? globalThis.ZEN : require("../gun");
 ```
 
 Affected files: `axe.js`, `bye.js`, `erase.js`, `evict.js`, `forget.js`, `fork.js`, `lex.js`, `load.js`, `mix.js`, `multicast.js`, `not.js`, `open.js`, `path.js`, `promise.js`, `shim.js`, `space.js`, `stats.js`, `store.js`, `webrtc.js`, and more.
@@ -88,9 +88,9 @@ if (globalThis.$) { return }
 
 ---
 
-## `Gun.window` — The Internal Browser Flag
+## `ZEN.window` — The Internal Browser Flag
 
-The `src/root.js` bootstrap code (which generates `gun.js`) sets `Gun.window` as a browser-environment sentinel. This property is **not `window` itself** — it is set to `globalThis` when running in a Web Worker, or to the real `window` when on the main thread:
+The `src/root.js` bootstrap code (which generates `zen.js`) sets `ZEN.window` as a browser-environment sentinel. This property is **not `window` itself** — it is set to `globalThis` when running in a Web Worker, or to the real `window` when on the main thread:
 
 ```js
 // src/root.js (unchanged logic, illustrative)
@@ -99,15 +99,15 @@ if (
   typeof window === "undefined" &&
   typeof WorkerGlobalScope !== "undefined"
 ) {
-  // Web Worker: register on globalThis, set Gun.window = globalThis
-  (globalThis.GUN = globalThis.Gun = Gun).window = globalThis;
+  // Web Worker: register on globalThis, set ZEN.window = globalThis
+  (globalThis.GUN = globalThis.ZEN = ZEN).window = globalThis;
 } else if (typeof window !== "undefined") {
-  // Main thread: register on window, set Gun.window = window
-  (window.GUN = window.Gun = Gun).window = window;
+  // Main thread: register on window, set ZEN.window = window
+  (window.GUN = window.ZEN = ZEN).window = window;
 }
 ```
 
-Internally, GUN uses `Gun.window` to decide whether it is running in any browser-like context (main thread _or_ worker). Code in `src/` that checks `Gun.window` continues to work correctly in workers.
+Internally, GUN uses `ZEN.window` to decide whether it is running in any browser-like context (main thread _or_ worker). Code in `src/` that checks `ZEN.window` continues to work correctly in workers.
 
 ---
 
@@ -117,12 +117,12 @@ With this migration you can now use GUN (including storage adapters) directly in
 
 ```js
 // worker.js  (type: "module")
-import Gun from "/gun.js";
+import ZEN from "/zen.js";
 import "/lib/opfs.js"; // OPFS — Worker-safe where supported
 import "/lib/radisk.js"; // RAD storage — now Worker-safe
 import "/lib/rindexed.js"; // IndexedDB — now Worker-safe
 
-const gun = Gun({ peers: ["https://relay.example.com/gun"] });
+const gun = ZEN({ peers: ["https://relay.example.com/gun"] });
 
 gun
   .get("~")

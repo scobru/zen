@@ -2,7 +2,7 @@
 
 > **PEN là một ngôn ngữ lập trình nhúng độc lập.**
 > Mục tiêu: sinh ra chuỗi base62 nhỏ nhất thế giới mã hóa logic tùy ý.
-> Core hoàn toàn không biết về môi trường xung quanh (không biết GUN, không biết time, không biết network).
+> Core hoàn toàn không biết về môi trường xung quanh (không biết ZEN, không biết time, không biết network).
 > Source hiện đã được vendored vào ZEN tại `src/pen.zig` và `src/wasm.zig` — vẫn là Zig, compile ra `pen.wasm` (26KB, zero imports).
 
 ---
@@ -12,21 +12,21 @@
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Tầng 2: Application (akao/shop)                    │
-│  - Định nghĩa order schema bằng SEA.pen() API       │
+│  - Định nghĩa order schema bằng ZEN.pen() API       │
 │  - Dùng candle number, window, PoW hash             │
 │  - Tất cả đều là arithmetic trên registers          │
 ├─────────────────────────────────────────────────────┤
-│  Tầng 1: GUN-PEN Bridge (lib/pen.js)                │
+│  Tầng 1: ZEN-PEN Bridge (lib/pen.js)                │
 │  - Biết register conventions (R0=key, R1=val...)    │
 │  - Inject R4=Date.now() trước khi gọi PEN core      │
 │  - Xử lý policy opcodes: SGN, CRT, NOA, POW         │
-│  - Biên dịch SEA.pen(spec) → bytecode               │
+│  - Biên dịch ZEN.pen(spec) → bytecode               │
 ├─────────────────────────────────────────────────────┤
 │  Tầng 0: PEN Core (lib/pen.wasm) — STANDALONE       │
 │  - Nguồn: src/pen.zig (Zig), compile ra WASM    │
 │  - Nhận: (bytecode, registers[])                    │
 │  - Trả về: boolean                                  │
-│  - Không biết GUN, time, hay bất kỳ môi trường nào  │
+│  - Không biết ZEN, time, hay bất kỳ môi trường nào  │
 │  - JS bridge + compiler: lib/pen.js                 │
 │  - Build local bằng Zig: npm run buildPEN           │
 └─────────────────────────────────────────────────────┘
@@ -250,7 +250,7 @@ LET(0, DIVU(R[4], INT32(300000)),    ← current candle
 | `0xE0–0xEF` | Inline integer shortcuts: `0xE0` = 0, `0xE1` = 1 ... `0xEF` = 15 (optimization) |
 | `0xF0–0xFF` | Register shorthands (v1 optimization, xem §3.13)                                |
 
-> **Host extension opcodes** (0xC0..): cho phép host thêm opcode đặc thù. Ví dụ GUN layer thêm `0xC0` = SGN,
+> **Host extension opcodes** (0xC0..): cho phép host thêm opcode đặc thù. Ví dụ ZEN layer thêm `0xC0` = SGN,
 > `0xC1` = CRT. PEN core throw "unknown opcode" nếu gặp — host callback xử lý extension.
 
 ### 3.13 Optimization opcodes (v1)
@@ -315,7 +315,7 @@ Pattern `SEG(REG[r], sep, idx)` và `TONUM(SEG(...))` xuất hiện 3–5 lần 
 
 ---
 
-## 4. GUN-PEN Bridge (Tầng 1) — `lib/pen.js`
+## 4. ZEN-PEN Bridge (Tầng 1) — `lib/pen.js`
 
 ### 4.1 Register conventions
 
@@ -325,7 +325,7 @@ Pattern `SEG(REG[r], sep, idx)` và `TONUM(SEG(...))` xuất hiện 3–5 lần 
 | R[1]     | write val (raw JSON string)                                   | string |
 | R[2]     | soul                                                          | string |
 | R[3]     | HAM state timestamp (ms)                                      | number |
-| R[4]     | Date.now() — inject bởi GUN layer                             | number |
+| R[4]     | Date.now() — inject bởi ZEN layer                             | number |
 | R[5]     | writer pub từ authenticated user hoặc `opt.authenticator.pub` | string |
 
 R[4] là `Date.now()` — host inject mỗi lần validate. PEN bytecode tự tính candle number từ R[4] bằng DIVU.
@@ -347,15 +347,15 @@ Luồng thực thi trong `penStage`:
 1. `pen.unpack(soul.slice(1))` → bytecode
 2. `pen.scanpolicy(bytecode)` → `{ sign, cert, open, pow, params }` (tail bytes sau tree root)
 3. `pen.run(bytecode, regs)` → boolean (predicate)
-4. Nếu `policy.pow`: async `SEA.hash(R[pow.field])`, kiểm tra hex prefix
+4. Nếu `policy.pow`: async `ZEN.hash(R[pow.field])`, kiểm tra hex prefix
 5. `applypolicy(policy, ctx, reject)` → forward hoặc verify signature
 
-### 4.3 `SEA.pen(spec)` — high-level compiler
+### 4.3 `ZEN.pen(spec)` — high-level compiler
 
 Input spec format:
 
 ```js
-SEA.pen({
+ZEN.pen({
     // Field predicates (tùy chọn)
     key:   <expr>,    // validate write key (R[0])
     val:   <expr>,    // validate write value (R[1])
@@ -363,7 +363,7 @@ SEA.pen({
     state: <expr>,    // validate HAM state (R[3])
     path:  <expr>,    // validate path after $bytecode/ (R[6])
 
-    // Policy (GUN-layer extension opcodes — append sau expression root)
+    // Policy (ZEN-layer extension opcodes — append sau expression root)
     sign: true,                         // 0xC0 = SGN
     cert: "<pubchars>",                 // 0xC1 = CRT(pub)
     open: true,                         // 0xC3 = NOA
@@ -417,12 +417,12 @@ SEA.pen({
 Dùng khi bạn cần nhiều soul có cùng validator logic nhưng identity khác nhau theo compile-time inputs:
 
 ```js
-var a = SEA.pen({
+var a = ZEN.pen({
   key: { type: "string" },
   params: { item: "organic-green-tea", type: "buy", candle: 5820000 },
 });
 
-var b = SEA.pen({
+var b = ZEN.pen({
   key: { type: "string" },
   params: { item: "organic-green-tea", type: "buy", candle: 5820001 },
 });
@@ -432,14 +432,14 @@ var b = SEA.pen({
 
 > Nếu hai object có cùng nội dung nhưng khác thứ tự key, soul vẫn giống nhau vì params được canonicalize trước khi encode.
 
-### 4.5 Helper: `SEA.candle(opts)` — temporal shorthand (Tầng 1)
+### 4.5 Helper: `ZEN.candle(opts)` — temporal shorthand (Tầng 1)
 
 Candle number = `Math.floor(timestamp_ms / size_ms)`.
-Đây là helper ở Tầng 1, compile xuống expression thuần túy rồi truyền vào `SEA.pen()`.
+Đây là helper ở Tầng 1, compile xuống expression thuần túy rồi truyền vào `ZEN.pen()`.
 
 ```js
 // Helper: validate rằng key segment idx chứa valid candle number trong window
-SEA.candle = function (opts) {
+ZEN.candle = function (opts) {
   // opts: { seg: 0, sep: "_", size: 300000, back: 100, fwd: 2 }
   // Tất cả fields có default: sep="_", size=300000, back=100, fwd=2
   // Compile ra PEN expr:
@@ -477,10 +477,10 @@ SEA.candle = function (opts) {
 Caller dùng:
 
 ```js
-SEA.pen({
+ZEN.pen({
   key: {
     and: [
-      SEA.candle({ seg: 0, sep: "_", size: 300000, back: 100, fwd: 2 }),
+      ZEN.candle({ seg: 0, sep: "_", size: 300000, back: 100, fwd: 2 }),
       {
         seg: {
           sep: "_",
@@ -497,27 +497,27 @@ SEA.pen({
 
 `candle` không phải opcode. Nó là sugar reduce xuống LET + DIVU + GTE + LTE + SEG + TONUM.
 
-### 4.6 `SEA.pen({ pow })` — Proof of Work option
+### 4.6 `ZEN.pen({ pow })` — Proof of Work option
 
 PoW verification là: `SHA256(val).startsWith("000...difficulty_zeros")`
 
 Cách implement trong PEN: host extension opcode `0xC4` = POW — vì SHA256 là async, không thể model trong sync expression tree. Pipeline stage xử lý async trước khi gọi check.next.
 
 ```js
-// Policy-level (async, handled by GUN layer)
-SEA.pen({ pow: { field: 1, difficulty: 3 } });
+// Policy-level (async, handled by ZEN layer)
+ZEN.pen({ pow: { field: 1, difficulty: 3 } });
 // pow.field là register index: 0=key, 1=val, 2=soul, 4=now, 5=pub
 // → bytecode: 0xC4 [u8 field_reg] [u8 difficulty]  (appended after expression root)
-// → penStage: async SEA.hash(R[field]) → verify hex prefix "000..."
+// → penStage: async ZEN.hash(R[field]) → verify hex prefix "000..."
 ```
 
 ---
 
 ## 5. `lib/pen.js` — cấu trúc thực tế
 
-`lib/pen.js` là một file duy nhất chứa toàn bộ PEN stack cho GUN: WASM loader, pack/unpack encoding, bytecode builder (bc), treeskip/scanpolicy, penStage pipeline, và compiler (`SEA.pen` / `SEA.candle`).
+`lib/pen.js` là một file duy nhất chứa toàn bộ PEN stack cho ZEN: WASM loader, pack/unpack encoding, bytecode builder (bc), treeskip/scanpolicy, penStage pipeline, và compiler (`ZEN.pen` / `ZEN.candle`).
 
-> **Không phải standalone.** `lib/pen.js` require GUN + SEA để đăng ký vào pipeline.
+> **Không phải standalone.** `lib/pen.js` require ZEN + ZEN để đăng ký vào pipeline.
 > PEN Core thuần túy là `lib/pen.wasm` — không import gì, không phụ thuộc vào JS runtime.
 
 ### 5.1 API công khai
@@ -551,18 +551,18 @@ var policy = pen.scanpolicy(bytecode);
 ### 5.2 SEA API
 
 ```js
-// SEA.pen(spec) → '$<base62>' soul string
-var soul = SEA.pen({
+// ZEN.pen(spec) → '$<base62>' soul string
+var soul = ZEN.pen({
   key: { pre: "order_" },
   val: { type: "string" },
   sign: true,
 });
 
-// SEA.candle(opts) → expr (dùng trong spec.key hoặc spec.val)
-var expr = SEA.candle({ seg: 0, sep: "_", size: 300000, back: 100, fwd: 2 });
+// ZEN.candle(opts) → expr (dùng trong spec.key hoặc spec.val)
+var expr = ZEN.candle({ seg: 0, sep: "_", size: 300000, back: 100, fwd: 2 });
 
 // params đổi soul identity mà không đổi validator semantics
-var market = SEA.pen({
+var market = ZEN.pen({
   key: { type: "string" },
   params: { item: "tea", type: "buy", candle: 5820000 },
 });
@@ -627,7 +627,7 @@ bc.segrn(reg, sep, idx)    // [0x81, reg, sep_byte, idx]  = TONUM(SEG(REG[reg], 
 
 ---
 
-## 6. Tích hợp với GUN pipeline
+## 6. Tích hợp với ZEN pipeline
 
 ### 6.1 Cơ chế đăng ký
 
@@ -678,7 +678,7 @@ function penStage(ctx, next, reject) {
 
     // 5. Enforce policy (async for PoW)
     if (policy.pow) {
-      SEA.hash(
+      ZEN.hash(
         regs[policy.pow.field],
         null,
         function (hash) {
@@ -725,10 +725,10 @@ Ví dụ với 5-phút candle:
 ### 7.2 Schema definition
 
 ```js
-var orderSoul = SEA.pen({
+var orderSoul = ZEN.pen({
   key: {
     and: [
-      SEA.candle({ seg: 0, sep: "_", size: 300000, back: 100, fwd: 2 }),
+      ZEN.candle({ seg: 0, sep: "_", size: 300000, back: 100, fwd: 2 }),
       {
         seg: {
           sep: "_",
@@ -766,7 +766,7 @@ AND(2)                                                     (2 bytes)
 Total: ~57 bytes → penpack → ~77 base62 chars  (was ~75 bytes → ~100 chars, -23%)
 ```
 
-### 7.4 Discovery (không thay đổi — dùng LEX query của GUN)
+### 7.4 Discovery (không thay đổi — dùng LEX query của ZEN)
 
 ```js
 // Tất cả ETH/USDT buy orders trong nến hiện tại
@@ -792,7 +792,7 @@ gun
 | 5   | `test/pen.js`      | 52 tests: ISA, LET, candle, policy, adversarial                                   | ✅         |
 
 > `lib/pen.js` là file **độc lập hoàn toàn** — WASM loader + compiler + penStage trong 1 file.
-> `lib/pen.wasm` (26KB, Zig-compiled) chứa core VM — không biết GUN, time, hay network.
+> `lib/pen.wasm` (26KB, Zig-compiled) chứa core VM — không biết ZEN, time, hay network.
 
 ---
 
@@ -801,7 +801,7 @@ gun
 ```
 akaoio/gun (hiện tại)
   lib/pen.js          ← WASM loader + compiler + penStage (1 file)
-  lib/pen.wasm        ← Zig-compiled WASM, 26KB, zero GUN imports
+  lib/pen.wasm        ← Zig-compiled WASM, 26KB, zero ZEN imports
   src/sea/index.js    ← integration (SEA.check.use(penStage))
 
 akaoio/pen (tương lai, planned)
@@ -811,7 +811,7 @@ akaoio/pen (tương lai, planned)
   README.md
 
 akao/shop (application)
-  Dùng SEA.pen() API  ← order/dispute/trade namespaces
+  Dùng ZEN.pen() API  ← order/dispute/trade namespaces
 ```
 
 Zig port: ISA v1 là fixed spec — không thay đổi opcode meanings sau khi publish. Version byte (`0x01`) cho phép thêm ISA v2 sau này.

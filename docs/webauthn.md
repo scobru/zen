@@ -2,7 +2,7 @@
 
 ## Overview
 
-This fork includes **native WebAuthn/Passkey integration**, allowing GunDB to use **hardware security keys, biometric authentication, and platform authenticators** for signing and verification. This brings:
+This fork includes **native WebAuthn/Passkey integration**, allowing ZEN to use **hardware security keys, biometric authentication, and platform authenticators** for signing and verification. This brings:
 
 - 🔐 **Hardware-backed security**: Private keys never leave the secure enclave
 - 🎯 **Phishing resistance**: Cryptographic domain binding prevents credential theft
@@ -12,11 +12,11 @@ This fork includes **native WebAuthn/Passkey integration**, allowing GunDB to us
 
 ## How It Works
 
-WebAuthn signatures are **normalized** to match SEA's signature format, allowing seamless integration with GunDB's verification system. The integration:
+WebAuthn signatures are **normalized** to match ZEN's signature format, allowing seamless integration with ZEN's verification system. The integration:
 
 1. Captures WebAuthn assertion responses
 2. Extracts the P-256 signature (r, s values)
-3. Wraps it in SEA's expected format
+3. Wraps it in ZEN's expected format
 4. Enables verification using the public key
 
 ## Prerequisites
@@ -46,7 +46,7 @@ const credential = await navigator.credentials.create({
       displayName: "User Name",
     },
     pubKeyCredParams: [
-      { type: "public-key", alg: -7 }, // ES256 (P-256) - REQUIRED for SEA
+      { type: "public-key", alg: -7 }, // ES256 (P-256) - REQUIRED for ZEN
       { type: "public-key", alg: -25 }, // ECDH (P-256) - for encryption
     ],
     authenticatorSelection: {
@@ -74,9 +74,9 @@ const rawKey = new Uint8Array(publicKey);
 const xCoord = rawKey.slice(27, 59);
 const yCoord = rawKey.slice(59, 91);
 
-// Format as SEA-compatible public key (new base62 format: 88 alphanumeric chars)
-// SEA.base62.bufToB62() converts a 32-byte Uint8Array → 44-char base62 string
-const pub = SEA.base62.bufToB62(xCoord) + SEA.base62.bufToB62(yCoord);
+// Format as ZEN-compatible public key (new base62 format: 88 alphanumeric chars)
+// ZEN.base62.bufToB62() converts a 32-byte Uint8Array → 44-char base62 string
+const pub = ZEN.base62.bufToB62(xCoord) + ZEN.base62.bufToB62(yCoord);
 
 console.log("Public key:", pub);
 // Example: "2BWVjPXJxj6HF9DKGK8q0WjBfGP1m7rZH4TnAkELqR3M0uYsVCa3xDZ4kRHbENm7TsOa2q1PmNu8L5nWFMW0dRA"
@@ -109,9 +109,9 @@ const authenticator = async (data) => {
   return assertion.response;
 };
 
-// Sign data using SEA with WebAuthn
+// Sign data using ZEN with WebAuthn
 const data = "Hello, World!";
-const signature = await SEA.sign(data, authenticator);
+const signature = await ZEN.sign(data, authenticator);
 
 console.log("Signature:", signature);
 // { m: {...}, s: "..." }
@@ -121,7 +121,7 @@ console.log("Signature:", signature);
 
 ```javascript
 // Verify using the public key
-const verified = await SEA.verify(signature, pub);
+const verified = await ZEN.verify(signature, pub);
 
 console.log("Verified:", verified);
 // "Hello, World!"
@@ -169,7 +169,7 @@ async function register() {
   const xCoord = rawKey.slice(27, 59);
   const yCoord = rawKey.slice(59, 91);
   // New base62 format: 88 alphanumeric chars (44 per coordinate)
-  pub = SEA.base62.bufToB62(xCoord) + SEA.base62.bufToB62(yCoord);
+  pub = ZEN.base62.bufToB62(xCoord) + ZEN.base62.bufToB62(yCoord);
 
   // Create authenticator function
   authenticator = async (data) => {
@@ -195,21 +195,21 @@ async function signAndVerify() {
   const message = "Hello from WebAuthn!";
 
   // Sign
-  const signature = await SEA.sign(message, authenticator);
+  const signature = await ZEN.sign(message, authenticator);
   console.log("Signature:", signature);
 
   // Verify
-  const verified = await SEA.verify(signature, pub);
+  const verified = await ZEN.verify(signature, pub);
   console.log("Verified:", verified);
   console.log("Valid:", verified === message);
 }
 
-// 3. Use with GunDB
+// 3. Use with ZEN
 async function useWithGun() {
-  const gun = Gun();
+  const zen = new ZEN();
 
   // Put data to user graph (without traditional auth)
-  gun.get(`~${pub}`).get("profile").put("My profile data", null, {
+  zen.get(`~${pub}`).get("profile").put("My profile data", null, {
     opt: { authenticator },
   });
 
@@ -230,15 +230,15 @@ await signAndVerify();
 await useWithGun();
 ```
 
-## Integration with GunDB
+## Integration with ZEN
 
 ### Put Data with WebAuthn
 
 ```javascript
-const gun = Gun();
+const zen = new ZEN();
 
 // Put to your own graph
-gun.get(`~${pub}`).get("test").put("hello world", null, {
+zen.get(`~${pub}`).get("test").put("hello world", null, {
   opt: { authenticator },
 });
 
@@ -261,8 +261,8 @@ const aliceAuthenticator = async (data) => {
 };
 
 // Bob creates a certificate for Alice
-const bob = await SEA.pair();
-const cert = await SEA.certify(
+const bob = await ZEN.pair();
+const cert = await ZEN.certify(
   alicePub, // Alice can write
   { "*": "messages" }, // to Bob's messages path
   bob,
@@ -332,7 +332,7 @@ for (let i = 0; i < 2; i++) {
 }
 
 // Use any authenticator
-const signature = await SEA.sign(data, authenticators[0].authenticator);
+const signature = await ZEN.sign(data, authenticators[0].authenticator);
 ```
 
 ### Conditional UI (Autofill)
@@ -418,8 +418,8 @@ const relaxedAuth = async (data) => {
 
 - Ensure algorithm is `-7` (ES256, P-256)
 - Check coordinate extraction (bytes 27-58 and 59-90)
-- Verify `SEA.base62` is available (loaded from `sea.js`)
-- Ensure `SEA.base62.bufToB62()` is called on `Uint8Array` slices (not raw base64url strings)
+- Verify `ZEN.base62` is available (loaded from `sea.js`)
+- Ensure `ZEN.base62.bufToB62()` is called on `Uint8Array` slices (not raw base64url strings)
 
 ### "Signature verification failed"
 
@@ -463,13 +463,13 @@ const relaxedAuth = async (data) => {
 
 ```javascript
 // OLD: Traditional SEA auth
-const user = gun.user();
+const user = zen.user();
 await user.create("alice", "password123");
 await user.auth("alice", "password123");
 
 // NEW: WebAuthn
 const { credential, pub, authenticator } = await registerWebAuthn();
-gun.get(`~${pub}`).get("data").put("value", null, {
+zen.get(`~${pub}`).get("data").put("value", null, {
   opt: { authenticator },
 });
 ```
@@ -483,7 +483,7 @@ async function hybridAuth(gun, username, password, useWebAuthn) {
     const { pub, authenticator } = await webAuthnLogin(username);
     return { pub, authenticator };
   } else {
-    const user = gun.user();
+    const user = zen.user();
     await user.auth(username, password);
     return { pub: user.is.pub, authenticator: user._.sea };
   }
