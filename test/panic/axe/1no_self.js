@@ -1,26 +1,26 @@
-import __ip from "ip";
-import __panic_server from "panic-server";
-import __panic_manager from "panic-manager";
-import __fs from "fs";
-import __fsrm from "./lib/fsrm";
-import __http from "http";
-import __index from "./index.js";
-import __child_process from "child_process";
-import __open from "../util/open.js";
+﻿import ip from "ip";
+import panicserver from "panic-server";
+import panicmanager from "panic-manager";
+import fs from "fs";
+import fsrm from "./lib/fsrm";
+import nodehttp from "http";
+import zenapp from "./index.js";
+import childproc from "child_process";
+import openutil from "../util/open.js";
 var ip;
 try {
-  ip = __ip.address();
+  ip = ip.address();
 } catch (e) {}
 
 var config = {
   IP: ip || "localhost",
-  port: 8765,
+  port: 8420,
   relays: 1,
 };
 
 var panic;
 try {
-  panic = __panic_server;
+  panic = panicserver;
 } catch (e) {
   console.log(
     "PANIC not installed! `npm install panic-server panic-manager panic-client`",
@@ -35,7 +35,7 @@ panic
   .listen(config.port);
 
 var clients = panic.clients;
-var manager = __panic_manager();
+var manager = panicmanager();
 
 manager.start({
   clients: Array(config.relays)
@@ -71,18 +71,18 @@ describe("Do not connect to self", function () {
             var env = test.props;
             test.async();
             try {
-              __fs.unlinkSync(env.i + "data");
+              fs.unlinkSync(env.i + "data");
             } catch (e) {}
             try {
-              __fsrm(env.i + "data");
+              fsrm(env.i + "data");
             } catch (e) {}
-            var server = __http.createServer(function (req, res) {
+            var server = nodehttp.createServer(function (req, res) {
               res.end("I am " + env.i + "!");
             });
             var port = env.config.port + env.i;
             var Zen;
             try {
-              Zen = __index;
+              Zen = zenapp;
             } catch (e) {
               console.log(
                 "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
@@ -103,7 +103,7 @@ describe("Do not connect to self", function () {
                   "--peers=" + peers.join(",").replaceAll("http", "ws"),
                 );
               }
-              const sp = __child_process.spawn(process.env.ROD_PATH, args);
+              const sp = childproc.spawn(process.env.ROD_PATH, args);
               sp.stdout.on("data", function (data) {
                 console.log(data.toString());
               });
@@ -171,7 +171,7 @@ describe("Do not connect to self", function () {
   });
 
   after("Everything shut down.", function () {
-    __open.cleanup();
+    openutil.cleanup();
     return relays.run(function () {
       process.exit();
     });

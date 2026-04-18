@@ -1,19 +1,19 @@
-import __ip from "ip";
-import __https from "https";
-import __fs from "fs";
-import __panic_manager from "panic-manager";
-import __test from "./test/https/test";
-import __open from "./util/open.js";
+﻿import ip from "ip";
+import nodehttps from "https";
+import fs from "fs";
+import panicmanager from "panic-manager";
+import httpstest from "./test/https/test";
+import openutil from "./util/open.js";
 import fs from "fs";
 import panic from "panic-server";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 var config = {
-  IP: __ip.address(),
-  port: 8765,
+  IP: ip.address(),
+  port: 8420,
   servers: 1,
   browsers: 2,
   each: 250,
@@ -23,12 +23,11 @@ var config = {
     "/": __dirname + "/index.html",
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
-    "/cryptomodules.js": __dirname + "/../../lib/cryptomodules.js",
     "/zen.js": __dirname + "/../../zen.js",
   },
 };
 
-var server = __https.createServer({
+var server = nodehttps.createServer({
   key: fs.readFileSync(__dirname + "/../https/server.key"),
   cert: fs.readFileSync(__dirname + "/../https/server.crt"),
   ca: fs.readFileSync(__dirname + "/../https/ca.crt"),
@@ -40,12 +39,12 @@ panic
   .server(server)
   .on("request", function (req, res) {
     config.route[req.url] &&
-      __fs.createReadStream(config.route[req.url]).pipe(res);
+      fs.createReadStream(config.route[req.url]).pipe(res);
   })
   .listen(config.port);
 
 var clients = panic.clients;
-var manager = __panic_manager();
+var manager = panicmanager();
 
 manager.start({
   clients: Array(config.servers)
@@ -91,14 +90,14 @@ describe("Stress test ZEN with ZEN users causing PANIC!", function () {
             //setInterval(function(){ var u, t; u = process.memoryUsage().heapUsed; t = load('os').totalmem(); console.log((u/t).toFixed(2)) }, 1000)
             // Clean up from previous test.
             try {
-              __fs.unlinkSync(env.i + "data");
+              fs.unlinkSync(env.i + "data");
             } catch (e) {
               console.log(
                 "!!! WARNING !!!! MUST MANUALLY REMOVE OLD DATA!!!!, e",
               );
             }
             var purl = "https://" + env.config.IP + ":" + env.config.port;
-            __test(
+            httpstest(
               env.config.port + env.i,
               env.i + "data",
               function () {
@@ -447,7 +446,7 @@ describe("Stress test ZEN with ZEN users causing PANIC!", function () {
   });
 
   after("Everything shut down.", function () {
-    __open.cleanup();
+    openutil.cleanup();
     return servers.run(function () {
       process.exit();
     });

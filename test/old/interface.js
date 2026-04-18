@@ -1,6 +1,6 @@
-import __theory from "theory";
+﻿import theory from "theory";
 
-export default __theory(
+export default theory(
   "interface",
   function (a) {
     return ":)";

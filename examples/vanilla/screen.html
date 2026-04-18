@@ -18,7 +18,7 @@
     <script src="/zen.js"></script>
 
     <script>
-      const gun = Gun(`${window.location.origin}/gun`);
+      const zen = Zen(`${window.location.origin}/zen`);
       const record = { recorder: null, recording: false };
 
       const video = document.querySelector("#video");
@@ -63,7 +63,7 @@
         record.file.onloadend = () => {
           let b64 = record.file.result;
           b64 = `data:video/webm${b64.slice(b64.indexOf(";"))}`;
-          gun.get("test").get("screen").put(b64);
+          zen.get("test").get("screen").put(b64);
         };
       };
 
@@ -80,7 +80,7 @@
           playButton.innerText = "Stop";
           record.playing = true;
 
-          gun
+          zen
             .get("test")
             .get("screen")
             .once((data) => {

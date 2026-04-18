@@ -1,19 +1,19 @@
-import "./zen";
-import __ip from "ip";
-import __fs from "fs";
-import __panic_manager from "panic-manager";
-import __http from "http";
-import __index from "./index.js";
-import __open from "./util/open.js";
+﻿import "./zen";
+import ip from "ip";
+import fs from "fs";
+import panicmanager from "panic-manager";
+import nodehttp from "http";
+import zenapp from "./index.js";
+import openutil from "./util/open.js";
 import panic from "panic-server";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 var config = {
-  IP: __ip.address(),
-  port: 8765,
+  IP: ip.address(),
+  port: 8420,
   servers: 1,
   browsers: 2,
   route: {
@@ -28,12 +28,12 @@ panic
   .server()
   .on("request", function (req, res) {
     config.route[req.url] &&
-      __fs.createReadStream(config.route[req.url]).pipe(res);
+      fs.createReadStream(config.route[req.url]).pipe(res);
   })
   .listen(config.port);
 
 var clients = panic.clients;
-var manager = __panic_manager();
+var manager = panicmanager();
 
 manager.start({
   clients: Array(config.servers)
@@ -69,16 +69,16 @@ describe("Make sure ZEN syncs correctly", function () {
         var env = test.props;
         test.async();
         try {
-          __fs.unlinkSync(env.i + "data");
+          fs.unlinkSync(env.i + "data");
         } catch (e) {}
         try {
-          __fs.unlinkSync(env.i + 1 + "data");
+          fs.unlinkSync(env.i + 1 + "data");
         } catch (e) {}
         var port = env.config.port + env.i;
-        var server = __http.createServer(function (req, res) {
+        var server = nodehttp.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
-        var Zen = __index;
+        var Zen = zenapp;
         var zen = Zen({ file: env.i + "data", web: server });
         server.listen(port, function () {
           test.done();
@@ -89,7 +89,7 @@ describe("Make sure ZEN syncs correctly", function () {
   });
 
   it(config.browsers + " browser(s) have joined!", function () {
-    __open.web(config.browsers, "http://" + config.IP + ":" + config.port);
+    openutil.web(config.browsers, "http://" + config.IP + ":" + config.port);
     return browsers.atLeast(config.browsers);
   });
 
@@ -132,7 +132,6 @@ describe("Make sure ZEN syncs correctly", function () {
               "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
             );
             window.zen = zen;
-            var user = (window.user = zen.user());
           },
           { i: (i += 1), config: config },
         ),
@@ -145,29 +144,22 @@ describe("Make sure ZEN syncs correctly", function () {
     return alice.run(function (test) {
       console.log("I AM ALICE");
       test.async();
-      window.user.create("alice", "xyzabcmnopq", function (ack) {
-        if (ack.err || !ack.pub) {
-          return;
-        }
-        window.user.auth("alice", "xyzabcmnopq", function (ack) {
-          if (ack.err || !ack.pub) {
-            return;
-          }
-          user
-            .get("who")
-            .get("said")
-            .set(
-              {
-                what: "Hello world!",
-              },
-              function (ack) {
-                if (ack.err) {
-                  return;
-                }
-                test.done();
-              },
-            );
-        });
+      ZEN.pair().then(function (pair) {
+        window.alicePair = pair;
+        localStorage.setItem("alicePair", JSON.stringify(pair));
+        window.zen.get("discovery").get("alice").put(pair.pub);
+        window.zen
+          .get("~" + pair.pub)
+          .get("who")
+          .get("said")
+          .set(
+            { what: "Hello world!" },
+            function (ack) {
+              if (ack.err) { return; }
+              test.done();
+            },
+            { authenticator: pair },
+          );
       });
     });
   });
@@ -175,16 +167,9 @@ describe("Make sure ZEN syncs correctly", function () {
   it("Create Bob", function () {
     return bob.run(function (test) {
       test.async();
-      window.user.create("bob", "zyxcbaqponm", function (ack) {
-        if (ack.err || !ack.pub) {
-          return;
-        }
-        window.user.auth("bob", "zyxcbaqponm", function (ack) {
-          if (ack.err || !ack.pub) {
-            return;
-          }
-          test.done();
-        });
+      ZEN.pair().then(function (pair) {
+        window.bobPair = pair;
+        test.done();
       });
     });
   });
@@ -192,14 +177,12 @@ describe("Make sure ZEN syncs correctly", function () {
   it("Have Bob find Alice", function () {
     return bob.run(function (test) {
       test.async();
-
-      window.zen
-        .get("~@alice")
-        .map()
-        .once(function (data) {
-          window.ref = zen.get("~" + data.pub);
-          test.done();
-        });
+      window.zen.get("discovery").get("alice").once(function (pub) {
+        if (!pub) { return; }
+        window.ref = zen.get("~" + pub);
+        window.alicePub = pub;
+        test.done();
+      });
     });
   });
 
@@ -265,13 +248,10 @@ describe("Make sure ZEN syncs correctly", function () {
           "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
         );
         window.zen = zen;
-        var user = (window.user = zen.user());
-        user.auth("alice", "xyzabcmnopq", function (ack) {
-          if (ack.err || !ack.pub) {
-            return;
-          }
-          test.done();
-        });
+        var stored = localStorage.getItem("alicePair");
+        if (!stored) { return; }
+        window.alicePair = JSON.parse(stored);
+        test.done();
       },
       { i: 1, config: config },
     );
@@ -281,19 +261,18 @@ describe("Make sure ZEN syncs correctly", function () {
     return again.alice.run(function (test) {
       test.async();
       console.log("write...");
-      user
+      var pair = window.alicePair;
+      window.zen
+        .get("~" + pair.pub)
         .get("who")
         .get("said")
         .set(
-          {
-            what: "AAA",
-          },
+          { what: "AAA" },
           function (ack) {
-            if (ack.err) {
-              return;
-            }
+            if (ack.err) { return; }
             test.done();
           },
+          { authenticator: pair },
         );
     });
   });
@@ -318,7 +297,7 @@ describe("Make sure ZEN syncs correctly", function () {
   });
 
   after("Everything shut down.", function () {
-    __open.cleanup();
+    openutil.cleanup();
     return servers.run(function () {
       process.exit();
     });

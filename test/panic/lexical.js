@@ -1,17 +1,17 @@
-import __ip from "ip";
-import __fs from "fs";
-import __panic_manager from "panic-manager";
-import __http from "http";
-import __index from "./index.js";
+﻿import ip from "ip";
+import fs from "fs";
+import panicmanager from "panic-manager";
+import nodehttp from "http";
+import zenapp from "./index.js";
 import panic from "panic-server";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 var config = {
-  IP: __ip.address(),
-  port: process.env.PORT ? parseInt(process.env.PORT) : 8765,
+  IP: ip.address(),
+  port: process.env.PORT ? parseInt(process.env.PORT) : 8420,
   servers: 1,
   browsers: 1,
   route: {
@@ -30,12 +30,12 @@ panic
   .server()
   .on("request", function (req, res) {
     config.route[req.url] &&
-      __fs.createReadStream(config.route[req.url]).pipe(res);
+      fs.createReadStream(config.route[req.url]).pipe(res);
   })
   .listen(config.port);
 
 var clients = panic.clients;
-var manager = __panic_manager();
+var manager = panicmanager();
 manager.start({
   clients: Array(config.servers)
     .fill()
@@ -68,16 +68,16 @@ describe("RAD Lexical search Test!           ", function () {
         var env = test.props;
         test.async();
         try {
-          __fs.unlinkSync("radata_test_lexical_" + env.i);
+          fs.unlinkSync("radata_test_lexical_" + env.i);
         } catch (e) {}
         try {
-          __fs.unlinkSync("radata_test_lexical_" + (env.i + 1));
+          fs.unlinkSync("radata_test_lexical_" + (env.i + 1));
         } catch (e) {}
         var port = env.config.port + env.i;
-        var server = __http.createServer(function (req, res) {
+        var server = nodehttp.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
-        var Zen = (global.Zen = __index);
+        var Zen = (global.Zen = zenapp);
         var zen = (global.zen = Zen({
           axe: false,
           multicast: false,

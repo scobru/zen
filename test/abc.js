@@ -1,3 +1,3 @@
-import __expect from "./expect.js";
+﻿import xpect from "./expect.js";
 import "./common.js";
-var expect = (global.expect = __expect);
+var expect = (global.expect = xpect);

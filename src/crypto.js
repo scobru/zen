@@ -1,7 +1,7 @@
-// src/crypto_wasm_bridge.js — Lazy loader and JS bridge for crypto.wasm.
+// src/crypto.js — Lazy loader and JS bridge for crypto.wasm.
 //
 // Usage:
-//   import bridge from "./crypto_wasm_bridge.js";
+//   import bridge from "./crypto.js";
 //   await bridge.ready;
 //   const hash = bridge.keccak256(bytes);  // synchronous once ready
 //

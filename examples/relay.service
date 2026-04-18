@@ -1,6 +1,6 @@
 [Unit]
 Description=GUN relay
-Documentation=https://gun.eco
+Documentation=https://zen.eco
 After=network.target
 
 [Install]

@@ -29,22 +29,22 @@
 		</style>
 		<script src="./jquery.js"></script>
 		<script src="/zen.js"></script>
-		<script src="../../gun/sea.js"></script>
-		<script src="../../gun/as.js"></script>
-		<script src="../../gun/nts.js"></script>
-		<script src="../../gun/lib/time.js"></script>
-		<script src="../../gun/lib/upload.js"></script>
+		<script src="../../zen/sea.js"></script>
+		<script src="../../zen/as.js"></script>
+		<script src="../../zen/nts.js"></script>
+		<script src="../../zen/lib/time.js"></script>
+		<script src="../../zen/lib/upload.js"></script>
 		<script>
 			;(() => {
 				function S(){};
 				window.S = S;
 				try{localStorage.clear();//sessionStorage.clear();
 				}catch(e){}
-				S.gun = ZEN(location.host? location.origin + '/zen' : 'http://localhost:8765/zen');
-				//S.gun = Gun('http://localhost:8765/zen');
-				//S.gun = Gun();
-				S.app = S.gun.get('examples/social/2');
-				S.user = S.gun.user();
+				S.zen = ZEN(location.host? location.origin + '/zen' : 'http://localhost:8420/zen');
+				//S.zen = Zen('http://localhost:8420/zen');
+				//S.zen = Zen();
+				S.app = S.zen.get('examples/social/2');
+				S.user = S.zen.user();
 				S.tell = (what, n) => {
 					var e = $('#tell').find('p');
 					e.addClass('notify').text(what);
@@ -171,9 +171,9 @@
 			<div class="pad ditch" style="margin-top: 1em;">
 				<p><span class="loud write shout">Welcome,</span><!-- span class="write loud">, you are currently connected to <b id="peers" class="huet4">2</b> peers. <b>Why not try to sign up or log in?</b></span --></p>
 				<p> - Your identity is created here, by you. Not on a server.</p>
-				<p> - It uses secure <a href="https://gun.eco/docs/Cartoon-Cryptography">cryptographic</a> methods to protect you.</p>
+				<p> - It uses secure <a href="https://zen.eco/docs/Cartoon-Cryptography">cryptographic</a> methods to protect you.</p>
 				<p> - Only you have access to it, meaning even we cannot reset your password!</p>
-				<p> - For added security, you can freely <a href="https://github.com/akaoio/gun">download</a> and run it on your own computer.</p>
+				<p> - For added security, you can freely <a href="https://github.com/akaoio/zen">download</a> and run it on your own computer.</p>
 			</div>
 			<div class="black">
 				<div class="pad huet">
@@ -220,7 +220,7 @@
 					<input id="in" type="submit" class="huet sap act symbol" value="sign in">
   				<input id="up" type="button" class="huet sap act symbol" value="or up">
 				</div>
-				<span class="tos">By logging in or up, you agree to the <a href="https://github.com/akaoio/gun/blob/master/LICENSE.md" class="tos" target="_blank">Terms of Service</a>.</span>
+				<span class="tos">By logging in or up, you agree to the <a href="https://github.com/akaoio/zen/blob/master/LICENSE.md" class="tos" target="_blank">Terms of Service</a>.</span>
 				<p class="tos"><a href="#forgot">Forgot password?</a></p>
 			</form>
 			<script>
@@ -269,7 +269,7 @@
 						}
 						return form;
 					}
-					S.gun.on('auth', (ack) => {
+					S.zen.on('auth', (ack) => {
 						if('hi' === S.route){ S.route = '' }
 						if('sign' === S.route){ S.route = '' }
 						if(check.up){ S.route = 'settings' }
@@ -312,7 +312,7 @@
 							if(!alias){ return }
 							$('.pet.length',_).val('');
 							$('.kiss.length',_).val('');
-							S.gun.get('alias/'+alias).once().map()
+							S.zen.get('alias/'+alias).once().map()
 								.get('settings').once(add);
 						}).focus();
 						var add = (set) => {
@@ -327,7 +327,7 @@
 							alias = alias || $('.alias',_).val();
 							if(!alias){ return S.tell("You need a username.") }
 							$('.act',_).addClass('pulse');
-							S.gun.get('alias/' + alias)
+							S.zen.get('alias/' + alias)
 								.once().map()
 								.get('settings')
 								.get('recover')
@@ -338,7 +338,7 @@
 							var pet = $('.jot.pet',_).val();
 							var kiss = $('.jot.kiss',_).val();
 							var hint;
-							try{ hint = await Gun.SEA.decrypt(data, await Gun.SEA.work(pet, kiss));
+							try{ hint = await Zen.SEA.decrypt(data, await Zen.SEA.work(pet, kiss));
 							}catch(e){}
 							if(!hint){ return S.tell("Nope. Try again!") }
 							$('.write.help',_).text(hint);
@@ -425,8 +425,8 @@
 						$('#pet').on('keyup', function(){ $('.pet').text(this.value.length + ' letters.') });
 						$('#kiss').on('keyup', function(){ $('.kiss').text(this.value.length + ' letters.') });
 						
-						S.user.get('settings').get('pet').on(function(l){ $('#pet').val(Gun.text.random(l, '*')) });
-						S.user.get('settings').get('kiss').on(function(l){ $('#kiss').val(Gun.text.random(l, '*')) });
+						S.user.get('settings').get('pet').on(function(l){ $('#pet').val(Zen.text.random(l, '*')) });
+						S.user.get('settings').get('kiss').on(function(l){ $('#kiss').val(Zen.text.random(l, '*')) });
 						
 						$('#recovery').on('submit', async (e) => {
 							var pet = $('#pet').val();
@@ -437,7 +437,7 @@
 							if(!reminder){ return S.tell("You need a password reminder.") } // NOTE: THIS IS TEMPORARY!
 							if(1+pet.indexOf('*') || 1+kiss.indexOf('*')){ return S.tell("Your answer should not have '*' in it.") }
 							$('#recovery .act').addClass('pulse');
-							var recover = await Gun.SEA.encrypt(reminder, await Gun.SEA.work(pet, kiss));
+							var recover = await Zen.SEA.encrypt(reminder, await Zen.SEA.work(pet, kiss));
 							// NOTE: We are currently doing this manually, in the future we want to
 							// just automatically log the user back in based off the security questions
 							// rather than only giving them a "reminder" of what theirold  password is.
@@ -575,16 +575,16 @@
 						var say = $('#speak .draft').text(); //.text(); // NO NO NO NO NO
 						if(!say){ return }
 						console.log('save!', say);
-						var ref = S.user.get('who').get('all').set({what: say, when: Gun.state()});
+						var ref = S.user.get('who').get('all').set({what: say, when: Zen.state()});
 						//ref.get('by').put(S.user.get('who'));
 						//S.user.get('who').get('said').time(ref);
 						S.user.get('who').get('said').set(ref);
-						//S.gun.get('@').time(ref);
+						//S.zen.get('@').time(ref);
 						$('#speak .draft').text('');
 					});
-					//S.gun.get('@').time(async (data, key, time) => {
+					//S.zen.get('@').time(async (data, key, time) => {
 					S.user.get('who').get('said').map().once(async (data, key, time) => {
-						//var ref = S.gun.get(data), tmp;
+						//var ref = S.zen.get(data), tmp;
 						//var said = await ref.then();
 						key = key.replace(/[^A-Za-z]/ig,'');
 						var tmp, said = data, time = said.when;
@@ -666,7 +666,7 @@
 			<script>
 				$.as.route.page('contacts', () => {
 					if(!S.user.is){ return $.as.route('sign') }
-					//S.gun.get('@').time(async (data, key, time) => {
+					//S.zen.get('@').time(async (data, key, time) => {
 
 					// TODO: BUG!! switch from `on` to `once` to get Martti's {_} empty object bug.
 					var $ul = $('#contacts ul');
@@ -734,7 +734,7 @@
 				if(!user.is){ return $.as.route('hi') }
 				var pub = location.hash.split('/').slice(-1)[0];
 				(pub === user._.pub? $('#say').show() : $('#say').hide());
-				as('#person', window.PUB = gun.get('pub/'+pub));
+				as('#person', window.PUB = zen.get('pub/'+pub));
 			});
 
 			$(document).upload(function resize(e, up){
@@ -750,9 +750,9 @@
 				});
 			});
 		</script>
-		<script async src="../../gun/lib/fun.js"></script>
-		<script async src="../../gun/lib/normalize.js"></script>
-		<script async src="../../gun/lib/monotype.js"></script>
-		<script async src="../../gun/lib/meta.js"></script>
+		<script async src="../../zen/lib/fun.js"></script>
+		<script async src="../../zen/lib/normalize.js"></script>
+		<script async src="../../zen/lib/monotype.js"></script>
+		<script async src="../../zen/lib/meta.js"></script>
 	</body>
 </html>

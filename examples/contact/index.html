@@ -137,194 +137,113 @@
 			<p class="mid black">Hello world!</p>
 		</div>
 
-		<!-- script src="/Users/mark/Dropbox/Public/gun/db/examples/jquery.js"></script>
+		<!-- script src="/Users/mark/Dropbox/Public/zen/db/examples/jquery.js"></script>
 		<script src="/zen.js"></script>
-		<script src="/Users/mark/Dropbox/Public/gun/db/lib/cryptomodules.js"></script>
-		<script src="/Users/mark/Dropbox/Public/gun/db/sea.js"></script>
-		<script src="/Users/mark/Dropbox/Public/gun/db/as.js"></script -->
+		<script src="/Users/mark/Dropbox/Public/zen/db/sea.js"></script>
+		<script src="/Users/mark/Dropbox/Public/zen/db/as.js"></script -->
 
 		<script src="/jquery.js"></script>
 		<script src="/zen.js"></script>
-		<script src="/gun/sea.js"></script>
-		<script src="/gun/as.js"></script>
-		<script src="/gun/nts.js"></script>
+		<script src="/zen/sea.js"></script>
+		<script src="/zen/as.js"></script>
+		<script src="/zen/nts.js"></script>
 		<script>
-			// Check out the interactive tutorial
-			// for how to build a simplified version
-			// of this example: https://scrimba.com/c/c2gBgt4
-			var gun = ZEN(location.origin + '/zen');
-			var app = gun.get('example/contacts/7');
-			var user = gun.user();
+			var zen = ZEN(location.origin + '/zen');
+			var app = zen.get('example/contacts/7');
 			var c = window.c = {};
+
 			(function(){
 				c.hash = location.hash.slice(1);
-				gun.on('auth', function(at){
-					if('sign' === c.hash){ c.hash = '' }
-					as.route(c.hash || 'people');
-				});
-				gun.on('secure', function(at){
-					/* enforce some rules about shared app level data */
-					if(!at.put || !at.put.users){ return }
-					var no;
-					Gun.node.is(at.put.users, function(val, key){
-						Gun.SEA.verify(val, false, function(val){
-						//Gun.SEA.read(val, false, function(val){
-							if('~@'+key === Gun.val.link.is(val)){ return }
-							no = true;
-						})
-						if(no){ return no }
-					});
-					if(no){ return }
-					this.to.next(at);
-				});
-				$(document).on('keyup', "form.sign input:first", as.wait(function(){
-					/*
-					var form = $(this).closest('form'), data = {alias: $(this).val()};
-					if(!data.alias || data.alias.length < 5){
-						return;
-					}
-					var exist = gun.path('alias').path(data.alias);
-					exist.get(function(at){
-						form.find('.or').addClass('none');
-						form.find('button:first').toggleClass('none', at.put? false : true);
-						form.find('button:last').toggleClass('none', at.put? true : false);
-					});
-					*/
-				})).on('click','form.sign button:last', function(){
-					var but = $(this), form = $(this).closest('form'), data = {alias: form.find('input:first').val(), pass: form.find('input:last').val()};
-					data.born = Gun.time.is();
-					if(!data.alias || data.alias.length < 5){
-						c.tell("Alias needs to be longer than 5 characters.");
-						return;
-					}
-					if(!data.pass || data.pass.length < 9){
-						c.tell("Passphrase needs to be longer than 9 characters.");
-						return;
-					}
-					but.addClass('pulse');
-					data.alias = data.alias.toLowerCase();
-					user.create(data.alias, data.pass, function(ack){
-						if(!ack.wait){ but.removeClass('pulse') }
-						if(ack.err){ c.tell(ack.err); return }
-						if(ack.pub){
-							gun.get('users').get(data.alias).put(gun.get('~@'+data.alias));
-						}
-						session(data);
-						user.auth(data.alias, data.pass);
-					});
-				}).on('click','form.sign button:first', become);
-				function become(){
-					var form = $('#sign').find('form'), data = {alias: form.find('input:first').val(), pass: form.find('input:last').val()};
-					data.alias = data.alias || sessionStorage.alias;
-					data.pass = data.pass || sessionStorage.tmp;
-					if(!data.alias || data.alias.length < 5){
-						c.tell("Alias needs to be longer than 5 characters.");
-						return;
-					}
-					if(!data.pass || data.pass.length < 9){
-						c.tell("Passphrase needs to be longer than 9 characters.");
-						return;
-					}
-					var but = form.find('button:first');
-					but.addClass('pulse');
-					data.alias = data.alias.toLowerCase();
-					user.auth(data.alias, data.pass, function(ack){
-						if(!ack.wait){ but.removeClass('pulse') }
-						if(ack.err){ c.tell(ack.err); return }
-						session(data);
-					});
-				}
-				if(!location.hash){
-					as.route('sign');
-				}
 				if(!window.sessionStorage){ window.sessionStorage = {clear:function(){}} }
-				if(sessionStorage.tmp){
-					become();
-				}
-				function session(data){
-					if(!sessionStorage){ return }
-					sessionStorage.alias = data.alias;
-					sessionStorage.tmp = data.pass;
-				}
+				if(!location.hash){ as.route('sign'); }
+
 				c.tell = function(what, n){
 					var e = $('#tell').find('p');
 					e.addClass('notify').text(what);
 					clearTimeout(c.tell.to);
-					c.tell.to = setTimeout(function(){e.removeClass('notify')}, n || 2500);
-				}
+					c.tell.to = setTimeout(function(){ e.removeClass('notify') }, n || 2500);
+				};
+
+				// Prefill alias from last session
+				var savedAlias = localStorage.getItem('zen_alias');
+				if(savedAlias){ $('input[name=alias]').val(savedAlias); }
+
+				// Sign up
+				$(document).on('click','form.sign button:last', function(){
+					var but = $(this), form = $(this).closest('form');
+					var alias = form.find('input[name=alias]').val();
+					var pass = form.find('input[name=pass]').val();
+					if(!alias || alias.length < 5){ c.tell('Alias needs to be longer than 5 characters.'); return; }
+					if(!pass || pass.length < 9){ c.tell('Passphrase needs to be longer than 9 characters.'); return; }
+					but.addClass('pulse');
+					alias = alias.toLowerCase();
+					ZEN.pair().then(function(pair){
+						return ZEN.encrypt(JSON.stringify(pair), pass).then(function(enc){
+							but.removeClass('pulse');
+							localStorage.setItem('zen_enc', enc);
+							localStorage.setItem('zen_alias', alias);
+							c.me = { pair: pair, alias: alias, pub: pair.pub };
+							zen.get('~' + pair.pub).get('name').put(alias, null, { authenticator: pair });
+							zen.get('~' + pair.pub).get('pub').put(pair.pub, null, { authenticator: pair });
+							app.get('users').get(alias).put({ pub: pair.pub });
+							as.route('people');
+						});
+					}).catch(function(){ but.removeClass('pulse'); c.tell('Failed to create identity.'); });
+				});
+
+				// Sign in
+				$(document).on('click','form.sign button:first', function(){
+					var but = $(this), form = $('#sign').find('form');
+					var alias = form.find('input[name=alias]').val().toLowerCase();
+					var pass = form.find('input[name=pass]').val();
+					if(!alias || alias.length < 5){ c.tell('Alias needs to be longer than 5 characters.'); return; }
+					if(!pass || pass.length < 9){ c.tell('Passphrase needs to be longer than 9 characters.'); return; }
+					var enc = localStorage.getItem('zen_enc');
+					if(!enc){ c.tell('No account found on this device.'); return; }
+					but.addClass('pulse');
+					ZEN.decrypt(enc, pass).then(function(dec){
+						but.removeClass('pulse');
+						if(!dec){ c.tell('Wrong passphrase.'); return; }
+						try {
+							var pair = JSON.parse(dec);
+							c.me = { pair: pair, alias: alias, pub: pair.pub };
+							as.route(c.hash && 'sign' !== c.hash ? c.hash : 'people');
+						} catch(e){ c.tell('Corrupted account data.'); }
+					}).catch(function(){ but.removeClass('pulse'); c.tell('Wrong passphrase.'); });
+				});
 			}());
+
 			(function(){
 				$(document).on('submit', '#say', function(e){
 					e.preventDefault();
-					user.get('who').get('said').set({
-						what: $(this).find('.jot').val()
-					});
+					if(!c.me){ return; }
+					zen.get('~' + c.me.pub).get('who').get('said').set(
+						{ what: $(this).find('.jot').val() },
+						null,
+						{ authenticator: c.me.pair }
+					);
 					$(this).find('.jot').val('');
 				});
 			}());
+
 			as.route.page('sign', function(){
 				$(document.forms.inup.alias).focus();
 			});
+
 			as.route.page('people', function(){
-				if(!user.is){ return as.route('sign') }
-				as('#people', gun, function(data, key, el){
-					if('pub' !== key){ return }
+				if(!c.me){ return as.route('sign'); }
+				as('#people', app.get('users'), function(data, key, el){
+					if('pub' !== key){ return; }
 					el.closest('a').attr('href', '#person/' + data);
 				});
 			});
+
 			as.route.page('person', function(){
-				if(!user.is){ return as.route('sign') }
+				if(!c.me){ return as.route('sign'); }
 				var pub = location.hash.split('/').slice(-1)[0];
-				(pub === user._.pub? $('#say').show() : $('#say').hide());
-				as('#person', window.PUB = gun.get('~'+pub));
+				(pub === c.me.pub ? $('#say').show() : $('#say').hide());
+				as('#person', window.PUB = zen.get('~' + pub));
 			});
-
-
-
-
-
-
-
-			(function(converse){
-				as.route.page('converse', function(){
-					if(!c.me){ return as.route('sign') }
-					converse.lock = false;
-					var alias = location.hash.split('/').slice(-1);
-					$('#converse form').find('input:first').val(alias);
-					function inbox(msg, id){
-						if(!sign.verify(msg.pub, msg.what, msg.sig)){ return }
-						msg.fro = (msg.to === c.me.alias? alias : c.me.alias);
-						as.route.render(id, '.msg', $('#converse ul'), msg);
-					}
-					sign.is(alias, function(acc){
-						sign.is(c.me.alias).path('msgs').path(acc.pub).map(inbox);
-					}).path('msgs').path(c.me.pub).map(inbox);
-				});
-				$(document).on('submit', '#converse form', function(e){
-					e.preventDefault();
-					if(converse.lock){ return console.log('message sending already') }
-					converse.lock = true; // prevent duplicate sends.
-					var form = $(this), msg = {};
-					msg.to = form.find('input:first').val();
-					msg.what = form.find('textarea').val();
-					sign.is(msg.to, function(to){
-						if(!priv){
-							form.find('.status').text("Failed to send. Please sign in again.");
-							converse.lock = false;
-							return;
-						}
-						msg.sig = sign.sig(msg.what, priv);
-						msg.pub = c.me.pub;
-						msg.when = Gun.time.is();
-						console.log("sending msg", msg);
-						sign.is(c.me.alias).path('msgs').path(to.pub).set(gun.put(msg));
-						converse.lock = false;
-					}, function(){
-						form.attr('disabled', false).find('.status').text(msg.to + " cannot be found! Alias is case sensitive.");
-						converse.lock = false;
-					});
-				});
-			}({}));
-		//}());</script>
+		</script>
 	</body>
 </html>

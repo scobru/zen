@@ -61,7 +61,7 @@ jobs:
   #     needs: [test]
   #     runs-on: ubuntu-latest
   #     env:
-  #       image: ${{ secrets.DOCKERHUB_USERNAME }}/gun
+  #       image: ${{ secrets.DOCKERHUB_USERNAME }}/zen
   #     steps:
   #
   #     - name: Checkout

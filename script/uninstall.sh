@@ -8,7 +8,7 @@ set -e
 
 # Default values
 SERVICE_NAME="relay"
-INSTALL_DIR="$HOME/gun"
+INSTALL_DIR="$HOME/zen"
 REMOVE_NODEJS=false
 REMOVE_CERTS=false
 REMOVE_ACME=false
@@ -33,7 +33,7 @@ USAGE:
 
 OPTIONS:
     -s, --service NAME         Systemd service name to remove (default: relay)
-    -d, --dir DIRECTORY        GUN installation directory (default: ~/gun)
+    -d, --dir DIRECTORY        GUN installation directory (default: ~/zen)
     --remove-nodejs            Also remove Node.js and npm
     --remove-certs             Remove SSL certificates (key.pem, cert.pem)
     --remove-acme              Remove acme.sh installation
@@ -53,7 +53,7 @@ EXAMPLES:
     $0 --remove-nodejs --remove-certs --remove-acme
 
     # Remove with custom service name and directory
-    $0 --service my-gun-relay --dir /opt/gun
+    $0 --service my-gun-relay --dir /opt/zen
 
     # Dry run to see what would be removed
     $0 --remove-nodejs --remove-certs --dry-run
@@ -155,7 +155,7 @@ validate_path() {
 
 # Use environment variables with validation
 SERVICE_NAME="${SERVICE_NAME:-relay}"
-INSTALL_DIR="${INSTALL_DIR:-$HOME/gun}"
+INSTALL_DIR="${INSTALL_DIR:-$HOME/zen}"
 
 # Validate inputs
 validate_service_name "$SERVICE_NAME"
@@ -264,7 +264,7 @@ remove_gun() {
     fi
     
     # Verify it looks like a GUN installation
-    if [[ ! -f "$INSTALL_DIR/package.json" ]] || ! grep -q '"name".*"gun"\|"@akaoio/gun"' "$INSTALL_DIR/package.json" 2>/dev/null; then
+    if [[ ! -f "$INSTALL_DIR/package.json" ]] || ! grep -q '"name".*"gun"\|"@akaoio/zen"' "$INSTALL_DIR/package.json" 2>/dev/null; then
         log_warn "Directory does not appear to be a GUN installation: $INSTALL_DIR"
         if ! confirm "Remove directory anyway?"; then
             log_info "Keeping directory"
@@ -344,7 +344,7 @@ remove_certificates() {
     
     log_info "Removing SSL certificates..."
     
-    CERT_FILES=("$HOME/key.pem" "$HOME/cert.pem" "/etc/ssl/private/gun.key" "/etc/ssl/certs/gun.crt")
+    CERT_FILES=("$HOME/key.pem" "$HOME/cert.pem" "/etc/ssl/private/zen.key" "/etc/ssl/certs/zen.crt")
     
     for cert_file in "${CERT_FILES[@]}"; do
         if [[ -f "$cert_file" ]]; then

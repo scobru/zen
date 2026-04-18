@@ -117,8 +117,8 @@
     // Check out the interactive tutorial
     // for how to build a simplified version
     // of this example: https://scrimba.com/c/cW2Vsa
-    var gun = ZEN(location.origin + '/zen');
-    var think = gun.get('think1/' + location.hash.slice(1));
+    var zen = ZEN(location.origin + '/zen');
+    var think = zen.get('think1/' + location.hash.slice(1));
     var thoughtItemStr = function(id) { return '<li class="thought__item"><label class="visually-hidden" for="' + id + '">Thought</label><input id="' + id + '" class="thought__input huet"><li/>'}
     var typing, throttle;
     $('.thought__add').on('click', function () {

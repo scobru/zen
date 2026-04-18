@@ -1,4 +1,4 @@
-let __defaultExport;
+﻿let defaultexport;
 const module = { exports: {} };
 (function (global, module) {
   var exports = module["exports"];
@@ -7,7 +7,7 @@ const module = { exports: {} };
    * Exports.
    */
 
-  __defaultExport = expect;
+  defaultexport = expect;
   expect.Assertion = Assertion;
 
   /**
@@ -1440,4 +1440,4 @@ const module = { exports: {} };
     window.expect = module["exports"];
   }
 })(this, "undefined" != typeof module ? module : { exports: {} });
-export default __defaultExport;
+export default defaultexport;

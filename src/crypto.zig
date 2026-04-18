@@ -1,4 +1,4 @@
-// src/crypto_wasm.zig — WASM boundary for all ZEN crypto primitives.
+// src/crypto.zig — WASM boundary for all ZEN crypto primitives.
 //
 // This is the single entry point compiled to crypto.wasm.
 // It imports all algorithm modules and exposes a flat export table

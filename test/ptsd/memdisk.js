@@ -1,14 +1,14 @@
-import __ZEN from "../../zen.js";
-var __gun;
+import ZEN from "../../zen.js";
+var ZEN;
 {
   var W = function (o) {
-    return new __ZEN(o);
+    return new ZEN(o);
   };
-  Object.setPrototypeOf(W, __ZEN);
-  W.prototype = __ZEN.prototype;
-  __gun = W;
+  Object.setPrototypeOf(W, ZEN);
+  W.prototype = ZEN.prototype;
+  ZEN = W;
 }
-var Zen = __gun;
+var Zen = ZEN;
 import "../../lib/memdisk.js";
 var zen = Zen();
 var TOTAL = 10000000;

@@ -11,7 +11,7 @@ console.log(
 );
 
 const server = new Hapi.Server({
-  port: 8765,
+  port: 8420,
   host: "localhost",
   routes: {
     files: {

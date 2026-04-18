@@ -1,10 +1,10 @@
-import http from "http";
+﻿import http from "http";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 var root = path.resolve(__dirname, "../..");
 
 var files = {

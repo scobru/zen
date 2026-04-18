@@ -13,7 +13,7 @@ var port =
   process.env.VCAP_APP_PORT ||
   process.env.PORT ||
   process.argv[2] ||
-  8765;
+  8420;
 var app = express();
 app.use(Zen.serve);
 app.use(express.static(__dirname));

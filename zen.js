@@ -1,8 +1,8 @@
-const __mods = Object.create(null);
-function __def(id, fn){ __mods[id] = { fn: fn, exports: {}, loaded: false }; }
-function __req(id){ var mod = __mods[id]; if(!mod){ throw new Error('Missing module: ' + id); } if(!mod.loaded){ mod.loaded = true; mod.fn(mod, mod.exports); } return mod.exports; }
+const mods = Object.create(null);
+function defmod(id, fn){ mods[id] = { fn: fn, exports: {}, loaded: false }; }
+function reqmod(id){ var mod = mods[id]; if(!mod){ throw new Error('Missing module: ' + id); } if(!mod.loaded){ mod.loaded = true; mod.fn(mod, mod.exports); } return mod.exports; }
 
-__def('./src/base64.js', function(module, __exp){
+defmod('./src/base64.js', function(module, exp){
   // Patch root.btoa/root.atob to use URL-safe base64 (no +//, no padding).
   // Native btoa/atob are available in all modern browsers and Node.js 16+.
 
@@ -35,8 +35,8 @@ __def('./src/base64.js', function(module, __exp){
   }
 });
 
-__def('./src/array.js', function(module, __exp){
-  __req('./src/base64.js');
+defmod('./src/array.js', function(module, exp){
+  reqmod('./src/base64.js');
   // This is Array extended to have .toString(['utf8'|'hex'|'base64'])
   function ZenArray() {}
   Object.assign(ZenArray, { from: Array.from });
@@ -61,12 +61,12 @@ __def('./src/array.js', function(module, __exp){
     }
   };
 
-  __exp.default = ZenArray;
+  exp.default = ZenArray;
 });
 
-__def('./src/buffer.js', function(module, __exp){
-  __req('./src/base64.js');
-  var __array = __req('./src/array.js').default;
+defmod('./src/buffer.js', function(module, exp){
+  reqmod('./src/base64.js');
+  var __array = reqmod('./src/array.js').default;
   // This is Buffer implementation used in ZEN. Functionality is mostly
   // compatible with NodeJS 'safe-buffer' and is used for encoding conversions
   // between binary and 'hex' | 'utf8' | 'base64'
@@ -160,10 +160,10 @@ __def('./src/buffer.js', function(module, __exp){
   SafeBuffer.prototype.from = SafeBuffer.from;
   SafeBuffer.prototype.toString = ZenArray.prototype.toString;
 
-  __exp.default = SafeBuffer;
+  exp.default = SafeBuffer;
 });
 
-__def('./src/json.js', function(module, __exp){
+defmod('./src/json.js', function(module, exp){
   function ensureJsonAsync() {
     JSON.parseAsync =
       JSON.parseAsync ||
@@ -222,12 +222,12 @@ __def('./src/json.js', function(module, __exp){
     };
   }
 
-  __exp.default = { ensureJsonAsync, parseAsync, stringifyAsync, createJsonPair };
+  exp.default = { ensureJsonAsync, parseAsync, stringifyAsync, createJsonPair };
 });
 
-__def('./src/shim.js', function(module, __exp){
-  var BufferApi = __req('./src/buffer.js').default;
-  var jsonAsync = __req('./src/json.js').default;
+defmod('./src/shim.js', function(module, exp){
+  var BufferApi = reqmod('./src/buffer.js').default;
+  var jsonAsync = reqmod('./src/json.js').default;
   const globalScope =
     typeof globalThis !== "undefined"
       ? globalThis
@@ -505,10 +505,10 @@ __def('./src/shim.js', function(module, __exp){
       next();
     };
 
-  __exp.default = api;
+  exp.default = api;
 });
 
-__def('./src/valid.js', function(module, __exp){
+defmod('./src/valid.js', function(module, exp){
   let __defaultExport;
 
   // Valid values are a subset of JSON: null, binary, number (!Infinity), text,
@@ -528,11 +528,11 @@ __def('./src/valid.js', function(module, __exp){
     );
   };
 
-  __exp.default = __defaultExport;
+  exp.default = __defaultExport;
 });
 
-__def('./src/state.js', function(module, __exp){
-  __req('./src/shim.js');
+defmod('./src/state.js', function(module, exp){
+  reqmod('./src/shim.js');
   let __defaultExport;
 
   function State() {
@@ -575,10 +575,10 @@ __def('./src/state.js', function(module, __exp){
   };
   __defaultExport = State;
 
-  __exp.default = __defaultExport;
+  exp.default = __defaultExport;
 });
 
-__def('./src/onto.js', function(module, __exp){
+defmod('./src/onto.js', function(module, exp){
   let __defaultExport;
 
   // On event emitter generic javascript utility.
@@ -635,11 +635,11 @@ __def('./src/onto.js', function(module, __exp){
     return tag;
   };
 
-  __exp.default = __defaultExport;
+  exp.default = __defaultExport;
 });
 
-__def('./src/dup.js', function(module, __exp){
-  __req('./src/shim.js');
+defmod('./src/dup.js', function(module, exp){
+  reqmod('./src/shim.js');
   let __defaultExport;
 
   function Dup(opt) {
@@ -687,11 +687,11 @@ __def('./src/dup.js', function(module, __exp){
   }
   __defaultExport = Dup;
 
-  __exp.default = __defaultExport;
+  exp.default = __defaultExport;
 });
 
-__def('./src/ask.js', function(module, __exp){
-  __req('./src/onto.js');
+defmod('./src/ask.js', function(module, exp){
+  reqmod('./src/onto.js');
   let __defaultExport;
 
   __defaultExport = function ask(cb, as) {
@@ -736,16 +736,16 @@ __def('./src/ask.js', function(module, __exp){
       return Math.random().toString(36).slice(2);
     };
 
-  __exp.default = __defaultExport;
+  exp.default = __defaultExport;
 });
 
-__def('./src/root.js', function(module, __exp){
-  __req('./src/shim.js');
-  var __valid = __req('./src/valid.js').default;
-  var __state = __req('./src/state.js').default;
-  var __onto = __req('./src/onto.js').default;
-  var __dup = __req('./src/dup.js').default;
-  var __ask = __req('./src/ask.js').default;
+defmod('./src/root.js', function(module, exp){
+  reqmod('./src/shim.js');
+  var __valid = reqmod('./src/valid.js').default;
+  var __state = reqmod('./src/state.js').default;
+  var __onto = reqmod('./src/onto.js').default;
+  var __dup = reqmod('./src/dup.js').default;
+  var __ask = reqmod('./src/ask.js').default;
   let __defaultExport;
 
   function Zen(o) {
@@ -1360,14 +1360,14 @@ __def('./src/root.js', function(module, __exp){
       );
     };
 
-  __exp.default = __defaultExport;
+  exp.default = __defaultExport;
 });
 
-__def('./src/crypto_wasm_bridge.js', function(module, __exp){
-  // src/crypto_wasm_bridge.js — Lazy loader and JS bridge for crypto.wasm.
+defmod('./src/crypto.js', function(module, exp){
+  // src/crypto.js — Lazy loader and JS bridge for crypto.wasm.
   //
   // Usage:
-  //   import bridge from "./crypto_wasm_bridge.js";
+  //   import bridge from "./crypto.js";
   //   await bridge.ready;
   //   const hash = bridge.keccak256(bytes);  // synchronous once ready
   //
@@ -1625,12 +1625,12 @@ __def('./src/crypto_wasm_bridge.js', function(module, __exp){
     },
   };
 
-  __exp.default = bridge;
+  exp.default = bridge;
 });
 
-__def('./src/base62.js', function(module, __exp){
-  var shim = __req('./src/shim.js').default;
-  var bridge = __req('./src/crypto_wasm_bridge.js').default;
+defmod('./src/base62.js', function(module, exp){
+  var shim = reqmod('./src/shim.js').default;
+  var bridge = reqmod('./src/crypto.js').default;
   let _wasmReady = false;
   bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});
 
@@ -1773,12 +1773,12 @@ __def('./src/base62.js', function(module, __exp){
     bufToB62,
     PUB_LEN,
   };
-  __exp.default = base62;
+  exp.default = base62;
 });
 
-__def('./src/settings.js', function(module, __exp){
-  var shim = __req('./src/shim.js').default;
-  var base62 = __req('./src/base62.js').default;
+defmod('./src/settings.js', function(module, exp){
+  var shim = reqmod('./src/shim.js').default;
+  var base62 = reqmod('./src/base62.js').default;
   const settings = {};
   settings.pbkdf2 = { hash: { name: "SHA-256" }, iter: 100000, ks: 64 };
   settings.ecdsa = {
@@ -1843,11 +1843,11 @@ __def('./src/settings.js', function(module, __exp){
     return t;
   };
 
-  __exp.default = settings;
+  exp.default = settings;
 });
 
-__def('./src/sha256.js', function(module, __exp){
-  var shim = __req('./src/shim.js').default;
+defmod('./src/sha256.js', function(module, exp){
+  var shim = reqmod('./src/shim.js').default;
   async function sha256(data, algorithm) {
     const text = typeof data === "string" ? data : await shim.stringify(data);
     const hash = await shim.subtle.digest(
@@ -1857,13 +1857,13 @@ __def('./src/sha256.js', function(module, __exp){
     return shim.Buffer.from(hash);
   }
 
-  __exp.default = sha256;
+  exp.default = sha256;
 });
 
-__def('./src/aeskey.js', function(module, __exp){
-  var shim = __req('./src/shim.js').default;
-  var settings = __req('./src/settings.js').default;
-  var sha256 = __req('./src/sha256.js').default;
+defmod('./src/aeskey.js', function(module, exp){
+  var shim = reqmod('./src/shim.js').default;
+  var settings = reqmod('./src/settings.js').default;
+  var sha256 = reqmod('./src/sha256.js').default;
   async function aeskey(key, salt, opt) {
     opt = opt || {};
     const combo = key + (salt || shim.random(8)).toString("utf8");
@@ -1878,12 +1878,12 @@ __def('./src/aeskey.js', function(module, __exp){
     );
   }
 
-  __exp.default = aeskey;
+  exp.default = aeskey;
 });
 
-__def('./src/keccak256.js', function(module, __exp){
-  var shim = __req('./src/shim.js').default;
-  var bridge = __req('./src/crypto_wasm_bridge.js').default;
+defmod('./src/keccak256.js', function(module, exp){
+  var shim = reqmod('./src/shim.js').default;
+  var bridge = reqmod('./src/crypto.js').default;
   function toBytes(data) {
     if (typeof data === "string") {
       return new shim.TextEncoder().encode(data);
@@ -1906,15 +1906,15 @@ __def('./src/keccak256.js', function(module, __exp){
     return shim.Buffer.from(bridge.keccak256(bytes));
   }
 
-  __exp.default = keccak256;
+  exp.default = keccak256;
 });
 
-__def('./src/hash.js', function(module, __exp){
-  var shim = __req('./src/shim.js').default;
-  var settings = __req('./src/settings.js').default;
-  var sha256 = __req('./src/sha256.js').default;
-  var keccak256 = __req('./src/keccak256.js').default;
-  var base62 = __req('./src/base62.js').default;
+defmod('./src/hash.js', function(module, exp){
+  var shim = reqmod('./src/shim.js').default;
+  var settings = reqmod('./src/settings.js').default;
+  var sha256 = reqmod('./src/sha256.js').default;
+  var keccak256 = reqmod('./src/keccak256.js').default;
+  var base62 = reqmod('./src/base62.js').default;
   function normhash(name) {
     const raw = (name || "").toString();
     const slim = raw.toLowerCase().replace(/[\s_-]/g, "");
@@ -2042,11 +2042,11 @@ __def('./src/hash.js', function(module, __exp){
     }
   }
 
-  __exp.normhash = normhash;
-  __exp.default = hash;
+  exp.normhash = normhash;
+  exp.default = hash;
 });
 
-__def('./src/curves/utils.js', function(module, __exp){
+defmod('./src/curves/utils.js', function(module, exp){
   function createCurveCore(config) {
     const curve = config.curve;
     const P = config.P;
@@ -2419,17 +2419,17 @@ __def('./src/curves/utils.js', function(module, __exp){
     );
   }
 
-  __exp.default = createCurveCore;
+  exp.default = createCurveCore;
 });
 
-__def('./src/curves/secp256k1.js', function(module, __exp){
-  var shim = __req('./src/shim.js').default;
-  var base62 = __req('./src/base62.js').default;
-  var settings = __req('./src/settings.js').default;
-  var aeskey = __req('./src/aeskey.js').default;
-  var sha256 = __req('./src/sha256.js').default;
-  var hash = __req('./src/hash.js').default;
-  var createCurveCore = __req('./src/curves/utils.js').default;
+defmod('./src/curves/secp256k1.js', function(module, exp){
+  var shim = reqmod('./src/shim.js').default;
+  var base62 = reqmod('./src/base62.js').default;
+  var settings = reqmod('./src/settings.js').default;
+  var aeskey = reqmod('./src/aeskey.js').default;
+  var sha256 = reqmod('./src/sha256.js').default;
+  var hash = reqmod('./src/hash.js').default;
+  var createCurveCore = reqmod('./src/curves/utils.js').default;
   const P = BigInt(
     "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F",
   );
@@ -2491,56 +2491,56 @@ __def('./src/curves/secp256k1.js', function(module, __exp){
   } = core;
 
 
-  __exp.default = core;
+  exp.default = core;
 
-  __exp.P = P;
-  __exp.N = N;
-  __exp.A = A;
-  __exp.B = B;
-  __exp.G = G;
-  __exp.HALF_N = HALF_N;
-  __exp.mod = mod;
-  __exp.modPow = modPow;
-  __exp.modInv = modInv;
-  __exp.isPoint = isPoint;
-  __exp.isOnCurve = isOnCurve;
-  __exp.pointAdd = pointAdd;
-  __exp.pointMultiply = pointMultiply;
-  __exp.bytesToBigInt = bytesToBigInt;
-  __exp.bigIntToBytes = bigIntToBytes;
-  __exp.concatBytes = concatBytes;
-  __exp.utf8Bytes = utf8Bytes;
-  __exp.decodeBase64Url = decodeBase64Url;
-  __exp.encodeBase64 = encodeBase64;
-  __exp.parseScalar = parseScalar;
-  __exp.assertScalar = assertScalar;
-  __exp.scalarToString = scalarToString;
-  __exp.pointToPub = pointToPub;
-  __exp.parsePub = parsePub;
-  __exp.publicFromPrivate = publicFromPrivate;
-  __exp.compactPoint = compactPoint;
-  __exp.shaBytes = shaBytes;
-  __exp.hmacSha256 = hmacSha256;
-  __exp.deterministicK = deterministicK;
-  __exp.hashToScalar = hashToScalar;
-  __exp.randomScalar = randomScalar;
-  __exp.normalizeMessage = normalizeMessage;
-  __exp.finalize = finalize;
-  __exp.shim = shim;
-  __exp.base62 = base62;
-  __exp.settings = settings;
-  __exp.aeskey = aeskey;
-  __exp.hash = hash;
+  exp.P = P;
+  exp.N = N;
+  exp.A = A;
+  exp.B = B;
+  exp.G = G;
+  exp.HALF_N = HALF_N;
+  exp.mod = mod;
+  exp.modPow = modPow;
+  exp.modInv = modInv;
+  exp.isPoint = isPoint;
+  exp.isOnCurve = isOnCurve;
+  exp.pointAdd = pointAdd;
+  exp.pointMultiply = pointMultiply;
+  exp.bytesToBigInt = bytesToBigInt;
+  exp.bigIntToBytes = bigIntToBytes;
+  exp.concatBytes = concatBytes;
+  exp.utf8Bytes = utf8Bytes;
+  exp.decodeBase64Url = decodeBase64Url;
+  exp.encodeBase64 = encodeBase64;
+  exp.parseScalar = parseScalar;
+  exp.assertScalar = assertScalar;
+  exp.scalarToString = scalarToString;
+  exp.pointToPub = pointToPub;
+  exp.parsePub = parsePub;
+  exp.publicFromPrivate = publicFromPrivate;
+  exp.compactPoint = compactPoint;
+  exp.shaBytes = shaBytes;
+  exp.hmacSha256 = hmacSha256;
+  exp.deterministicK = deterministicK;
+  exp.hashToScalar = hashToScalar;
+  exp.randomScalar = randomScalar;
+  exp.normalizeMessage = normalizeMessage;
+  exp.finalize = finalize;
+  exp.shim = shim;
+  exp.base62 = base62;
+  exp.settings = settings;
+  exp.aeskey = aeskey;
+  exp.hash = hash;
 });
 
-__def('./src/curves/p256.js', function(module, __exp){
+defmod('./src/curves/p256.js', function(module, exp){
   // P-256 / secp256r1 curve — same Weierstrass math as secp256k1, different constants.
   // A = P - 3 (i.e. -3 mod P), so the doubling formula includes the A term.
-  var shim = __req('./src/shim.js').default;
-  var base62 = __req('./src/base62.js').default;
-  var sha256 = __req('./src/sha256.js').default;
-  var settings = __req('./src/settings.js').default;
-  var createCurveCore = __req('./src/curves/utils.js').default;
+  var shim = reqmod('./src/shim.js').default;
+  var base62 = reqmod('./src/base62.js').default;
+  var sha256 = reqmod('./src/sha256.js').default;
+  var settings = reqmod('./src/settings.js').default;
+  var createCurveCore = reqmod('./src/curves/utils.js').default;
   const P = BigInt(
     "0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF",
   );
@@ -2559,7 +2559,7 @@ __def('./src/curves/p256.js', function(module, __exp){
       "0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5",
     ),
   };
-  __exp.default = createCurveCore({
+  exp.default = createCurveCore({
     curve: "p256",
     P,
     N,
@@ -2573,20 +2573,20 @@ __def('./src/curves/p256.js', function(module, __exp){
   });
 });
 
-__def('./src/curves.js', function(module, __exp){
-  var secp256k1 = __req('./src/curves/secp256k1.js').default;
-  var p256 = __req('./src/curves/p256.js').default;
+defmod('./src/curves.js', function(module, exp){
+  var secp256k1 = reqmod('./src/curves/secp256k1.js').default;
+  var p256 = reqmod('./src/curves/p256.js').default;
   const MAP = { secp256k1, p256, secp256r1: p256 };
 
   function crv(name) {
     return MAP[name] || MAP.secp256k1;
   }
 
-  __exp.default = crv;
+  exp.default = crv;
 });
 
-__def('./src/verify.js', function(module, __exp){
-  var crv = __req('./src/curves.js').default;
+defmod('./src/verify.js', function(module, exp){
+  var crv = reqmod('./src/curves.js').default;
   async function verify(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -2653,13 +2653,13 @@ __def('./src/verify.js', function(module, __exp){
   }
 
 
-  __exp.default = verify;
+  exp.default = verify;
 
-  __exp.verify = verify;
+  exp.verify = verify;
 });
 
-__def('./src/sign.js', function(module, __exp){
-  var crv = __req('./src/curves.js').default;
+defmod('./src/sign.js', function(module, exp){
+  var crv = reqmod('./src/curves.js').default;
   async function sign(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -2715,17 +2715,17 @@ __def('./src/sign.js', function(module, __exp){
   }
 
 
-  __exp.default = sign;
+  exp.default = sign;
 
-  __exp.sign = sign;
+  exp.sign = sign;
 });
 
-__def('./src/security.js', function(module, __exp){
-  var ZEN = __req('./src/root.js').default;
-  var verify = __req('./src/verify.js').default;
-  var hash = __req('./src/hash.js').default;
-  var sign = __req('./src/sign.js').default;
-  var settings = __req('./src/settings.js').default;
+defmod('./src/security.js', function(module, exp){
+  var ZEN = reqmod('./src/root.js').default;
+  var verify = reqmod('./src/verify.js').default;
+  var hash = reqmod('./src/hash.js').default;
+  var sign = reqmod('./src/sign.js').default;
+  var settings = reqmod('./src/settings.js').default;
   var u;
   var Zen = ZEN;
 
@@ -2870,11 +2870,7 @@ __def('./src/security.js', function(module, __exp){
     };
     var pipeline = [check.pipe.forget];
 
-    if ("~@" === soul) {
-      pipeline.push(check.pipe.alias);
-    } else if ("~@" === soul.slice(0, 2)) {
-      pipeline.push(check.pipe.pubs);
-    } else if ("~" === soul || "~/" === soul.slice(0, 2)) {
+    if ("~" === soul || "~/" === soul.slice(0, 2)) {
       pipeline.push(check.pipe.shard);
     } else if ((tmp = settings.pub(soul))) {
       ctx.pub = tmp;
@@ -2944,12 +2940,6 @@ __def('./src/security.js', function(module, __exp){
         }
       }
       next();
-    },
-    alias: function (ctx, next, reject) {
-      check.alias(ctx.eve, ctx.msg, ctx.val, ctx.key, ctx.soul, ctx.at, reject);
-    },
-    pubs: function (ctx, next, reject) {
-      check.pubs(ctx.eve, ctx.msg, ctx.val, ctx.key, ctx.soul, ctx.at, reject);
     },
     shard: function (ctx, next, reject) {
       check.shard(
@@ -3226,26 +3216,6 @@ __def('./src/security.js', function(module, __exp){
       },
       { name: "SHA-256" },
     );
-  };
-
-  check.alias = function (eve, msg, val, key, soul, at, no) {
-    if (!val) {
-      return no("Data must exist!");
-    }
-    if ("~@" + key === link_is(val)) {
-      return eve.to.next(msg);
-    }
-    no("Alias not same!");
-  };
-
-  check.pubs = function (eve, msg, val, key, soul, at, no) {
-    if (!val) {
-      return no("Alias must exist!");
-    }
-    if (key === link_is(val)) {
-      return eve.to.next(msg);
-    }
-    no("Alias not same!");
   };
 
   check.$sh = {
@@ -3571,11 +3541,11 @@ __def('./src/security.js', function(module, __exp){
     sign: sign,
   };
 
-  __exp.default = security;
+  exp.default = security;
 });
 
-__def('./src/pen.js', function(module, __exp){
-  var SecurityMod = __req('./src/security.js').default;
+defmod('./src/pen.js', function(module, exp){
+  var SecurityMod = reqmod('./src/security.js').default;
   let __defaultExport;
   const __penWasmURL = new URL("./pen.wasm", import.meta.url);
   {
@@ -4535,13 +4505,13 @@ __def('./src/pen.js', function(module, __exp){
       __defaultExport = pen;
     } catch (e) {}
   }
-  __exp.default = __defaultExport;
+  exp.default = __defaultExport;
 });
 
-__def('./src/ripemd160.js', function(module, __exp){
+defmod('./src/ripemd160.js', function(module, exp){
   // Pure RIPEMD-160 implementation — no dependencies, no WebCrypto.
   // Spec: https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
-  var bridge = __req('./src/crypto_wasm_bridge.js').default;
+  var bridge = reqmod('./src/crypto.js').default;
   let _wasmReady = false;
   bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});
 
@@ -4669,15 +4639,15 @@ __def('./src/ripemd160.js', function(module, __exp){
     return new Uint8Array(out.buffer);
   }
 
-  __exp.default = ripemd160;
+  exp.default = ripemd160;
 });
 
-__def('./src/format.js', function(module, __exp){
+defmod('./src/format.js', function(module, exp){
   // Format converters for zen.pair() output.
   // Receives raw BigInt scalars and {x,y} curve points; returns {curve, pub, epub, priv, epriv}.
-  var keccak256 = __req('./src/keccak256.js').default;
-  var ripemd160 = __req('./src/ripemd160.js').default;
-  var shim = __req('./src/shim.js').default;
+  var keccak256 = reqmod('./src/keccak256.js').default;
+  var ripemd160 = reqmod('./src/ripemd160.js').default;
+  var shim = reqmod('./src/shim.js').default;
   // ── shared helpers ────────────────────────────────────────────────────────────
 
   function bigIntToBytes32(n) {
@@ -4860,12 +4830,12 @@ __def('./src/format.js', function(module, __exp){
     throw new Error("Unknown format: " + format + ". Supported: zen, evm, btc");
   }
 
-  __exp.default = applyFormat;
+  exp.default = applyFormat;
 });
 
-__def('./src/pair.js', function(module, __exp){
-  var crv = __req('./src/curves.js').default;
-  var applyFormat = __req('./src/format.js').default;
+defmod('./src/pair.js', function(module, exp){
+  var crv = reqmod('./src/curves.js').default;
+  var applyFormat = reqmod('./src/format.js').default;
   async function derivepriv(c, priv, seed, label) {
     for (let i = 0; i < 100; i++) {
       const off = await c.hashToScalar(seed, label + (i ? i : ""));
@@ -5009,13 +4979,13 @@ __def('./src/pair.js', function(module, __exp){
   }
 
 
-  __exp.default = pair;
+  exp.default = pair;
 
-  __exp.pair = pair;
+  exp.pair = pair;
 });
 
-__def('./src/encrypt.js', function(module, __exp){
-  var core = __req('./src/curves/secp256k1.js').default;
+defmod('./src/encrypt.js', function(module, exp){
+  var core = reqmod('./src/curves/secp256k1.js').default;
   async function encrypt(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -5058,13 +5028,13 @@ __def('./src/encrypt.js', function(module, __exp){
   }
 
 
-  __exp.default = encrypt;
+  exp.default = encrypt;
 
-  __exp.encrypt = encrypt;
+  exp.encrypt = encrypt;
 });
 
-__def('./src/decrypt.js', function(module, __exp){
-  var core = __req('./src/curves/secp256k1.js').default;
+defmod('./src/decrypt.js', function(module, exp){
+  var core = reqmod('./src/curves/secp256k1.js').default;
   async function decrypt(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -5111,13 +5081,13 @@ __def('./src/decrypt.js', function(module, __exp){
   }
 
 
-  __exp.default = decrypt;
+  exp.default = decrypt;
 
-  __exp.decrypt = decrypt;
+  exp.decrypt = decrypt;
 });
 
-__def('./src/secret.js', function(module, __exp){
-  var crv = __req('./src/curves.js').default;
+defmod('./src/secret.js', function(module, exp){
+  var crv = reqmod('./src/curves.js').default;
   async function secret(epub, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -5156,13 +5126,13 @@ __def('./src/secret.js', function(module, __exp){
   }
 
 
-  __exp.default = secret;
+  exp.default = secret;
 
-  __exp.secret = secret;
+  exp.secret = secret;
 });
 
-__def('./src/certify.js', function(module, __exp){
-  var sign = __req('./src/sign.js').default;
+defmod('./src/certify.js', function(module, exp){
+  var sign = reqmod('./src/sign.js').default;
   /*
     The Certify Protocol was made out of love by a Vietnamese code enthusiast.
     Vietnamese people around the world deserve respect!
@@ -5298,14 +5268,14 @@ __def('./src/certify.js', function(module, __exp){
   }
 
 
-  __exp.default = certify;
+  exp.default = certify;
 
-  __exp.certify = certify;
+  exp.certify = certify;
 });
 
-__def('./src/keyid.js', function(module, __exp){
-  var shim = __req('./src/shim.js').default;
-  var base62 = __req('./src/base62.js').default;
+defmod('./src/keyid.js', function(module, exp){
+  var shim = reqmod('./src/shim.js').default;
+  var base62 = reqmod('./src/base62.js').default;
   async function sha1hash(bytes) {
     const crypto = shim.ossl || shim.subtle;
     return crypto.digest({ name: "SHA-1" }, new Uint8Array(bytes));
@@ -5329,18 +5299,18 @@ __def('./src/keyid.js', function(module, __exp){
     return hash.toString("hex", hash.length - 8);
   }
 
-  __exp.default = keyid;
+  exp.default = keyid;
 });
 
-__def('./src/runtime.js', function(module, __exp){
-  var security = __req('./src/security.js').default;
+defmod('./src/runtime.js', function(module, exp){
+  var security = reqmod('./src/security.js').default;
 
-  __exp.default = security;
+  exp.default = security;
 
-  __exp.security = security;
+  exp.security = security;
 });
 
-__def('./src/book.js', function(module, __exp){
+defmod('./src/book.js', function(module, exp){
   let __defaultExport;
 
   // TODO: BUG! Unbuild will make these globals... CHANGE unbuild to wrap files in a function.
@@ -5766,11 +5736,11 @@ __def('./src/book.js', function(module, __exp){
     __defaultExport = B;
   } catch (e) {}
 
-  __exp.default = __defaultExport;
+  exp.default = __defaultExport;
 });
 
-__def('./src/chain.js', function(module, __exp){
-  var __root = __req('./src/root.js').default;
+defmod('./src/chain.js', function(module, exp){
+  var __root = reqmod('./src/root.js').default;
   // WARNING: ZEN is very simple, but the JavaScript chaining API around ZEN
   // is complicated and was extremely hard to build. If you port ZEN to another
   // language, consider implementing an easier API to build.
@@ -6231,8 +6201,8 @@ __def('./src/chain.js', function(module, __exp){
   }
 });
 
-__def('./src/back.js', function(module, __exp){
-  var __root = __req('./src/root.js').default;
+defmod('./src/back.js', function(module, exp){
+  var __root = reqmod('./src/root.js').default;
   var Zen = __root;
   Zen.chain.back = function (n, opt) {
     var tmp;
@@ -6276,8 +6246,8 @@ __def('./src/back.js', function(module, __exp){
     u;
 });
 
-__def('./src/put.js', function(module, __exp){
-  var __root = __req('./src/root.js').default;
+defmod('./src/put.js', function(module, exp){
+  var __root = reqmod('./src/root.js').default;
   var Zen = __root;
   var PUT_CONTEXT = Symbol("put-context");
   Zen.chain.put = function (data, cb, opt, as) {
@@ -6285,7 +6255,8 @@ __def('./src/put.js', function(module, __exp){
     var zen = this,
       at = zen._,
       root = at.root;
-    as = as || context(zen, data, cb, opt);
+    opt = options(opt);
+    as = as || context(zen, data, cb);
     as.root = at.root;
     as.run || (as.run = root.once);
     stun(as, at.id); // set a flag for reads to check if this chain is writing.
@@ -6302,12 +6273,12 @@ __def('./src/put.js', function(module, __exp){
       return zen;
     }
     if (!as.soul) {
-      return (get(as), zen);
+      return (get(as, opt), zen);
     }
     as.$ = root.$.get(as.soul); // TODO: This may not allow user chaining and similar?
     as.todo = [{ it: as.data, ref: as.$ }];
     as.turn = as.turn || turn;
-    as.ran = as.ran || ran;
+    as.ran = as.ran || function (a) { ran(a, opt); };
     //var path = []; as.via.back(at => { at.get && path.push(at.get.slice(0,9)) }); path = path.reverse().join('.');
     // TODO: Perf! We only need to stun chains that are being modified, not necessarily written to.
     function walk() {
@@ -6444,25 +6415,12 @@ __def('./src/put.js', function(module, __exp){
     return zen;
   };
 
-  function context(zen, data, cb, opt) {
+  function context(zen, data, cb) {
     var ctx = {};
     ctx[PUT_CONTEXT] = 1;
-    ctx.opt = options(opt);
     ctx.data = data;
     ctx.ack = cb;
     ctx.via = zen;
-    if (u !== ctx.opt.state) {
-      ctx.state = ctx.opt.state;
-    }
-    if (u !== ctx.opt.soul) {
-      ctx.soul = ctx.opt.soul;
-    }
-    if (u !== ctx.opt.ok) {
-      ctx.ok = ctx.opt.ok;
-    }
-    if (u !== ctx.opt.acks) {
-      ctx.acks = ctx.opt.acks;
-    }
     return ctx;
   }
 
@@ -6505,7 +6463,7 @@ __def('./src/put.js', function(module, __exp){
     });
   }
 
-  function ran(as) {
+  function ran(as, opt) {
     if (as.err) {
       ran.end(as.stun, as.root);
       return;
@@ -6529,7 +6487,7 @@ __def('./src/put.js', function(module, __exp){
           return;
         }
         as.ack(ack, this);
-      }, as.opt),
+      }, opt),
       acks = 0,
       stun = as.stun,
       tmp;
@@ -6552,7 +6510,7 @@ __def('./src/put.js', function(module, __exp){
     as.via._.on("out", {
       put: (as.out = as.graph),
       ok: as.ok && { "@": as.ok + 1 },
-      opt: as.opt,
+      opt: opt,
       "#": ask,
       _: tmp,
     });
@@ -6570,7 +6528,7 @@ __def('./src/put.js', function(module, __exp){
     as.ran(as);
   };
 
-  function get(as) {
+  function get(as, opt) {
     var at = as.via._,
       tmp;
     as.via = as.via.back(function (at) {
@@ -6585,16 +6543,7 @@ __def('./src/put.js', function(module, __exp){
         ((as.data || "")._ || "")["#"] || at.$.back("opt.uuid")(),
       );
     }
-    as.via.put(as.data, as.ack, as.opt, as);
-
-    return;
-    if (at.get && at.back.soul) {
-      tmp = as.data;
-      as.via = at.back.$;
-      (as.data = {})[at.get] = tmp;
-      as.via.put(as.data, as.ack, as.opt, as);
-      return;
-    }
+    as.via.put(as.data, as.ack, opt, as);
   }
   function check(d, tmp) {
     return (d && (tmp = d.constructor) && tmp.name) || typeof d;
@@ -6611,8 +6560,8 @@ __def('./src/put.js', function(module, __exp){
   };
 });
 
-__def('./src/get.js', function(module, __exp){
-  var __root = __req('./src/root.js').default;
+defmod('./src/get.js', function(module, exp){
+  var __root = reqmod('./src/root.js').default;
   var Zen = __root;
   Zen.chain.get = function (key, cb, as) {
     var zen, tmp;
@@ -6903,8 +6852,8 @@ __def('./src/get.js', function(module, __exp){
     u;
 });
 
-__def('./src/on.js', function(module, __exp){
-  var __root = __req('./src/root.js').default;
+defmod('./src/on.js', function(module, exp){
+  var __root = reqmod('./src/root.js').default;
   var Zen = __root;
   Zen.chain.on = function (tag, arg, eas, as) {
     // don't rewrite!
@@ -7101,8 +7050,8 @@ __def('./src/on.js', function(module, __exp){
     u;
 });
 
-__def('./src/map.js', function(module, __exp){
-  var __root = __req('./src/root.js').default;
+defmod('./src/map.js', function(module, exp){
+  var __root = reqmod('./src/root.js').default;
   var Zen = __root,
     next = Zen.chain.get.next;
   Zen.chain.get.next = function (zen, lex) {
@@ -7190,8 +7139,8 @@ __def('./src/map.js', function(module, __exp){
     u;
 });
 
-__def('./src/set.js', function(module, __exp){
-  var __root = __req('./src/root.js').default;
+defmod('./src/set.js', function(module, exp){
+  var __root = reqmod('./src/root.js').default;
   var Zen = __root;
   Zen.chain.set = function (item, cb, opt) {
     var zen = this,
@@ -7229,9 +7178,9 @@ __def('./src/set.js', function(module, __exp){
   };
 });
 
-__def('./src/mesh.js', function(module, __exp){
-  __req('./src/shim.js');
-  var jsonAsync = __req('./src/json.js').default;
+defmod('./src/mesh.js', function(module, exp){
+  reqmod('./src/shim.js');
+  var jsonAsync = reqmod('./src/json.js').default;
   let __defaultExport;
 
   var noop = function () {};
@@ -7853,12 +7802,12 @@ __def('./src/mesh.js', function(module, __exp){
     __defaultExport = Mesh;
   } catch (e) {}
 
-  __exp.default = __defaultExport;
+  exp.default = __defaultExport;
 });
 
-__def('./src/websocket.js', function(module, __exp){
-  var __root = __req('./src/root.js').default;
-  var __mesh = __req('./src/mesh.js').default;
+defmod('./src/websocket.js', function(module, exp){
+  var __root = reqmod('./src/root.js').default;
+  var __mesh = reqmod('./src/mesh.js').default;
   var Zen = __root;
   Zen.Mesh = __mesh;
 
@@ -7945,9 +7894,9 @@ __def('./src/websocket.js', function(module, __exp){
     u;
 });
 
-__def('./src/locstore.js', function(module, __exp){
-  var Zen = __req('./src/root.js').default;
-  var jsonAsync = __req('./src/json.js').default;
+defmod('./src/locstore.js', function(module, exp){
+  var Zen = reqmod('./src/root.js').default;
+  var jsonAsync = reqmod('./src/json.js').default;
   var env = (typeof process !== "undefined" && process.env) || {};
 
   var noop = function () {},
@@ -8071,7 +8020,7 @@ __def('./src/locstore.js', function(module, __exp){
           );
           root.on("localStorage:error", { err: err, get: opt.prefix, put: disk });
         }
-        size = tmp.length;
+        size = (tmp || "").length;
 
         //if(!err && !Object.empty(opt.peers)){ return } // only ack if there are no peers. // Switch this to probabilistic mode
         setTimeout.each(
@@ -8087,19 +8036,19 @@ __def('./src/locstore.js', function(module, __exp){
   });
 });
 
-__def('./src/graph.js', function(module, __exp){
-  __req('./src/book.js');
-  __req('./src/chain.js');
-  __req('./src/back.js');
-  __req('./src/put.js');
-  __req('./src/get.js');
-  __req('./src/on.js');
-  __req('./src/map.js');
-  __req('./src/set.js');
-  __req('./src/mesh.js');
-  __req('./src/websocket.js');
-  __req('./src/locstore.js');
-  var ZEN = __req('./src/root.js').default;
+defmod('./src/graph.js', function(module, exp){
+  reqmod('./src/book.js');
+  reqmod('./src/chain.js');
+  reqmod('./src/back.js');
+  reqmod('./src/put.js');
+  reqmod('./src/get.js');
+  reqmod('./src/on.js');
+  reqmod('./src/map.js');
+  reqmod('./src/set.js');
+  reqmod('./src/mesh.js');
+  reqmod('./src/websocket.js');
+  reqmod('./src/locstore.js');
+  var ZEN = reqmod('./src/root.js').default;
   if (!ZEN.chain.then) {
     ZEN.chain.then = function (cb, opt) {
       var zen = this;
@@ -8122,27 +8071,27 @@ __def('./src/graph.js', function(module, __exp){
   };
 
 
-  __exp.default = graph;
+  exp.default = graph;
 
-  __exp.graph = graph;
+  exp.graph = graph;
 });
 
-__def('./src/index.js', function(module, __exp){
-  var PEN = __req('./src/pen.js').default;
-  var secp256k1 = __req('./src/curves/secp256k1.js').default;
-  var settings = __req('./src/settings.js').default;
-  var pair = __req('./src/pair.js').default;
-  var sign = __req('./src/sign.js').default;
-  var verify = __req('./src/verify.js').default;
-  var encrypt = __req('./src/encrypt.js').default;
-  var decrypt = __req('./src/decrypt.js').default;
-  var secret = __req('./src/secret.js').default;
-  var shim = __req('./src/shim.js').default;
-  var hash = __req('./src/hash.js').default;
-  var certify = __req('./src/certify.js').default;
-  var keyid = __req('./src/keyid.js').default;
-  var security = __req('./src/runtime.js').default;
-  var graph = __req('./src/graph.js').default;
+defmod('./src/index.js', function(module, exp){
+  var PEN = reqmod('./src/pen.js').default;
+  var secp256k1 = reqmod('./src/curves/secp256k1.js').default;
+  var settings = reqmod('./src/settings.js').default;
+  var pair = reqmod('./src/pair.js').default;
+  var sign = reqmod('./src/sign.js').default;
+  var verify = reqmod('./src/verify.js').default;
+  var encrypt = reqmod('./src/encrypt.js').default;
+  var decrypt = reqmod('./src/decrypt.js').default;
+  var secret = reqmod('./src/secret.js').default;
+  var shim = reqmod('./src/shim.js').default;
+  var hash = reqmod('./src/hash.js').default;
+  var certify = reqmod('./src/certify.js').default;
+  var keyid = reqmod('./src/keyid.js').default;
+  var security = reqmod('./src/runtime.js').default;
+  var graph = reqmod('./src/graph.js').default;
   var hasOwn = Object.prototype.hasOwnProperty;
   var STATIC_SKIP = { length: 1, name: 1, prototype: 1 };
   var CHAIN_SKIP = { constructor: 1 };
@@ -8424,12 +8373,12 @@ __def('./src/index.js', function(module, __exp){
   ZEN.opt = security.opt;
 
 
-  __exp.default = ZEN;
+  exp.default = ZEN;
 
-  __exp.ZEN = ZEN;
+  exp.ZEN = ZEN;
 });
 
-const __zen = __req('./src/index.js');
-const ZEN = __zen.default;
+const zenmod = reqmod('./src/index.js');
+const ZEN = zenmod.default;
 export { ZEN };
 export default ZEN;

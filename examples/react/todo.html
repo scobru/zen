@@ -7,13 +7,13 @@
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
     <script src="/zen.js"></script>
     <script type="text/babel">
-      const gun = Gun();
+      const zen = Zen();
       const App = () => {
         const newTodo = React.useRef();
         const [todos, setTodos] = React.useState({});
 
         React.useEffect(() => {
-          return gun
+          return zen
             .get("todos")
             .map()
             .on((todo, id) => setTodos((todos) => ({ ...todos, [id]: todo })))
@@ -31,7 +31,7 @@
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                gun.get("todos").set({ title: newTodo.current.value });
+                zen.get("todos").set({ title: newTodo.current.value });
                 newTodo.current.value = "";
               }}
             >

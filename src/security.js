@@ -148,11 +148,7 @@ function check(msg) {
   };
   var pipeline = [check.pipe.forget];
 
-  if ("~@" === soul) {
-    pipeline.push(check.pipe.alias);
-  } else if ("~@" === soul.slice(0, 2)) {
-    pipeline.push(check.pipe.pubs);
-  } else if ("~" === soul || "~/" === soul.slice(0, 2)) {
+  if ("~" === soul || "~/" === soul.slice(0, 2)) {
     pipeline.push(check.pipe.shard);
   } else if ((tmp = settings.pub(soul))) {
     ctx.pub = tmp;
@@ -222,12 +218,6 @@ check.pipe = {
       }
     }
     next();
-  },
-  alias: function (ctx, next, reject) {
-    check.alias(ctx.eve, ctx.msg, ctx.val, ctx.key, ctx.soul, ctx.at, reject);
-  },
-  pubs: function (ctx, next, reject) {
-    check.pubs(ctx.eve, ctx.msg, ctx.val, ctx.key, ctx.soul, ctx.at, reject);
   },
   shard: function (ctx, next, reject) {
     check.shard(
@@ -504,26 +494,6 @@ check.hash = function (eve, msg, val, key, soul, at, no, yes) {
     },
     { name: "SHA-256" },
   );
-};
-
-check.alias = function (eve, msg, val, key, soul, at, no) {
-  if (!val) {
-    return no("Data must exist!");
-  }
-  if ("~@" + key === link_is(val)) {
-    return eve.to.next(msg);
-  }
-  no("Alias not same!");
-};
-
-check.pubs = function (eve, msg, val, key, soul, at, no) {
-  if (!val) {
-    return no("Alias must exist!");
-  }
-  if (key === link_is(val)) {
-    return eve.to.next(msg);
-  }
-  no("Alias not same!");
 };
 
 check.$sh = {

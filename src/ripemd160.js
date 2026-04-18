@@ -1,6 +1,6 @@
 // Pure RIPEMD-160 implementation — no dependencies, no WebCrypto.
 // Spec: https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
-import bridge from "./crypto_wasm_bridge.js";
+import bridge from "./crypto.js";
 
 let _wasmReady = false;
 bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});

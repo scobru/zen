@@ -1,11 +1,11 @@
-import __ZEN from "../zen.js";
-var __gun;
+﻿import zenbase from "../zen.js";
+var ZEN;
 {
   var W = function (o) {
-    return new __ZEN(o);
+    return new zenbase(o);
   };
-  Object.setPrototypeOf(W, __ZEN);
-  W.prototype = __ZEN.prototype;
+  Object.setPrototypeOf(W, zenbase);
+  W.prototype = zenbase.prototype;
   Object.defineProperty(W.prototype, "_", {
     get: function () {
       return this._graph._;
@@ -13,19 +13,18 @@ var __gun;
     configurable: true,
   });
   W.is = function ($) {
-    return $ instanceof __ZEN;
+    return $ instanceof zenbase;
   };
-  __gun = W;
+  ZEN = W;
 }
-import __pen from "../src/pen.js";
-import ZEN from "../src/index.js";
+import penmod from "../src/pen.js";
 import assert from "assert";
 ("use strict");
 var Zen, pen;
 
 before(function (done) {
-  Zen = __gun;
-  pen = __pen;
+  Zen = ZEN;
+  pen = penmod;
   pen.ready
     .then(function () {
       done();

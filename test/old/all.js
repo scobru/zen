@@ -1,12 +1,12 @@
-import __expect from "./expect";
-import __zen from "../zen.js";
-import __file from "../lib/file";
+﻿import xpect from "./expect";
+import ZEN from "../zen.js";
+import filemod from "../lib/file";
 describe("All", function () {
   return;
-  var expect = (global.expect = __expect);
+  var expect = (global.expect = xpect);
 
-  var Zen = Zen || __zen;
-  typeof window === "undefined" && __file;
+  var Zen = Zen || ZEN;
+  typeof window === "undefined" && filemod;
 
   var zen = Zen({ file: "data.json" });
 

@@ -17,14 +17,14 @@
     "https://gunjs.herokuapp.com/zen",
   ];
 
-  const gun = ZEN({ localStorage: true, peers });
+  const zen = ZEN({ localStorage: true, peers });
 
   const pass = document.querySelector("#pass");
   const video = document.querySelector("#video");
   const camera = document.querySelector(".record");
   const screen = document.querySelector(".screen");
 
-  gun
+  zen
     .get("test")
     .get("video")
     .on(async (data) => {
@@ -88,7 +88,7 @@
       if (pass.value) {
         b64formated = await SEA.encrypt(b64formated, pass.value);
       }
-      gun.get("test").get("video").put(b64formated);
+      zen.get("test").get("video").put(b64formated);
     };
   };
 

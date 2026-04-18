@@ -1,25 +1,24 @@
-import __ip from "ip";
-import __fs from "fs";
-import __panic_manager from "panic-manager";
-import __http from "http";
-import __index from "./index.js";
-import __open from "./util/open.js";
+﻿import ip from "ip";
+import fs from "fs";
+import panicmanager from "panic-manager";
+import nodehttp from "http";
+import zenapp from "./index.js";
+import openutil from "./util/open.js";
 import panic from "panic-server";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 var config = {
-  IP: __ip.address(),
-  port: 8765,
+  IP: ip.address(),
+  port: 8420,
   servers: 1,
   browsers: 2,
   route: {
     "/": __dirname + "/index.html",
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
-    "/cryptomodules.js": __dirname + "/../../lib/cryptomodules.js",
     "/zen.js": __dirname + "/../../zen.js",
   },
 };
@@ -28,12 +27,12 @@ panic
   .server()
   .on("request", function (req, res) {
     config.route[req.url] &&
-      __fs.createReadStream(config.route[req.url]).pipe(res);
+      fs.createReadStream(config.route[req.url]).pipe(res);
   })
   .listen(config.port);
 
 var clients = panic.clients;
-var manager = __panic_manager();
+var manager = panicmanager();
 
 manager.start({
   clients: Array(config.servers)
@@ -69,16 +68,16 @@ describe("Make sure ZEN syncs correctly", function () {
         var env = test.props;
         test.async();
         try {
-          __fs.unlinkSync(env.i + "data");
+          fs.unlinkSync(env.i + "data");
         } catch (e) {}
         try {
-          __fs.unlinkSync(env.i + 1 + "data");
+          fs.unlinkSync(env.i + 1 + "data");
         } catch (e) {}
         var port = env.config.port + env.i;
-        var server = __http.createServer(function (req, res) {
+        var server = nodehttp.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
-        var Zen = __index;
+        var Zen = zenapp;
         var zen = Zen({ file: env.i + "data", web: server });
         server.listen(port, function () {
           test.done();
@@ -89,7 +88,7 @@ describe("Make sure ZEN syncs correctly", function () {
   });
 
   it(config.browsers + " browser(s) have joined!", function () {
-    __open.web(config.browsers, "http://" + config.IP + ":" + config.port);
+    openutil.web(config.browsers, "http://" + config.IP + ":" + config.port);
     return browsers.atLeast(config.browsers);
   });
 
@@ -101,18 +100,12 @@ describe("Make sure ZEN syncs correctly", function () {
         client.run(
           function (test) {
             test.async();
-            //console.log("load?");
             function load(src, cb) {
               var script = document.createElement("script");
               script.onload = cb;
               script.src = src;
               document.head.appendChild(script);
             }
-            /*load('cryptomodules.js', function(){
-					load('zen.js', function(){
-						test.done();
-					});
-				});*/
             test.done();
           },
           { i: (i += 1), config: config },
@@ -258,7 +251,7 @@ describe("Make sure ZEN syncs correctly", function () {
   });
 
   after("Everything shut down.", function () {
-    __open.cleanup();
+    openutil.cleanup();
     return servers.run(function () {
       process.exit();
     });

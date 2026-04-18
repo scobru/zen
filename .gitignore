@@ -3,6 +3,7 @@ npm-debug.log
 yarn.lock
 *data.json
 *data*
+!docs/**
 *.db
 .idea/
 *.bak

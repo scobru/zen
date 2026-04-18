@@ -20,19 +20,19 @@
       var pid = location.hash.slice(1);
 
       var opt = {
-        peers: [`${location.origin}/gun`],
+        peers: [`${location.origin}/zen`],
       };
 
       if (pid) {
         opt.pid = pid;
       }
 
-      Gun.on("opt", function (ctx) {
+      Zen.on("opt", function (ctx) {
         this.to.next(ctx);
         ctx.on("hi", function (opt) {
           //       console.log('HI!! PEER', new Date(), opt.pid);
           setTimeout(function () {
-            document.getElementById("pid").innerHTML = gun._.opt.pid;
+            document.getElementById("pid").innerHTML = zen._.opt.pid;
           });
         });
         //     if (pid) {
@@ -43,8 +43,8 @@
         //     }
       });
 
-      var gun = ZEN(opt);
-      //var user = gun.user();
+      var zen = ZEN(opt);
+      //var user = zen.user();
     </script>
   </body>
 </html>

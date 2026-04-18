@@ -1,13 +1,13 @@
 <html>
 	<head>
-		<title>Gun Tests</title>
+		<title>Zen Tests</title>
 		<link rel="stylesheet" href="../mocha.css"/>
 		<style>
 		</style>
 	  </head>
 	</head>
 	<body>
-		Gun Tests
+		Zen Tests
 		<div id="debug"></div>
 		<div id="mocha"></div>
 		
@@ -22,11 +22,11 @@
 		<script src="./book.js"></script>
 		<script>
 		if(location.search){
-			Gun.debug = true;
-			console.log('async?', Gun.debug);
+			Zen.debug = true;
+			console.log('async?', Zen.debug);
 		}
 		var run = mocha.run(function(a,b,c){
-			document.body.prepend("TODO: localStorage gun/gap ???");return;
+			document.body.prepend("TODO: localStorage zen/gap ???");return;
 			var yes = confirm("REFRESH BROWSER FOR ASYNC TESTS?");
 			if(yes){
 				if(location.search){
@@ -41,7 +41,7 @@
 			document.getElementById('mocha-stats').id = 'mocha-stats2';
 			document.getElementById('mocha-report').style.display = 'none';
 			document.getElementById('mocha-report').id = 'mocha-report2';
-			Gun.debug = false;
+			Zen.debug = false;
 			mocha.run();*/
 		});
 		run.on("fail", function(test, err){

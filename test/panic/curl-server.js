@@ -1,18 +1,18 @@
-import __ip from "ip";
-import __panic_manager from "panic-manager";
-import __express from "express";
-import __body_parser from "body-parser";
-import __index from "./index.js";
-import __child_process from "child_process";
+﻿import ip from "ip";
+import panicmanager from "panic-manager";
+import express from "express";
+import bodyparser from "body-parser";
+import zenapp from "./index.js";
+import childproc from "child_process";
 import panic from "panic-server";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 var config = {
-  IP: __ip.address(),
-  port: 8765,
+  IP: ip.address(),
+  port: 8420,
   servers: 2,
   dir: __dirname,
 };
@@ -20,7 +20,7 @@ var config = {
 panic.server().listen(config.port);
 
 var clients = panic.clients;
-var manager = __panic_manager();
+var manager = panicmanager();
 
 manager.start({
   clients: Array(config.servers)
@@ -50,9 +50,9 @@ describe("Server to server sync", function () {
       function (test) {
         test.async();
 
-        var express = __express;
-        var bodyParser = __body_parser;
-        var Zen = __index;
+        var express = express;
+        var bodyParser = bodyparser;
+        var Zen = zenapp;
 
         var app = express();
 
@@ -83,9 +83,9 @@ describe("Server to server sync", function () {
       function (test) {
         test.async();
 
-        var express = __express;
-        var bodyParser = __body_parser;
-        var Zen = __index;
+        var express = express;
+        var bodyParser = bodyparser;
+        var Zen = zenapp;
 
         var app = express();
 
@@ -107,7 +107,7 @@ describe("Server to server sync", function () {
   });
 
   it("Curl Bob!", function () {
-    var reply = __child_process.execSync(
+    var reply = childproc.execSync(
       "curl --request POST " +
         "--url http://localhost:8082/foo " +
         "--header 'content-type: application/json' " +

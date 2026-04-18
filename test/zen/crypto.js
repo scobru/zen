@@ -837,7 +837,8 @@ describe("ZEN user graph — shard intermediate", function () {
             assert.ok(ack.err);
             done();
           },
-          { state: futureState, authenticator: bob },
+          { authenticator: bob },
+          { state: futureState },
         );
     })().catch(done);
   });

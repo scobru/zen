@@ -1,12 +1,11 @@
 <script src="../zen.js"></script>
-<script src="../lib/cryptomodules.js"></script>
 <script src="../sea.js"></script>
 <script>
   (function () {
     localStorage.clear();
 
-    var gun = (window.gun = Gun());
-    var user = gun.user();
+    var zen = (window.zen = Zen());
+    var user = zen.user();
 
     user.create("alice", "unsafepassword", login);
 

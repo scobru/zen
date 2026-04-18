@@ -1,12 +1,12 @@
-import __theory from "theory";
-import __shots0 from "../../shots0";
-import __interface from "./interface.js";
+﻿import theory from "theory";
+import shots0 from "../../shots0";
+import iface from "./interface.js";
 
-export default __theory(
+export default theory(
   "shoot",
   function (a) {
     if (root.node) {
-      var shot = __shots0({ src: a.com, batch: 999 }).pump(
+      var shot = shots0({ src: a.com, batch: 999 }).pump(
         function (g, m, done) {
           console.log(">>> pump!");
           done();
@@ -80,7 +80,7 @@ export default __theory(
       console.log("graph", g());
       shoot.graph(g(), "Graph");
     });
-    __interface(function () {});
+    iface(function () {});
     $(document).on("keyboard", function () {
       var the = theory.discrete,
         key = theory.key,

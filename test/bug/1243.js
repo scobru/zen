@@ -1,11 +1,11 @@
-import __child_process from "child_process";
+﻿import childproc from "child_process";
 import expect from "../expect.js";
 import path from "path";
 import http from "https";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 const outputData = false;
 
 function request(hostname, done) {
@@ -21,7 +21,7 @@ function request(hostname, done) {
 }
 
 function spawn(cmd, done) {
-  const spawn = __child_process.spawn;
+  const spawn = childproc.spawn;
   let args = cmd.split(" ");
   cmd = args.shift();
 

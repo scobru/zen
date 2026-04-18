@@ -581,7 +581,7 @@ p + p {
   width: 100px;
   height: 100px;
   position: absolute;
-  background: url(https://cdn.jsdelivr.net/npm/gun/examples/pop.png) no-repeat;
+  background: url(https://cdn.jsdelivr.net/npm/zen/examples/pop.png) no-repeat;
   background-position: -2800px 0;
   pointer-events: none;
   z-index: 999999999;

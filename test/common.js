@@ -1,17 +1,17 @@
-import "../lib/yson.js";
-import __ZEN from "../zen.js";
+﻿import "../lib/yson.js";
+import zenbase from "../zen.js";
 import "../lib/store.js";
 import "../lib/rfs.js";
 import "./rad/rad.js";
-import __fs from "fs";
-import __fsrm from "../lib/fsrm.js";
-var __gun;
+import fs from "fs";
+import fsrm from "../lib/fsrm.js";
+var ZEN;
 {
   var W = function (o) {
-    return new __ZEN(o);
+    return new zenbase(o);
   };
-  Object.setPrototypeOf(W, __ZEN);
-  W.prototype = __ZEN.prototype;
+  Object.setPrototypeOf(W, zenbase);
+  W.prototype = zenbase.prototype;
   Object.defineProperty(W.prototype, "_", {
     get: function () {
       return this._graph._;
@@ -19,9 +19,9 @@ var __gun;
     configurable: true,
   });
   W.is = function ($) {
-    return $ instanceof __ZEN;
+    return $ instanceof zenbase;
   };
-  __gun = W;
+  ZEN = W;
 }
 describe("ZEN", function () {
   var root;
@@ -41,18 +41,18 @@ describe("ZEN", function () {
       localStorage.clear();
     } catch (e) {}
     try {
-      __fs.unlinkSync("tmp/data.json");
+      fs.unlinkSync("tmp/data.json");
     } catch (e) {}
     try {
-      __fsrm("tmp/radatatest");
+      fsrm("tmp/radatatest");
     } catch (e) {}
     //root.Zen = root.Zen || load('../zen');
-    root.Zen = __gun;
+    root.Zen = ZEN;
     root.Zen.TESTING = true;
   }
   var Zen = root.Zen;
   Zen.is = function ($) {
-    return $ instanceof __ZEN;
+    return $ instanceof ZEN;
   };
   //Zen.log.squelch = true;
   var gleak = {
@@ -1349,17 +1349,17 @@ describe("ZEN", function () {
     };
     if (((Zen.globalThis || {}).location || {}).search) {
       /*console.log("LOCALHOST PEER MUST BE ON!");
-			var peer = {url: 'http://localhost:8765/zen'};
+			var peer = {url: 'http://localhost:8420/zen'};
 			Zen.on('opt', function(root){
 				if(root.opt.test_no_peer){ return this.to.next(root) }
 				root.opt.peers = root.opt.peers || {};
-				root.opt.peers['http://localhost:8765/zen'] = peer;
+				root.opt.peers['http://localhost:8420/zen'] = peer;
 				this.to.next(root);
 			});*/
     }
     var goff = Zen();
     Zen.statedisk = function (o, s, cb) {
-      goff.get(s).put(o, cb, {
+      goff.get(s).put(o, cb, null, {
         turn: function (fn) {
           fn();
         },
@@ -5020,7 +5020,7 @@ describe("ZEN", function () {
 
     it("Deep puts with peer should work", function (done) {
       // tests in async mode now automatically connect to localhost peer.
-      //var zen = Zen('http://localhost:8765/zen');
+      //var zen = Zen('http://localhost:8420/zen');
       var zen = Zen();
       //var user = zen.user();
       //user.create('alice', 'password', function(){

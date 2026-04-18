@@ -1,6 +1,6 @@
-import __zen from "./zen.js";
+import ZEN from "./zen.js";
 
-var Zen = typeof window !== "undefined" ? window.ZEN || window.Zen : __zen;
+var Zen = typeof window !== "undefined" ? window.ZEN || window.Zen : ZEN;
 var dam = "nts";
 var smooth = 2;
 

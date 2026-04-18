@@ -1,11 +1,10 @@
 <script src="/zen.js"></script>
 <!--
-<script src="/gun/lib/cryptomodules.js" type="text/javascript"></script>
-<script src="/gun/sea.js"></script>
+<script src="/zen/sea.js"></script>
 -->
 <script>
-  var gun = ZEN(location.origin + "/zen");
-  var user = gun.user && gun.user();
+  var zen = ZEN(location.origin + "/zen");
+  var user = zen.user && zen.user();
   if (user) {
     // 1st: call create. 2nd call auth. After that, call recall
     // user.create('dude', 'my secret').then(function(ack) { console.log('created ack:', ack) });

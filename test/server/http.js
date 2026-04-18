@@ -6,6 +6,6 @@ var zen = Zen({
   file: "http.json",
   web: server,
 });
-server.listen(8765);
+server.listen(8420);
 
-console.log("Server started on port " + 8765 + " with /zen");
+console.log("Server started on port " + 8420 + " with /zen");

@@ -152,10 +152,10 @@
 
   <script src="/jquery.js"></script>
   <script src="/zen.js"></script>
-  <script src="/gun/nts.js"></script>
+  <script src="/zen/nts.js"></script>
   <script>
-    var gun = ZEN(location.origin + '/zen');
-    var chat = gun.get('converse/' + location.hash.slice(1));
+    var zen = ZEN(location.origin + '/zen');
+    var chat = zen.get('converse/' + location.hash.slice(1));
 
     $(".chat__submit").on('click', submit);
     $(".chat_form").on('keydown', enter);
@@ -166,7 +166,7 @@
     function submit(e) {
       e.preventDefault();
 
-      var msg = { when: Gun.state() };
+      var msg = { when: Zen.state() };
 
       msg.who = $('.chat__name-input').val();
       if (!msg.who) {

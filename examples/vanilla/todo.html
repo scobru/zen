@@ -21,7 +21,7 @@
     <script src="/zen.js"></script>
 
     <script>
-      const gun = ZEN(`${window.location.origin}/zen`).get("thoughts");
+      const zen = ZEN(`${window.location.origin}/zen`).get("thoughts");
 
       const parentList = document.getElementById("parentList");
       const input = document.getElementById("input");
@@ -30,7 +30,7 @@
       const dynamicEvent = (e) => {
         const target = e.target;
 
-        gun.get(target.id).put(null);
+        zen.get(target.id).put(null);
 
         target.innerHTML = document.getElementById(target.id);
 
@@ -45,7 +45,7 @@
         }
       };
 
-      gun.map().on((thought, id) => {
+      zen.map().on((thought, id) => {
         parentList.insertAdjacentHTML(
           "beforeend",
           `<li id =${id}> ${thought}</li>`,
@@ -69,7 +69,7 @@
 
       form.addEventListener("submit", (e) => {
         e.preventDefault();
-        gun.set(input.value);
+        zen.set(input.value);
         input.value = "";
       });
     </script>

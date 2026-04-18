@@ -1,11 +1,11 @@
-import __fs from "fs";
-import __https from "https";
-import __path from "path";
-import __index from "../../index.js";
+﻿import fs from "fs";
+import nodehttps from "https";
+import nodepath from "path";
+import zenapp from "../../index.js";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 export default function (port, file, cb, inject) {
   port =
@@ -14,12 +14,12 @@ export default function (port, file, cb, inject) {
     process.env.VCAP_APP_PORT ||
     process.env.PORT ||
     process.argv[2] ||
-    8765;
+    8420;
 
-  var fs = __fs;
-  var Zen = __index;
+  var fs = fs;
+  var Zen = zenapp;
 
-  var server = __https.createServer(
+  var server = nodehttps.createServer(
     {
       key: fs.readFileSync(__dirname + "/server.key"),
       cert: fs.readFileSync(__dirname + "/server.crt"),
@@ -33,12 +33,12 @@ export default function (port, file, cb, inject) {
       } // filters zen requests!
       var file;
       try {
-        file = __fs.readFileSync(
-          __path.join(__dirname + "/../../examples", req.url),
+        file = fs.readFileSync(
+          nodepath.join(__dirname + "/../../examples", req.url),
         );
       } catch (e) {
-        file = __fs.readFileSync(
-          __path.join(__dirname + "/../../examples", "index.html"),
+        file = fs.readFileSync(
+          nodepath.join(__dirname + "/../../examples", "index.html"),
         );
       }
       if (inject) {

@@ -1,4 +1,4 @@
-# Gun on react-native!
+# Zen on react-native!
 
 ---
 
@@ -14,9 +14,9 @@ i would recommend using [react-native-debugger](https://github.com/facebook/reac
 - ios: `cmd+D` then `Debug JS Remotely`
 - android: `cmd+M` then `Debug JS Remotely`
 
-now you have access to the gun globals on the console which are
-`gun` -> the root gun
-`user` -> the gun user
+now you have access to the zen globals on the console which are
+`zen` -> the root zen
+`user` -> the zen user
 
 ---
 

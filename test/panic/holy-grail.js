@@ -1,24 +1,24 @@
-import __ip from "ip";
-import __panic_server from "panic-server";
-import __fs from "fs";
-import __panic_manager from "panic-manager";
-import __child_process from "child_process";
-import __fsrm from "./lib/fsrm";
-import __http from "http";
-import __index from "./index.js";
-import __open from "./util/open.js";
+﻿import ip from "ip";
+import panicserver from "panic-server";
+import fs from "fs";
+import panicmanager from "panic-manager";
+import childproc from "child_process";
+import fsrm from "./lib/fsrm";
+import nodehttp from "http";
+import zenapp from "./index.js";
+import openutil from "./util/open.js";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 var ip;
 try {
-  ip = __ip.address();
+  ip = ip.address();
 } catch (e) {}
 
 var config = {
   IP: ip || "localhost",
-  port: 8765,
+  port: 8420,
   relays: 2,
   browsers: 2,
   route: {
@@ -30,7 +30,7 @@ var config = {
 
 var panic;
 try {
-  panic = __panic_server;
+  panic = panicserver;
 } catch (e) {
   console.log(
     "PANIC not installed! `npm install panic-server panic-manager panic-client`",
@@ -41,12 +41,12 @@ panic
   .server()
   .on("request", function (req, res) {
     config.route[req.url] &&
-      __fs.createReadStream(config.route[req.url]).pipe(res);
+      fs.createReadStream(config.route[req.url]).pipe(res);
   })
   .listen(config.port);
 
 var clients = panic.clients;
-var manager = __panic_manager();
+var manager = panicmanager();
 
 manager.start({
   clients: Array(config.relays)
@@ -86,7 +86,7 @@ describe("The Holy Grail Test!", function () {
 
         if (process.env.ROD_PATH) {
           console.log("testing with rod");
-          const sp = __child_process.spawn(process.env.ROD_PATH, [
+          const sp = childproc.spawn(process.env.ROD_PATH, [
             "start",
             "--port",
             port,
@@ -103,23 +103,23 @@ describe("The Holy Grail Test!", function () {
         }
 
         try {
-          __fs.unlinkSync(env.i + "data");
+          fs.unlinkSync(env.i + "data");
         } catch (e) {}
         try {
-          __fs.unlinkSync(env.i + 1 + "data");
+          fs.unlinkSync(env.i + 1 + "data");
         } catch (e) {}
         try {
-          __fsrm(env.i + "data");
+          fsrm(env.i + "data");
         } catch (e) {}
         try {
-          __fsrm(env.i + 1 + "data");
+          fsrm(env.i + 1 + "data");
         } catch (e) {}
-        var server = __http.createServer(function (req, res) {
+        var server = nodehttp.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
         var Zen;
         try {
-          Zen = __index;
+          Zen = zenapp;
         } catch (e) {
           console.log(
             "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
@@ -135,7 +135,7 @@ describe("The Holy Grail Test!", function () {
   });
 
   it(config.browsers + " browser(s) have joined!", function () {
-    __open.web(config.browsers, "http://" + config.IP + ":" + config.port);
+    openutil.web(config.browsers, "http://" + config.IP + ":" + config.port);
     return browsers.atLeast(config.browsers);
   });
 
@@ -199,10 +199,10 @@ describe("The Holy Grail Test!", function () {
         console.log(3);
         var env = test.props;
         try {
-          __fs.unlinkSync(env.i + "data");
+          fs.unlinkSync(env.i + "data");
         } catch (e) {}
         try {
-          __fsrm(env.i + "data");
+          fsrm(env.i + "data");
         } catch (e) {}
         process.exit(0);
       },
@@ -303,7 +303,7 @@ describe("The Holy Grail Test!", function () {
 
         if (process.env.ROD_PATH) {
           console.log("testing with rod");
-          const sp = __child_process.spawn(process.env.ROD_PATH, [
+          const sp = childproc.spawn(process.env.ROD_PATH, [
             "start",
             "--port",
             port,
@@ -320,15 +320,15 @@ describe("The Holy Grail Test!", function () {
         }
 
         try {
-          __fs.unlinkSync(env.i + "data");
+          fs.unlinkSync(env.i + "data");
         } catch (e) {}
         try {
-          __fsrm(env.i + "data");
+          fsrm(env.i + "data");
         } catch (e) {}
-        var server = __http.createServer(function (req, res) {
+        var server = nodehttp.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
-        var Zen = __index;
+        var Zen = zenapp;
         var zen = Zen({ file: env.i + "data", web: server });
         server.listen(port, function () {
           test.done();
@@ -438,7 +438,7 @@ describe("The Holy Grail Test!", function () {
   });
 
   after("Everything shut down.", function () {
-    __open.cleanup();
+    openutil.cleanup();
     return relays.run(function () {
       process.exit();
     });

@@ -1,30 +1,30 @@
-# GUN Development Guide for AI Agents
+# ZEN Development Guide for AI Agents
 
 ## Project Overview
 
-GUN is a realtime, decentralized, offline-first, graph data synchronization engine with CRDT-based conflict resolution. This is a production database used by Internet Archive and 100s of other apps for P2P, encrypted, local-first applications.
+ZEN is a realtime, decentralized, offline-first, graph data synchronization engine with CRDT-based conflict resolution. This is a production database used by Internet Archive and 100s of other apps for P2P, encrypted, local-first applications.
 
 ## Architecture & Build System
 
 ### Custom Module System (USE)
 
-GUN uses a **custom bundler** called "USE" (not CommonJS/ESM directly):
+ZEN uses a **custom bundler** called "USE" (not CommonJS/ESM directly):
 
 - All modules wrapped in `USE(function(module){ ... }, './path')` pattern
 - Bundler processes `/* UNBUILD */` comments to generate browser builds
-- Source files in `/src`, bundled output in `gun.js` and `gun.min.js`
+- Source files in `/src`, bundled output in `zen.js` and `zen.min.js`
 - After modifying `/src` files, **always run** `npm run buildGUN` to regenerate builds
 
 ### Entry Points
 
 - `index.js` → Node.js (loads `lib/server.js`)
-- `browser.js` → Browser (loads `gun.js`)
-- `gun.js` → Pre-bundled browser build with all core modules
+- `browser.js` → Browser (loads `zen.js`)
+- `zen.js` → Pre-bundled browser build with all core modules
 - `sea.js` → Security/Encryption/Authorization module
 
 ### Core Modules (`/src`)
 
-- `root.js` - Core GUN constructor, `Gun.create()` initialization
+- `root.js` - Core ZEN constructor, `Zen.create()` initialization
 - `core.js` - Graph operations and internal messaging
 - `mesh.js` - P2P networking layer, peer synchronization
 - `websocket.js` - WebSocket transport (primary)
@@ -43,8 +43,8 @@ GUN uses a **custom bundler** called "USE" (not CommonJS/ESM directly):
 ### Build & Test
 
 ```bash
-npm run buildGUN       # Build gun.js after /src changes (CRITICAL)
-npm run unbuildGUN     # Extract gun.js back into /src
+npm run buildGUN       # Build zen.js after /src changes (CRITICAL)
+npm run unbuildGUN     # Extract zen.js back into /src
 npm run buildSEA       # Build sea.js after /sea changes
 npm run unbuildSEA     # Extract sea.js back into /sea
 npm start              # Start dev server with examples on localhost
@@ -68,10 +68,10 @@ Located in `test/panic/` - critical for validating changes:
 
 ### 1. HAM (Hypothetical Amnesia Machine)
 
-GUN's CRDT conflict resolution uses **state-based vector clocks**:
+ZEN's CRDT conflict resolution uses **state-based vector clocks**:
 
 - Every value has a `>` (state) timestamp
-- `Gun.state()` generates millisecond timestamps
+- `Zen.state()` generates millisecond timestamps
 - Conflicts resolved by: later state wins, ties preserve existing value
 - Found in: `src/state.js`, validation in `src/valid.js`
 
@@ -97,7 +97,7 @@ All operations flow through `universe()` in `src/root.js`:
 
 ### 4. SEA (Security, Encryption, Authorization)
 
-Located in `/sea`, extends GUN with cryptographic operations:
+Located in `/sea`, extends ZEN with cryptographic operations:
 
 - `SEA.pair()` - Generate key pairs (ECDSA + ECDH)
 - `SEA.sign/verify()` - Message signatures
@@ -127,9 +127,9 @@ Located in `/sea`, extends GUN with cryptographic operations:
 
 1. **Forgotten Build**: Changes to `/src/*.js` don't affect browser until `npm run buildGUN`
 2. **Test Data Pollution**: ALWAYS `rm -rf *data* *radata*` between test runs
-3. **Circular References**: GUN supports them natively - don't try to "fix" them
+3. **Circular References**: ZEN supports them natively - don't try to "fix" them
 4. **Async Everywhere**: All storage/network ops are async, use callbacks/promises
-5. **HAM Violations**: Never manually set state timestamps - use `Gun.state()`
+5. **HAM Violations**: Never manually set state timestamps - use `Zen.state()`
 
 ## Integration Points
 
@@ -138,7 +138,7 @@ Located in `/sea`, extends GUN with cryptographic operations:
 Follow `lib/rfs.js` pattern:
 
 ```javascript
-Gun.on("create", function (root) {
+Zen.on("create", function (root) {
   this.to.next(root);
   root.opt.store &&
     (function () {
@@ -149,14 +149,14 @@ Gun.on("create", function (root) {
 
 ### Adding Chain Methods
 
-Extend `Gun.chain.myMethod` in a new module:
+Extend `Zen.chain.myMethod` in a new module:
 
 ```javascript
-Gun.chain.myMethod = function (data) {
-  var gun = this,
-    at = gun._;
-  // Implementation using gun.get(), gun.put(), etc.
-  return gun; // Enable chaining
+Zen.chain.myMethod = function (data) {
+  var zen = this,
+    at = zen._;
+  // Implementation using zen.get(), zen.put(), etc.
+  return zen; // Enable chaining
 };
 ```
 

@@ -1,27 +1,27 @@
-import __panic_manager from "panic-manager";
-import __events from "events";
-import __ip from "ip";
-import __fs from "fs";
-import __leveldown from "leveldown";
-import __encoding_down from "encoding-down";
-import __levelup from "levelup";
-import __index from "../../../index";
-import __level from "../../../lib/level";
-import __http from "http";
+﻿import panicmanager from "panic-manager";
+import events from "events";
+import ip from "ip";
+import fs from "fs";
+import leveldown from "leveldown";
+import encodingdown from "encoding-down";
+import levelup from "levelup";
+import zenapp from "../../../index";
+import levellib from "../../../lib/level";
+import nodehttp from "http";
 import panic from "panic-server";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 const clients = panic.clients;
-const manager = __panic_manager();
+const manager = panicmanager();
 const opts = { radisk: false, localStorage: false, file: false };
 
-__events.EventEmitter.defaultMaxListeners = Infinity;
+events.EventEmitter.defaultMaxListeners = Infinity;
 
 const config = {
-  ip: __ip.address(),
-  port: 8765,
+  ip: ip.address(),
+  port: 8420,
   servers: 3,
   route: {
     "/": __dirname + "/index.html",
@@ -34,7 +34,7 @@ const srv = panic.server();
 srv
   .on("request", (req, res) => {
     config.route[req.url] &&
-      __fs.createReadStream(config.route[req.url]).pipe(res);
+      fs.createReadStream(config.route[req.url]).pipe(res);
   })
   .listen(config.port);
 
@@ -66,11 +66,11 @@ describe("Make sure the leveldb storage engine works", function () {
         test.async();
         const { config, opts } = test.props;
 
-        const leveldown = __leveldown;
-        const encode = __encoding_down;
-        const levelup = __levelup;
+        const leveldown = leveldown;
+        const encode = encodingdown;
+        const levelup = levelup;
 
-        if (__fs.existsSync("./lvldata")) {
+        if (fs.existsSync("./lvldata")) {
           console.error("Please delete previous data first!");
           return;
         }
@@ -82,8 +82,8 @@ describe("Make sure the leveldb storage engine works", function () {
         ));
 
         // Load the libraries under test
-        const Zen = __index;
-        const debug = __level;
+        const Zen = zenapp;
+        const debug = levellib;
 
         // // Add debug message
         // debug.on('create', () => console.log('LEVEL CREATE'));
@@ -97,7 +97,7 @@ describe("Make sure the leveldb storage engine works", function () {
         debug.on("put", () => global.state++);
 
         // Create server
-        opts.web = __http.createServer(function (req, res) {
+        opts.web = nodehttp.createServer(function (req, res) {
           res.end("Number five is alive!");
         });
 
@@ -116,7 +116,7 @@ describe("Make sure the leveldb storage engine works", function () {
       function (test) {
         test.async();
         const { config, opts } = test.props;
-        const Zen = __index;
+        const Zen = zenapp;
 
         // Start zen
         const zen = (global.zen = Zen({
@@ -181,9 +181,9 @@ describe("Make sure the leveldb storage engine works", function () {
         test.async();
         const { config, opts } = test.props;
 
-        const leveldown = __leveldown;
-        const encode = __encoding_down;
-        const levelup = __levelup;
+        const leveldown = leveldown;
+        const encode = encodingdown;
+        const levelup = levelup;
 
         // Initialize zen opts
         const level = (global.level = levelup(
@@ -191,8 +191,8 @@ describe("Make sure the leveldb storage engine works", function () {
         ));
 
         // Load the libraries under test
-        const Zen = __index;
-        const debug = __level;
+        const Zen = zenapp;
+        const debug = levellib;
 
         // // Add debug messages
         // debug.on('get', key => console.log('LEVEL GET', key));
@@ -201,7 +201,7 @@ describe("Make sure the leveldb storage engine works", function () {
         // debug.on('error', err => console.log('LEVEL ERROR', err));
 
         // Create server
-        opts.web = __http.createServer((req, res) => {
+        opts.web = nodehttp.createServer((req, res) => {
           res.end("Number five is alive!");
         });
 

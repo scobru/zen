@@ -1,17 +1,17 @@
-import __ip from "ip";
-import __fs from "fs";
-import __panic_manager from "panic-manager";
-import __http from "http";
+﻿import ip from "ip";
+import fs from "fs";
+import panicmanager from "panic-manager";
+import nodehttp from "http";
 import panic from "panic-server";
-import __index from "../../index.js";
+import zenapp from "../../index.js";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 var config = {
-  IP: __ip.address(),
-  port: 8765,
+  IP: ip.address(),
+  port: 8420,
   servers: 1,
   browsers: 2,
   each: 10000,
@@ -32,12 +32,12 @@ panic
   .on("request", function (req, res) {
     // Static server
     config.route[req.url] &&
-      __fs.createReadStream(config.route[req.url]).pipe(res);
+      fs.createReadStream(config.route[req.url]).pipe(res);
   })
   .listen(config.port); // Start panic server.
 
 var clients = panic.clients;
-var manager = __panic_manager();
+var manager = panicmanager();
 manager.start({
   clients: Array(config.servers)
     .fill()
@@ -89,13 +89,13 @@ describe(
               test.async();
               // Clean up from previous test.
               try {
-                __fs.unlinkSync(env.i + "data.json");
+                fs.unlinkSync(env.i + "data.json");
               } catch (e) {}
-              var server = __http.createServer(function (req, res) {
+              var server = nodehttp.createServer(function (req, res) {
                 res.end("I am " + env.i + "!");
               });
               // Launch the server and start zen!
-              var Zen = __index;
+              var Zen = zenapp;
               // Attach the server to zen.
               //var zen = Zen({file: env.i+'data', web: server});
               var zen = Zen({

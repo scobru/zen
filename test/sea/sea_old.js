@@ -1,23 +1,23 @@
-import "../lib/file";
+﻿import "../lib/file";
 import "./index.js";
-import __fs from "fs";
-import __expect from "./expect";
-import __zen from "../zen.js";
-import __serve from "../lib/serve";
+import fs from "fs";
+import xpect from "./expect";
+import ZEN from "../zen.js";
+import serve from "../lib/serve";
 var root;
 (function (env) {
   root = env.window ? env.window : global;
   env.window && root.localStorage && root.localStorage.clear();
   try {
-    __fs.unlinkSync("tmp/data.json");
+    fs.unlinkSync("tmp/data.json");
   } catch (e) {}
   //root.Zen = root.Zen || load('../zen');
   if (root.Zen) {
     root.Zen = root.Zen;
   } else {
-    var expect = (global.expect = __expect);
-    root.Zen = __zen;
-    Zen.serve = __serve;
+    var expect = (global.expect = xpect);
+    root.Zen = ZEN;
+    Zen.serve = serve;
   }
 })(this);
 

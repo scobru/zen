@@ -17,11 +17,11 @@
 </form>
 
 <script src="/zen.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/zen/sea.js"></script>
 
 <script>
-  const gun = Gun(`${window.location.origin}/gun`);
-  const user = gun.user().recall({ sessionStorage: true });
+  const zen = Zen(`${window.location.origin}/zen`);
+  const user = zen.user().recall({ sessionStorage: true });
 
   const alias = document.querySelector("#alias");
   const pass = document.querySelector("#pass");
@@ -55,7 +55,7 @@
     said.value = "";
   });
 
-  gun.on("auth", () => {
+  zen.on("auth", () => {
     sign.style.display = "none";
     user.get("said").map().on(UI);
   });

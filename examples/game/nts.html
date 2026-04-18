@@ -9,12 +9,12 @@
     ></h1>
   </body>
   <script src="/zen.js"></script>
-  <script src="/gun/nts.js"></script>
+  <script src="/zen/nts.js"></script>
   <script>
-    window.gun = ZEN(location.origin + "/zen");
+    window.zen = ZEN(location.origin + "/zen");
     requestAnimationFrame(function now() {
       requestAnimationFrame(now);
-      var time = new Date(Gun.state());
+      var time = new Date(Zen.state());
       var print =
         time.toLocaleString() +
         " " +

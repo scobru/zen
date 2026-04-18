@@ -1,21 +1,21 @@
-import "./lib/open.js";
+﻿import "./lib/open.js";
 import "./lib/load.js";
-import __ip from "ip";
-import __fs from "fs";
-import __panic_manager from "panic-manager";
-import __fsrm from "./lib/fsrm";
-import __http from "http";
-import __index from "./index.js";
-import __zen from "./zen";
+import ip from "ip";
+import fs from "fs";
+import panicmanager from "panic-manager";
+import fsrm from "./lib/fsrm";
+import nodehttp from "http";
+import zenapp from "./index.js";
+import ZEN from "./zen";
 import panic from "panic-server";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 var config = {
-  IP: __ip.address(),
-  port: 8765,
+  IP: ip.address(),
+  port: 8420,
   servers: 4,
   browsers: 0,
   route: {
@@ -58,12 +58,12 @@ panic
   .server()
   .on("request", function (req, res) {
     config.route[req.url] &&
-      __fs.createReadStream(config.route[req.url]).pipe(res);
+      fs.createReadStream(config.route[req.url]).pipe(res);
   })
   .listen(config.port);
 
 var clients = panic.clients;
-var manager = __panic_manager();
+var manager = panicmanager();
 
 manager.start({
   clients: Array(config.servers)
@@ -104,19 +104,19 @@ describe("Shocknet Test!", function () {
             var env = test.props;
             test.async();
             try {
-              __fs.unlinkSync(3 + env.i + "data");
+              fs.unlinkSync(3 + env.i + "data");
             } catch (e) {}
             try {
-              __fs.unlinkSync(env.i + 1 + 3 + "data");
+              fs.unlinkSync(env.i + 1 + 3 + "data");
             } catch (e) {}
             try {
-              __fsrm(3 + env.i + "data");
+              fsrm(3 + env.i + "data");
             } catch (e) {}
             try {
-              __fsrm(env.i + 1 + 3 + "data");
+              fsrm(env.i + 1 + 3 + "data");
             } catch (e) {}
             var port = env.config.port + 3 + env.i;
-            var server = __http.createServer(function (req, res) {
+            var server = nodehttp.createServer(function (req, res) {
               res.end("I am " + (3 + env.i) + "!");
             });
             const peerPort = env.i === 1 ? 5 : 4;
@@ -126,7 +126,7 @@ describe("Shocknet Test!", function () {
               ":" +
               (env.config.port + peerPort) +
               "/zen";
-            var Zen = __index;
+            var Zen = zenapp;
             var zen = Zen({
               file: 3 + env.i + "data",
               web: server,
@@ -171,18 +171,18 @@ describe("Shocknet Test!", function () {
             };
             var env = test.props;
             try {
-              __fs.unlinkSync(env.i + "data");
+              fs.unlinkSync(env.i + "data");
             } catch (e) {}
             try {
-              __fs.unlinkSync(env.i + 1 + "data");
+              fs.unlinkSync(env.i + 1 + "data");
             } catch (e) {}
             try {
-              __fsrm(env.i + "data");
+              fsrm(env.i + "data");
             } catch (e) {}
             try {
-              __fsrm(env.i + 1 + "data");
+              fsrm(env.i + 1 + "data");
             } catch (e) {}
-            var Zen = __index;
+            var Zen = zenapp;
             const peerAddr =
               "http://" +
               env.config.IP +
@@ -267,7 +267,7 @@ describe("Shocknet Test!", function () {
           async function (test) {
             const done = test.async();
             var env = test.props;
-            const ZEN = __zen;
+            const ZEN = ZEN;
             const user = global.user;
             return ZEN.secret(user._.zen.epub, user._.zen).then((mySecret) => {
               global.ZEN = ZEN;

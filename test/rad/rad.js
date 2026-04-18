@@ -1,21 +1,21 @@
-import __ZEN from "../../zen.js";
+﻿import zenbase from "../../zen.js";
 import "../../lib/store.js";
 import "../../lib/rfs.js";
-import __fs from "fs";
-import __fsrm from "../../lib/fsrm.js";
-var __gun;
+import fs from "fs";
+import fsrm from "../../lib/fsrm.js";
+var ZEN;
 {
   var W = function (o) {
-    return new __ZEN(o);
+    return new zenbase(o);
   };
-  Object.setPrototypeOf(W, __ZEN);
-  W.prototype = __ZEN.prototype;
-  __gun = W;
+  Object.setPrototypeOf(W, zenbase);
+  W.prototype = zenbase.prototype;
+  ZEN = W;
 }
-import __expect from "../expect.js";
-import __radix from "../../lib/radix.js";
-import __radisk from "../../lib/radisk.js";
-import __rfs from "../../lib/rfs.js";
+import xpect from "../expect.js";
+import radix from "../../lib/radix.js";
+import radisk from "../../lib/radisk.js";
+import rfs from "../../lib/rfs.js";
 var root;
 var Zen;
 {
@@ -36,24 +36,24 @@ var Zen;
     root.Zen.TESTING = true;
   } else {
     try {
-      __fs.unlinkSync("tmp/data.json");
+      fs.unlinkSync("tmp/data.json");
     } catch (e) {}
     try {
-      __fsrm("tmp/radatatest");
+      fsrm("tmp/radatatest");
     } catch (e) {}
-    root.Zen = __gun;
+    root.Zen = ZEN;
     root.Zen.TESTING = true;
   }
 
   try {
-    var expect = (global.expect = __expect);
+    var expect = (global.expect = xpect);
   } catch (e) {}
 }
 
 {
   Zen = root.Zen;
 
-  var Radix = (Zen.window && Zen.window.Radix) || __radix;
+  var Radix = (Zen.window && Zen.window.Radix) || radix;
 
   describe("RAD", function () {
     var names = [
@@ -442,8 +442,8 @@ var Zen;
 
     var opt = {};
     opt.file = "radatatest";
-    var Radisk = (Zen.window && Zen.window.Radisk) || __radisk;
-    opt.store = ((Zen.window && Zen.window.RindexedDB) || __rfs)(opt);
+    var Radisk = (Zen.window && Zen.window.Radisk) || radisk;
+    opt.store = ((Zen.window && Zen.window.RindexedDB) || rfs)(opt);
     opt.chunk = 1000;
     var rad = Radisk(opt),
       esc = String.fromCharCode(27);
@@ -454,7 +454,7 @@ var Zen;
       /*it('parse', function(done){
         this.timeout(60000);
         if(Zen.window){ return done() }
-        var raw = __fs.readFileSync(__dirname + '/parse.rad').toString();
+        var raw = fs.readFileSync(__dirname + '/parse.rad').toString();
         rad.parse('!', function(err, disk){
             console.log("!!!!", err);
         }, raw);
