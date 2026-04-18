@@ -1,6 +1,6 @@
-# `~` Shard Index (SEA)
+# `~` Shard Index (ZEN)
 
-This document introduces the `~` shard behavior in SEA firewall logic.
+This document introduces the `~` shard behavior in ZEN firewall logic.
 
 ## Why `~` shard exists
 
@@ -10,7 +10,7 @@ Main goals:
 
 - Avoid oversized single-node indexes.
 - Enforce deterministic shard structure.
-- Reuse SEA signing/verification flow for shard leaf writes.
+- Reuse ZEN signing/verification flow for shard leaf writes.
 - Support external authenticators (including WebAuthn-style authenticators) during `put`.
 - Prevent spam: intermediate shard nodes require an authenticator whose public key is a valid owner of that path.
 
@@ -58,7 +58,7 @@ For non-leaf shard nodes:
 - Link target **must equal** exact child soul (`check.$kid(soul, key)`).
 - An `authenticator` is **required**.
 - The authenticator's public key must have the correct prefix matching the key path — i.e. `pub.startsWith(path.join('') + key)`. This ensures only the key owner can claim a shard slot.
-- The signature is generated fresh by `check.auth` via `SEA.opt.pack`, which embeds the Gun state timestamp into the signed message. Pre-signed proofs are not accepted.
+- The signature is generated fresh by `check.auth` via `ZEN.opt.pack`, which embeds the ZEN state timestamp into the signed message. Pre-signed proofs are not accepted.
 
 **Stored envelope for intermediate nodes:**
 
@@ -98,7 +98,7 @@ Both intermediate and leaf shard writes require an authenticator. Two styles are
 The simplest form. `pub` is read directly from the pair:
 
 ```javascript
-const pair = await SEA.pair();
+const pair = await ZEN.pair();
 
 // --- Intermediate node ---
 const key = pair.pub.slice(0, 2); // first 2-char segment
@@ -128,8 +128,8 @@ A custom async signing function (WebAuthn adapter, HSM, etc.).
 **Important:** A function has no `.pub` property. For **intermediate** nodes you must also pass `opt.pub` explicitly so the firewall can derive the owner and check the path prefix. Leaf nodes do not need `opt.pub` (the pub is reconstructed from the soul path).
 
 ```javascript
-const pair = await SEA.pair();
-const auth = async (data) => SEA.sign(data, pair);
+const pair = await ZEN.pair();
+const auth = async (data) => ZEN.sign(data, pair);
 
 // --- Intermediate node — opt.pub is REQUIRED ---
 const key = pair.pub.slice(0, 2);
@@ -197,7 +197,7 @@ gun
 
 Recommended leaf input contract:
 
-- Use scalar pub payload flow (signed through SEA pipeline at put time).
+- Use scalar pub payload flow (signed through ZEN pipeline at put time).
 - Avoid object-shaped leaf payloads.
 
 Reason:

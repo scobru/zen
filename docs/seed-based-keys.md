@@ -15,7 +15,7 @@ This feature enables **deterministic key pair generation** from a seed value. Un
 
 ```javascript
 // Generate a key pair from a string seed
-const pair = await SEA.pair(null, { seed: "my secret passphrase" });
+const pair = await ZEN.pair(null, { seed: "my secret passphrase" });
 
 console.log(pair);
 // {
@@ -26,7 +26,7 @@ console.log(pair);
 // }
 
 // Same seed = same keys
-const pair2 = await SEA.pair(null, { seed: "my secret passphrase" });
+const pair2 = await ZEN.pair(null, { seed: "my secret passphrase" });
 console.log(pair.pub === pair2.pub); // true
 ```
 
@@ -41,14 +41,14 @@ const seedData = textEncoder.encode("my secret passphrase");
 const seedBuffer = seedData.buffer; // ArrayBuffer
 
 // Generate key pair from binary seed
-const pair = await SEA.pair(null, { seed: seedBuffer });
+const pair = await ZEN.pair(null, { seed: seedBuffer });
 ```
 
 ### Different Seeds = Different Keys
 
 ```javascript
-const pair1 = await SEA.pair(null, { seed: "seed one" });
-const pair2 = await SEA.pair(null, { seed: "seed two" });
+const pair1 = await ZEN.pair(null, { seed: "seed one" });
+const pair2 = await ZEN.pair(null, { seed: "seed two" });
 
 console.log(pair1.pub === pair2.pub); // false - different seeds produce different keys
 ```
@@ -65,10 +65,10 @@ The security of your keys depends entirely on the strength of your seed:
 
 ```javascript
 // ❌ WEAK - easily guessable
-const weakPair = await SEA.pair(null, { seed: "password123" });
+const weakPair = await ZEN.pair(null, { seed: "password123" });
 
 // ✅ STRONG - high entropy
-const strongPair = await SEA.pair(null, {
+const strongPair = await ZEN.pair(null, {
   seed: "correct horse battery staple quantum entropy flux",
 });
 ```
@@ -91,15 +91,12 @@ const strongPair = await SEA.pair(null, {
 // Registration
 async function registerUser(username, passphrase) {
   // Generate deterministic key pair from passphrase
-  const pair = await SEA.pair(null, { seed: passphrase });
+  const pair = await ZEN.pair(null, { seed: passphrase });
 
-  // Create user account
-  const gun = Gun();
-  const user = gun.user();
-  await user.auth(pair);
-
-  // Store username alias
-  gun.get("~@").get(username).put(gun.user().is);
+  // Create user account with ZEN
+  const zen = new ZEN();
+  // Store user data
+  zen.get(`~${pair.pub}`).get("username").put(username);
 
   return pair.pub;
 }
@@ -107,15 +104,10 @@ async function registerUser(username, passphrase) {
 // Recovery (on any device)
 async function recoverUser(username, passphrase) {
   // Regenerate the same keys from passphrase
-  const pair = await SEA.pair(null, { seed: passphrase });
+  const pair = await ZEN.pair(null, { seed: passphrase });
 
-  // Login with recovered keys
-  const gun = Gun();
-  const user = gun.user();
-  await user.auth(pair);
-
-  console.log("Account recovered:", user.is.pub);
-  return user;
+  console.log("Account recovered:", pair.pub);
+  return pair;
 }
 ```
 
@@ -128,14 +120,14 @@ describe("User tests", function () {
 
   beforeEach(async function () {
     // Always use the same test keys
-    testUser1 = await SEA.pair(null, { seed: "test-user-1" });
-    testUser2 = await SEA.pair(null, { seed: "test-user-2" });
+    testUser1 = await ZEN.pair(null, { seed: "test-user-1" });
+    testUser2 = await ZEN.pair(null, { seed: "test-user-2" });
   });
 
   it("should send message between users", async function () {
     // Test with deterministic keys
-    const message = await SEA.encrypt("hello", testUser1, testUser2.epub);
-    const decrypted = await SEA.decrypt(message, testUser2);
+    const message = await ZEN.encrypt("hello", testUser2.epub, testUser1);
+    const decrypted = await ZEN.decrypt(message, testUser2);
     expect(decrypted).to.equal("hello");
   });
 });
@@ -147,19 +139,19 @@ The implementation handles various seed types robustly:
 
 ```javascript
 // Empty string
-const pair1 = await SEA.pair(null, { seed: "" });
+const pair1 = await ZEN.pair(null, { seed: "" });
 
 // Numeric strings
-const pair2 = await SEA.pair(null, { seed: "12345" });
+const pair2 = await ZEN.pair(null, { seed: "12345" });
 
 // Special characters
-const pair3 = await SEA.pair(null, { seed: "!@#$%^&*()" });
+const pair3 = await ZEN.pair(null, { seed: "!@#$%^&*()" });
 
 // Very long strings
-const pair4 = await SEA.pair(null, { seed: "a".repeat(1000) });
+const pair4 = await ZEN.pair(null, { seed: "a".repeat(1000) });
 
 // Unicode/emoji
-const pair5 = await SEA.pair(null, { seed: "😀🔑🔒👍" });
+const pair5 = await ZEN.pair(null, { seed: "😀🔑🔒👍" });
 
 // All produce valid, unique key pairs
 ```
@@ -169,33 +161,33 @@ const pair5 = await SEA.pair(null, { seed: "😀🔑🔒👍" });
 Seeds are **case-sensitive** and **whitespace-sensitive**:
 
 ```javascript
-const pair1 = await SEA.pair(null, { seed: "MyPassword" });
-const pair2 = await SEA.pair(null, { seed: "mypassword" });
-const pair3 = await SEA.pair(null, { seed: "MyPassword " }); // trailing space
+const pair1 = await ZEN.pair(null, { seed: "MyPassword" });
+const pair2 = await ZEN.pair(null, { seed: "mypassword" });
+const pair3 = await ZEN.pair(null, { seed: "MyPassword " }); // trailing space
 
 // All three produce DIFFERENT keys
 console.log(pair1.pub !== pair2.pub); // true
 console.log(pair1.pub !== pair3.pub); // true
 ```
 
-## Working with Other SEA Functions
+## Working with Other ZEN Functions
 
-Keys generated from seeds work seamlessly with all SEA functions:
+Keys generated from seeds work seamlessly with all ZEN functions:
 
 ```javascript
 const seed = "my deterministic seed";
-const pair = await SEA.pair(null, { seed });
+const pair = await ZEN.pair(null, { seed });
 
 // Signing
-const signature = await SEA.sign("my data", pair);
-const verified = await SEA.verify(signature, pair.pub);
+const signature = await ZEN.sign("my data", pair);
+const verified = await ZEN.verify(signature, pair.pub);
 
 // Encryption
-const encrypted = await SEA.encrypt("secret message", pair);
-const decrypted = await SEA.decrypt(encrypted, pair);
+const encrypted = await ZEN.encrypt("secret message", pair);
+const decrypted = await ZEN.decrypt(encrypted, pair);
 
 // Hashing
-const proof = await SEA.hash("my hash", pair);
+const hash = await ZEN.hash("my hash");
 
 // All operations work identically to random-generated keys
 ```
@@ -207,7 +199,7 @@ const proof = await SEA.hash("my hash", pair);
 | Reproducibility | ❌ Different every time | ✅ Same seed = same keys              |
 | Security        | ✅ Maximally random     | ⚠️ Depends on seed strength           |
 | Use Case        | Standard usage          | Recovery, testing, deterministic apps |
-| Command         | `SEA.pair()`            | `SEA.pair(null, { seed })`            |
+| Command         | `ZEN.pair()`            | `ZEN.pair(null, { seed })`            |
 
 ## Best Practices
 
@@ -224,26 +216,21 @@ If you have existing random keys and want to migrate to seed-based:
 
 ```javascript
 // Old approach (random)
-const oldPair = await SEA.pair();
+const oldPair = await ZEN.pair();
 
 // You cannot "reverse engineer" a seed from existing keys
 // Instead, plan a migration:
 
 async function migrateToSeedBased(oldPair, newSeed) {
   // 1. Generate new seed-based keys
-  const newPair = await SEA.pair(null, { seed: newSeed });
+  const newPair = await ZEN.pair(null, { seed: newSeed });
 
   // 2. Re-encrypt your data with new keys
-  const data = await gun
-    .get("~" + oldPair.pub)
-    .get("mydata")
-    .once();
+  const zen = new ZEN();
+  const data = await zen.get("~" + oldPair.pub).get("mydata").once();
 
   // 3. Put to new graph
-  gun
-    .get("~" + newPair.pub)
-    .get("mydata")
-    .put(data);
+  zen.get("~" + newPair.pub).get("mydata").put(data);
 
   return newPair;
 }
@@ -251,6 +238,6 @@ async function migrateToSeedBased(oldPair, newSeed) {
 
 ## See Also
 
-- [Derive (Additive Key Derivation)](./additive-derivation.md) - Generate child keys from parent keys
+- [Additive Derivation](./additive-derivation.md) - Generate child keys from parent keys
 - [WebAuthn Integration](./webauthn.md) - Use hardware authenticators
 - [External Authenticators](./external-authenticators.md) - Custom signing functions

@@ -89,11 +89,13 @@ const pair2 = await ZEN.pair(null, { seed: "my-deterministic-seed" });
 ### Additive key derivation
 
 ```js
-// Bob derives child key pair from his private key + shared seed
-const child = await ZEN.derive(pair, "shared-namespace");
+// Bob derives a child key pair from his private key + shared seed
+// ZEN.pair() automatically performs additive derivation when given both priv and seed
+const child = await ZEN.pair(null, { priv: pair.priv, seed: "shared-namespace" });
 
 // Alice derives the same child public key from Bob's public key + same seed
-const childPub = await ZEN.derive({ pub: pair.pub }, "shared-namespace");
+// ZEN.pair() performs public-only derivation when given pub and seed
+const childPub = await ZEN.pair(null, { pub: pair.pub, seed: "shared-namespace" });
 // child.pub === childPub.pub — without either party revealing private keys
 ```
 

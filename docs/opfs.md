@@ -21,7 +21,7 @@ When loaded in a supported browser runtime, `lib/opfs.js`:
 1. Registers itself on `globalThis` as `ROPFS`
 2. Creates one OPFS directory per `opt.file`
 3. Stores RAD chunk/index files inside that directory
-4. Auto-hooks `Gun.on('create', ...)` and claims `root.opt.store` only if no store is already set
+4. Auto-hooks `ZEN.on('create', ...)` and claims `root.opt.store` only if no store is already set
 
 Like the other `lib/` storage adapters, it is a **side-effect plugin**, not an ES module export.
 
@@ -34,10 +34,10 @@ Like the other `lib/` storage adapters, it is a **side-effect plugin**, not an E
 If OPFS is available and `root.opt.store` is not already set:
 
 ```html
-<script src="/gun.js"></script>
+<script src="/zen.js"></script>
 <script src="/lib/opfs.js"></script>
 <script>
-  var gun = Gun({ file: "my-opfs-db" });
+  const zen = ZEN({ file: "my-opfs-db" });
 </script>
 ```
 
@@ -48,7 +48,7 @@ If you want to make the active store deterministic, select it manually:
 ```javascript
 var opt = { file: "my-opfs-db" };
 opt.store = ROPFS(opt);
-var gun = Gun(opt);
+const zen = ZEN(opt);
 ```
 
 This is the safest way to avoid ambiguity when multiple browser storage plugins are loaded.
@@ -60,7 +60,7 @@ This is the safest way to avoid ambiguity when multiple browser storage plugins 
 Yes — developers can choose the persistent storage name with `opt.file`:
 
 ```javascript
-var gun = Gun({ file: "orders-db" });
+const zen = ZEN({ file: "orders-db" });
 ```
 
 For OPFS, this name becomes the **directory name** inside the origin-private filesystem.
@@ -74,10 +74,10 @@ RAD then stores its internal files inside that directory. So `opt.file` is the s
 `lib/opfs.js` works fine in ES module applications as a **side-effect import**:
 
 ```javascript
-import "/gun.js";
+import "/zen.js";
 import "/lib/opfs.js";
 
-const gun = Gun({ file: "my-opfs-db" });
+const zen = ZEN({ file: "my-opfs-db" });
 ```
 
 It does **not** currently export `ROPFS` with ESM syntax, so this is **not** supported:
@@ -91,7 +91,7 @@ Use the global instead:
 ```javascript
 const opt = { file: "my-opfs-db" };
 opt.store = ROPFS(opt);
-const gun = Gun(opt);
+const zen = ZEN(opt);
 ```
 
 ---
@@ -127,7 +127,7 @@ If you need a future high-performance worker-only variant, that would be a separ
 
 ## Interaction with IndexedDB
 
-If both `lib/opfs.js` and `lib/rindexed.js` are loaded, GUN still uses **only one active store per Gun instance**.
+If both `lib/opfs.js` and `lib/rindexed.js` are loaded, GUN still uses **only one active store per ZEN instance**.
 
 Rules:
 
@@ -147,7 +147,7 @@ If you want deterministic selection, set `opt.store` explicitly.
 To prevent the plugin from auto-claiming `root.opt.store`:
 
 ```javascript
-var gun = Gun({
+const zen = ZEN({
   opfs: false,
 });
 ```

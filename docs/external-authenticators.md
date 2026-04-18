@@ -2,7 +2,7 @@
 
 ## Overview
 
-**External Authenticators** provide a flexible way to integrate custom signing mechanisms with GunDB. Instead of using the traditional authenticated user session (`user.auth()`), you can provide your own signing function or key pair directly in the `put` operation.
+**External Authenticators** provide a flexible way to integrate custom signing mechanisms with ZEN. Instead of using the traditional authenticated user session, you can provide your own signing function or key pair directly in the `put` operation.
 
 This enables:
 
@@ -17,36 +17,27 @@ This enables:
 ### Traditional Approach (Session-Based)
 
 ```javascript
-const gun = Gun();
-const user = gun.user();
-
-// 1. Create account (stores credentials)
-await user.create("alice", "password");
-
-// 2. Login (establishes session)
-await user.auth("alice", "password");
-
-// 3. Put data (uses session)
-user.get("profile").put({ name: "Alice" });
+// ZEN doesn't require traditional session-based authentication
+// You can use key pairs directly for each operation
 ```
 
-**Limitations:**
+**Limitations of session-based approaches:**
 
 - Requires maintaining an authenticated session
 - One identity per session
-- Password-based (unless using SEA.pair recovery)
+- Password-based (unless using ZEN.pair recovery)
 - State management complexity
 
 ### External Authenticator Approach (Stateless)
 
 ```javascript
-const gun = Gun();
+const zen = new ZEN();
 
 // 1. Have a key pair (from anywhere)
-const pair = await SEA.pair();
+const pair = await ZEN.pair();
 
 // 2. Put data directly without session
-gun.get(`~${pair.pub}`).get("profile").put(
+zen.get(`~${pair.pub}`).get("profile").put(
   { name: "Alice" },
   null,
   { authenticator: pair }, // ⬅️ External authenticator
@@ -62,22 +53,22 @@ gun.get(`~${pair.pub}`).get("profile").put(
 
 ## Usage Patterns
 
-### 1. Using a SEA Key Pair
+### 1. Using a ZEN Key Pair
 
-The simplest form - provide a SEA key pair:
+The simplest form - provide a ZEN key pair:
 
 ```javascript
 // Generate or load a key pair
-const pair = await SEA.pair();
+const pair = await ZEN.pair();
 
 // Put data to the user's graph
-gun
+zen
   .get(`~${pair.pub}`)
   .get("data")
   .put("Hello World", null, { authenticator: pair });
 
 // Read it back
-gun
+zen
   .get(`~${pair.pub}`)
   .get("data")
   .once((data) => {
@@ -98,7 +89,7 @@ const customAuthenticator = async (data) => {
   // (e.g., call to HSM, cloud KMS, hardware wallet, etc.)
   const signature = await myCustomSigningService.sign(data);
 
-  // Return in SEA signature format
+  // Return in ZEN signature format
   return {
     m: data, // The message that was signed
     s: signature, // The signature
@@ -106,7 +97,7 @@ const customAuthenticator = async (data) => {
 };
 
 // Use it
-gun
+zen
   .get(`~${myPublicKey}`)
   .get("data")
   .put("Signed by custom service", null, {
@@ -136,11 +127,11 @@ const webAuthnAuth = async (data) => {
     },
   });
 
-  return assertion.response; // SEA will normalize this
+  return assertion.response; // ZEN will normalize this
 };
 
 // Use it
-gun
+zen
   .get(`~${webAuthnPub}`)
   .get("data")
   .put("Signed by Touch ID", null, { authenticator: webAuthnAuth });
@@ -151,10 +142,10 @@ gun
 When writing to your own graph (where graph soul `~pub` matches your public key):
 
 ```javascript
-const pair = await SEA.pair();
+const pair = await ZEN.pair();
 
 // ✅ Writing to own graph - just provide authenticator
-gun
+zen
   .get(`~${pair.pub}`)
   .get("profile")
   .put({ bio: "I'm Alice" }, null, { authenticator: pair });
@@ -171,20 +162,20 @@ When writing to someone else's graph, you need a certificate:
 
 ```javascript
 // Alice's key pair
-const alice = await SEA.pair();
+const alice = await ZEN.pair();
 
 // Bob's key pair
-const bob = await SEA.pair();
+const bob = await ZEN.pair();
 
 // Bob creates a certificate allowing Alice to write
-const cert = await SEA.certify(
+const cert = await ZEN.certify(
   alice.pub, // Alice can write
   { "*": "messages" }, // to 'messages' path
   bob, // Certificate signed by Bob
 );
 
 // ✅ Alice writes to Bob's graph with certificate
-gun
+zen
   .get(`~${bob.pub}`)
   .get("messages")
   .get("alice")
@@ -212,9 +203,9 @@ Intermediate nodes in the `~` shard namespace (`~/ab`, `~/ab/cd`, etc.) enforce 
 - **Pair object authenticator** — `pub` is read from `authenticator.pub` automatically:
 
 ```javascript
-const pair = await SEA.pair();
+const pair = await ZEN.pair();
 const key = pair.pub.slice(0, 2);
-gun
+zen
   .get("~")
   .get(key)
   .put({ "#": "~/" + key }, null, {
@@ -225,10 +216,10 @@ gun
 - **Function authenticator** — a function has no `.pub`. You **must** pass `opt.pub` explicitly:
 
 ```javascript
-const pair = await SEA.pair();
-const auth = async (data) => SEA.sign(data, pair);
+const pair = await ZEN.pair();
+const auth = async (data) => ZEN.sign(data, pair);
 const key = pair.pub.slice(0, 2);
-gun
+zen
   .get("~")
   .get(key)
   .put({ "#": "~/" + key }, null, {
@@ -243,17 +234,17 @@ Omitting `opt.pub` when using a function authenticator on an intermediate shard 
 ### Switch Identities Per Operation
 
 ```javascript
-const alicePair = await SEA.pair();
-const bobPair = await SEA.pair();
+const alicePair = await ZEN.pair();
+const bobPair = await ZEN.pair();
 
 // Write as Alice
-gun
+zen
   .get(`~${alicePair.pub}`)
   .get("post1")
   .put("Post by Alice", null, { authenticator: alicePair });
 
 // Write as Bob (different identity, no session change)
-gun
+zen
   .get(`~${bobPair.pub}`)
   .get("post1")
   .put("Post by Bob", null, { authenticator: bobPair });
@@ -264,19 +255,19 @@ gun
 Create an authenticator that delegates to another signing mechanism:
 
 ```javascript
-const masterPair = await SEA.pair();
+const masterPair = await ZEN.pair();
 
 // Create a delegated authenticator
 const delegatedAuth = async (data) => {
   // First, sign with master key
-  const masterSig = await SEA.sign(data, masterPair);
+  const masterSig = await ZEN.sign(data, masterPair);
 
   // Then, add additional context or transform
   return masterSig;
 };
 
 // Use the delegated authenticator
-gun
+zen
   .get(`~${masterPair.pub}`)
   .get("data")
   .put("Delegated signature", null, { authenticator: delegatedAuth });
@@ -288,19 +279,19 @@ Use with [additive derivation](./additive-derivation.md):
 
 ```javascript
 // Master key
-const master = await SEA.pair(null, { seed: "master-seed" });
+const master = await ZEN.pair(null, { seed: "master-seed" });
 
 // Derive child keys for different contexts
-const workKey = await SEA.pair(null, { priv: master.priv, seed: "work" });
-const socialKey = await SEA.pair(null, { priv: master.priv, seed: "social" });
+const workKey = await ZEN.pair(null, { priv: master.priv, seed: "work" });
+const socialKey = await ZEN.pair(null, { priv: master.priv, seed: "social" });
 
 // Use different derived keys
-gun
+zen
   .get(`~${workKey.pub}`)
   .get("documents")
   .put("Work document", null, { authenticator: workKey });
 
-gun
+zen
   .get(`~${socialKey.pub}`)
   .get("posts")
   .put("Social post", null, { authenticator: socialKey });
@@ -312,7 +303,7 @@ Create short-lived authenticators for specific operations:
 
 ```javascript
 async function createTempAuthenticator(masterPair, expiryMs) {
-  const tempPair = await SEA.pair(null, {
+  const tempPair = await ZEN.pair(null, {
     priv: masterPair.priv,
     seed: `temp-${Date.now()}`,
   });
@@ -328,7 +319,7 @@ async function createTempAuthenticator(masterPair, expiryMs) {
 
 // Use temporary authenticator
 const tempAuth = await createTempAuthenticator(masterPair, 5 * 60 * 1000);
-gun
+zen
   .get(`~${tempAuth.pub}`)
   .get("temp-data")
   .put("Expires in 5 minutes", null, { authenticator: tempAuth });
@@ -344,12 +335,12 @@ async function conditionalAuth(data, condition) {
     throw new Error("Condition not met, refusing to sign");
   }
 
-  const pair = await SEA.pair();
-  return await SEA.sign(data, pair);
+  const pair = await ZEN.pair();
+  return await ZEN.sign(data, pair);
 }
 
 // Use with condition
-gun
+zen
   .get(`~${pub}`)
   .get("sensitive")
   .put("Sensitive data", null, {
@@ -372,7 +363,7 @@ async function multiSigAuth(data, signers) {
   const signatures = [];
 
   for (const signer of signers) {
-    const sig = await SEA.sign(data, signer);
+    const sig = await ZEN.sign(data, signer);
     signatures.push(sig);
   }
 
@@ -386,7 +377,7 @@ async function multiSigAuth(data, signers) {
 
 // Require 2-of-3 signatures
 const signers = [pair1, pair2, pair3];
-gun
+zen
   .get(`~${multisigPub}`)
   .get("vault")
   .put("Multi-sig data", null, {
@@ -424,7 +415,7 @@ class HSMAuthenticator {
 
 // Use HSM authenticator
 const hsmAuth = new HSMAuthenticator(hsmClient, "my-key-id");
-gun
+zen
   .get(`~${hsmPub}`)
   .get("data")
   .put("HSM-signed data", null, {
@@ -452,7 +443,7 @@ async function kmsAuthenticator(data) {
   };
 }
 
-gun
+zen
   .get(`~${kmsPub}`)
   .get("data")
   .put("KMS-signed data", null, { authenticator: kmsAuthenticator });
@@ -475,10 +466,10 @@ async function biometricAuthenticator(data) {
 
   // Get stored key after biometric verification
   const pair = await getStoredKeyPair();
-  return await SEA.sign(data, pair);
+  return await ZEN.sign(data, pair);
 }
 
-gun
+zen
   .get(`~${pub}`)
   .get("data")
   .put("Biometric-signed data", null, {
@@ -530,17 +521,17 @@ type SEAPair = {
 3. **Don't skip certificate validation**: Always verify certificates when writing to others' graphs
 4. **Don't ignore errors**: Handle signing failures gracefully
 
-## Comparison: Session vs External Authenticator
+## Comparison: External Authenticator Approach
 
-| Feature              | Session (`user.auth()`) | External Authenticator |
-| -------------------- | ----------------------- | ---------------------- |
-| Setup                | Login required          | No session needed      |
-| State                | Stateful                | Stateless              |
-| Switching identities | Logout/login            | Per-operation          |
-| Custom signing       | ❌ Not supported        | ✅ Supported           |
-| Hardware keys        | ❌ Limited              | ✅ Full support        |
-| Complexity           | Simple                  | More flexible          |
-| Use case             | Traditional apps        | Modern, multi-identity |
+| Feature              | External Authenticator |
+| -------------------- | ---------------------- |
+| Setup                | No session needed      |
+| State                | Stateless              |
+| Switching identities | Per-operation          |
+| Custom signing       | ✅ Supported           |
+| Hardware keys        | ✅ Full support        |
+| Complexity           | Flexible               |
+| Use case             | Modern, multi-identity |
 
 ## Testing
 
@@ -549,8 +540,8 @@ type SEAPair = {
 ```javascript
 describe("External Authenticators", function () {
   it("should put with external authenticator", async function () {
-    const gun = Gun();
-    const pair = await SEA.pair();
+    const zen = new ZEN();
+    const pair = await ZEN.pair();
 
     // Put with external authenticator
     gun
@@ -571,12 +562,12 @@ describe("External Authenticators", function () {
   });
 
   it("should work with custom signing function", async function () {
-    const gun = Gun();
-    const pair = await SEA.pair();
+    const zen = new ZEN();
+    const pair = await ZEN.pair();
 
     // Custom authenticator
     const customAuth = async (data) => {
-      return await SEA.sign(data, pair);
+      return await ZEN.sign(data, pair);
     };
 
     gun
@@ -608,7 +599,7 @@ const debugAuth = async (data) => {
   console.log("Signing data:", data);
 
   try {
-    const sig = await SEA.sign(data, pair);
+    const sig = await ZEN.sign(data, pair);
     console.log("Signature:", sig);
     return sig;
   } catch (error) {
@@ -617,55 +608,10 @@ const debugAuth = async (data) => {
   }
 };
 
-gun
+zen
   .get(`~${pub}`)
   .get("debug")
   .put("debug data", null, { authenticator: debugAuth });
-```
-
-## Migration from Session-Based Auth
-
-### Before (Session-based)
-
-```javascript
-const gun = Gun();
-const user = gun.user();
-
-await user.create("alice", "password");
-await user.auth("alice", "password");
-
-user.get("profile").put({ name: "Alice" });
-```
-
-### After (External Authenticator)
-
-```javascript
-const gun = Gun();
-const pair = await SEA.pair(null, { seed: "alice-recovery-seed" });
-
-gun
-  .get(`~${pair.pub}`)
-  .get("profile")
-  .put({ name: "Alice" }, null, { authenticator: pair });
-```
-
-### Hybrid Approach
-
-Support both for backward compatibility:
-
-```javascript
-async function hybridPut(gun, user, path, data, authenticator) {
-  if (authenticator) {
-    // New way: external authenticator
-    const pub = authenticator.pub || user.is?.pub;
-    gun.get(`~${pub}`).get(path).put(data, null, {
-      opt: { authenticator },
-    });
-  } else {
-    // Old way: authenticated session
-    user.get(path).put(data);
-  }
-}
 ```
 
 ## See Also
@@ -673,4 +619,4 @@ async function hybridPut(gun, user, path, data, authenticator) {
 - [WebAuthn Integration](./webauthn.md) - Hardware authenticators and biometrics
 - [Seed-Based Keys](./seed-based-keys.md) - Deterministic key generation
 - [Additive Derivation](./additive-derivation.md) - Hierarchical key derivation
-- [SEA Certificates](https://gun.eco/docs/SEA.certify) - Permission management
+- [Tilde Shard](./tilde-shard.md) - Understanding `~` namespace rules

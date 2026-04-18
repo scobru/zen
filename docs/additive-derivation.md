@@ -20,7 +20,7 @@ derived_private_key = (base_private_key + seed_hash) mod n
 derived_public_key = base_public_key + (seed_hash × G)
 ```
 
-Where `G` is the generator point on the P-256 elliptic curve and `n` is the curve order.
+Where `G` is the generator point on the elliptic curve (secp256k1 by default, or P-256) and `n` is the curve order.
 
 **Key property**: If Bob knows the private key and Alice only knows the public key, they can both independently derive the **same public key** using the same seed.
 
@@ -30,10 +30,10 @@ Where `G` is the generator point on the P-256 elliptic curve and `n` is the curv
 
 ```javascript
 // Create a base key pair
-const base = await SEA.pair();
+const base = await ZEN.pair();
 
 // Derive a new key pair using the private key + seed
-const derived = await SEA.pair(null, {
+const derived = await ZEN.pair(null, {
   priv: base.priv,
   seed: "child-key-1",
 });
@@ -54,7 +54,7 @@ console.log(derived);
 const bobPublicKey = base.pub;
 
 // Alice can derive the same public key Bob derived
-const aliceDerived = await SEA.pair(null, {
+const aliceDerived = await ZEN.pair(null, {
   pub: bobPublicKey,
   seed: "child-key-1",
 });
@@ -68,13 +68,13 @@ For encryption key derivation, use `epriv` and `epub`:
 
 ```javascript
 // Derive encryption key pair from encryption private key
-const derivedEncrypt = await SEA.pair(null, {
+const derivedEncrypt = await ZEN.pair(null, {
   epriv: base.epriv,
   seed: "encryption-child-1",
 });
 
 // Or derive public encryption key only
-const aliceEncrypt = await SEA.pair(null, {
+const aliceEncrypt = await ZEN.pair(null, {
   epub: base.epub,
   seed: "encryption-child-1",
 });
@@ -87,11 +87,11 @@ console.log(derivedEncrypt.epub === aliceEncrypt.epub); // true!
 Same inputs always produce the same outputs:
 
 ```javascript
-const base = await SEA.pair();
+const base = await ZEN.pair();
 const seed = "deterministic-child";
 
-const derived1 = await SEA.pair(null, { priv: base.priv, seed });
-const derived2 = await SEA.pair(null, { priv: base.priv, seed });
+const derived1 = await ZEN.pair(null, { priv: base.priv, seed });
+const derived2 = await ZEN.pair(null, { priv: base.priv, seed });
 
 console.log(derived1.priv === derived2.priv); // true
 console.log(derived1.pub === derived2.pub); // true
@@ -105,18 +105,18 @@ Create a tree of keys from a single master key:
 
 ```javascript
 // Master key
-const master = await SEA.pair(null, { seed: "master-seed-phrase" });
+const master = await ZEN.pair(null, { seed: "master-seed-phrase" });
 
 // Derive account keys
-const account0 = await SEA.pair(null, { priv: master.priv, seed: "account-0" });
-const account1 = await SEA.pair(null, { priv: master.priv, seed: "account-1" });
+const account0 = await ZEN.pair(null, { priv: master.priv, seed: "account-0" });
+const account1 = await ZEN.pair(null, { priv: master.priv, seed: "account-1" });
 
 // Derive sub-keys from accounts
-const account0Address0 = await SEA.pair(null, {
+const account0Address0 = await ZEN.pair(null, {
   priv: account0.priv,
   seed: "address-0",
 });
-const account0Address1 = await SEA.pair(null, {
+const account0Address1 = await ZEN.pair(null, {
   priv: account0.priv,
   seed: "address-1",
 });
@@ -130,22 +130,22 @@ Bob and Alice can independently derive the same public key:
 
 ```javascript
 // Bob's side (has private key)
-const bob = await SEA.pair();
+const bob = await ZEN.pair();
 const sharedSeed = "shared-context-2024";
-const bobDerived = await SEA.pair(null, { priv: bob.priv, seed: sharedSeed });
+const bobDerived = await ZEN.pair(null, { priv: bob.priv, seed: sharedSeed });
 
 // Bob publishes his base public key: bob.pub
 
 // Alice's side (only has Bob's public key)
-const aliceDerived = await SEA.pair(null, { pub: bob.pub, seed: sharedSeed });
+const aliceDerived = await ZEN.pair(null, { pub: bob.pub, seed: sharedSeed });
 
 // They both have the same derived public key
 console.log(bobDerived.pub === aliceDerived.pub); // true
 
 // Alice can now verify signatures made with Bob's derived key
 const message = "Hello Alice";
-const signature = await SEA.sign(message, bobDerived);
-const verified = await SEA.verify(signature, aliceDerived.pub);
+const signature = await ZEN.sign(message, bobDerived);
+const verified = await ZEN.verify(signature, aliceDerived.pub);
 console.log(verified); // "Hello Alice"
 ```
 
@@ -158,11 +158,11 @@ async function rotateKey(currentPair, rotationPeriod) {
   const today = new Date().toISOString().split("T")[0]; // "2024-01-15"
   const seed = `rotation-${today}-${rotationPeriod}`;
 
-  return await SEA.pair(null, { priv: currentPair.priv, seed });
+  return await ZEN.pair(null, { priv: currentPair.priv, seed });
 }
 
 // Original key
-const original = await SEA.pair();
+const original = await ZEN.pair();
 
 // Rotated keys (different each day/period)
 const jan15Key = await rotateKey(original, "daily");
@@ -176,15 +176,15 @@ const jan16Key = await rotateKey(original, "daily");
 Create separate identities for different contexts:
 
 ```javascript
-const master = await SEA.pair(null, { seed: "my-master-identity" });
+const master = await ZEN.pair(null, { seed: "my-master-identity" });
 
 // Different identities for different purposes
-const workIdentity = await SEA.pair(null, { priv: master.priv, seed: "work" });
-const socialIdentity = await SEA.pair(null, {
+const workIdentity = await ZEN.pair(null, { priv: master.priv, seed: "work" });
+const socialIdentity = await ZEN.pair(null, {
   priv: master.priv,
   seed: "social",
 });
-const gamingIdentity = await SEA.pair(null, {
+const gamingIdentity = await ZEN.pair(null, {
   priv: master.priv,
   seed: "gaming",
 });
@@ -198,16 +198,16 @@ Create temporary or scoped authentication keys:
 
 ```javascript
 // Main account
-const mainAccount = await SEA.pair();
+const mainAccount = await ZEN.pair();
 
 // Derive a temporary key for mobile app (expires after rotation)
-const mobileKey = await SEA.pair(null, {
+const mobileKey = await ZEN.pair(null, {
   priv: mainAccount.priv,
   seed: "mobile-app-2024-02",
 });
 
 // Derive a read-only key for analytics
-const analyticsKey = await SEA.pair(null, {
+const analyticsKey = await ZEN.pair(null, {
   priv: mainAccount.priv,
   seed: "analytics-readonly",
 });
@@ -220,22 +220,22 @@ const analyticsKey = await SEA.pair(null, {
 You can derive only what you have:
 
 ```javascript
-const base = await SEA.pair();
+const base = await ZEN.pair();
 
 // Derive signing keys only (priv → pub)
-const signOnly = await SEA.pair(null, { priv: base.priv, seed: "test" });
+const signOnly = await ZEN.pair(null, { priv: base.priv, seed: "test" });
 console.log(signOnly.pub); // ✅ Derived
 console.log(signOnly.priv); // ✅ Derived
 console.log(signOnly.epub); // ❌ undefined (no base.epub provided)
 console.log(signOnly.epriv); // ❌ undefined (no base.epriv provided)
 
 // Derive public key only
-const pubOnly = await SEA.pair(null, { pub: base.pub, seed: "test" });
+const pubOnly = await ZEN.pair(null, { pub: base.pub, seed: "test" });
 console.log(pubOnly.pub); // ✅ Derived
 console.log(pubOnly.priv); // ❌ undefined (can't derive without base.priv)
 
 // Derive encryption keys only (epriv → epub)
-const encryptOnly = await SEA.pair(null, { epriv: base.epriv, seed: "test" });
+const encryptOnly = await ZEN.pair(null, { epriv: base.epriv, seed: "test" });
 console.log(encryptOnly.epub); // ✅ Derived
 console.log(encryptOnly.epriv); // ✅ Derived
 console.log(encryptOnly.pub); // ❌ undefined (no base.priv provided)
@@ -249,7 +249,7 @@ The implementation includes several security checks:
 
 ```javascript
 try {
-  await SEA.pair(null, { pub: "invalid-format", seed: "test" });
+  await ZEN.pair(null, { pub: "invalid-format", seed: "test" });
 } catch (error) {
   console.log("Error: Invalid public key format");
 }
@@ -260,7 +260,7 @@ try {
 ```javascript
 try {
   // Coordinates that don't satisfy the curve equation
-  await SEA.pair(null, { pub: "AA.AA", seed: "test" });
+  await ZEN.pair(null, { pub: "AA.AA", seed: "test" });
 } catch (error) {
   console.log("Error: Point not on curve");
 }
@@ -270,12 +270,12 @@ try {
 
 ```javascript
 try {
-  // Coordinate values >= field prime P
+  // Coordinate values >= field prime P (for secp256k1 or P-256)
   const P = BigInt(
     "0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff",
   );
   const invalidPub = encodeBase64(P) + "." + encodeBase64(1n);
-  await SEA.pair(null, { pub: invalidPub, seed: "test" });
+  await ZEN.pair(null, { pub: invalidPub, seed: "test" });
 } catch (error) {
   console.log("Error: Coordinate out of range");
 }
@@ -290,7 +290,7 @@ try {
     "0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551",
   );
   const invalidPriv = encodeBase64(n);
-  await SEA.pair(null, { priv: invalidPriv, seed: "test" });
+  await ZEN.pair(null, { priv: invalidPriv, seed: "test" });
 } catch (error) {
   console.log("Error: Private key out of range");
 }
@@ -301,7 +301,7 @@ try {
 ```javascript
 try {
   const zeroPriv = encodeBase64(0n);
-  await SEA.pair(null, { priv: zeroPriv, seed: "test" });
+  await ZEN.pair(null, { priv: zeroPriv, seed: "test" });
 } catch (error) {
   console.log("Error: Private key cannot be zero");
 }
@@ -320,14 +320,14 @@ async function derivePath(master, path) {
   for (const part of parts) {
     const index = part.replace("'", ""); // Hardened indicator
     const seed = `index-${index}`;
-    current = await SEA.pair(null, { priv: current.priv, seed });
+    current = await ZEN.pair(null, { priv: current.priv, seed });
   }
 
   return current;
 }
 
 // Master key
-const master = await SEA.pair(null, { seed: "my mnemonic phrase" });
+const master = await ZEN.pair(null, { seed: "my mnemonic phrase" });
 
 // Derive keys using BIP44-style paths
 const account0 = await derivePath(master, "m/44'/0'/0'/0/0");
@@ -340,44 +340,44 @@ You can combine both approaches:
 
 ```javascript
 // Start with a seed-based master key
-const master = await SEA.pair(null, { seed: "master-passphrase" });
+const master = await ZEN.pair(null, { seed: "master-passphrase" });
 
 // Derive child keys additively
-const child1 = await SEA.pair(null, { priv: master.priv, seed: "child-1" });
-const child2 = await SEA.pair(null, { priv: master.priv, seed: "child-2" });
+const child1 = await ZEN.pair(null, { priv: master.priv, seed: "child-1" });
+const child2 = await ZEN.pair(null, { priv: master.priv, seed: "child-2" });
 
 // Everything is deterministic and reproducible
 ```
 
-## Working with GunDB User Graphs
+## Working with ZEN User Graphs
 
 ```javascript
-const gun = Gun();
+const zen = new ZEN();
 
 // Master identity
-const master = await SEA.pair(null, { seed: "my-master-seed" });
+const master = await ZEN.pair(null, { seed: "my-master-seed" });
 
 // Derive a key for public profile
-const publicProfile = await SEA.pair(null, {
+const publicProfile = await ZEN.pair(null, {
   priv: master.priv,
   seed: "public",
 });
 
 // Derive a key for private data
-const privateData = await SEA.pair(null, {
+const privateData = await ZEN.pair(null, {
   priv: master.priv,
   seed: "private",
 });
 
 // Use different derived keys for different data
-gun
+zen
   .get(`~${publicProfile.pub}`)
   .get("bio")
   .put("Hello world!", null, {
     opt: { authenticator: publicProfile },
   });
 
-gun
+zen
   .get(`~${privateData.pub}`)
   .get("secrets")
   .put("My secrets", null, {
