@@ -23,7 +23,7 @@ var config = {
     "/": __dirname + "/index.html",
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
-    "/sea.js": __dirname + "/../../zen.js",
+    "/zen.js": __dirname + "/../../zen.js",
   },
 };
 
@@ -65,7 +65,7 @@ var browsers = clients.excluding(servers);
 // PANIC works with Mocha and other testing libraries!
 // So it is easy to use PANIC.
 
-describe("Stress test ZEN with SEA users causing PANIC!", function () {
+describe("Stress test ZEN with ZEN users causing PANIC!", function () {
   this.timeout(10 * 60 * 1000);
 
   it("Servers have joined!", function () {

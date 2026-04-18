@@ -9,7 +9,6 @@ describe('ZEN', function() {
 
   it('exposes only ZEN from the public entry', function() {
     assert.strictEqual(typeof ZenModule.GUN, 'undefined');
-    assert.strictEqual(typeof ZenModule.SEA, 'undefined');
     assert.strictEqual(typeof ZenModule.PEN, 'undefined');
     assert.strictEqual(typeof ZenModule.createZEN, 'undefined');
   });
@@ -51,7 +50,7 @@ describe('ZEN', function() {
     assert.strictEqual(globalThis.ZEN, undefined);
   });
 
-  it('bridges SEA helpers', async function() {
+  it('bridges ZEN helpers', async function() {
     var zen = new ZEN();
     var pair = await zen.pair();
     assert.strictEqual(typeof ZEN.sign, 'function');
@@ -65,8 +64,8 @@ describe('ZEN', function() {
   it('loads security runtime through ZEN', function() {
     var zen = new ZEN({ localStorage: false, peers: [] });
     var graph = zen.chain();
-    assert.ok(graph._.root.sea);
-    assert.strictEqual(typeof graph._.root.sea.own, 'object');
+    assert.ok(graph._.root.zen);
+    assert.strictEqual(typeof graph._.root.zen.own, 'object');
   });
 
   it('accepts graph-native runtime options and instances', function() {

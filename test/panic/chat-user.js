@@ -2,7 +2,7 @@ import __ip from "ip";
 import __panic_server from "panic-server";
 import __fs from "fs";
 import __panic_manager from "panic-manager";
-import __sea from "./sea";
+import __zen from "./zen";
 import __http from "http";
 import __index from "./index.js";
 import __open from "./util/open.js";
@@ -22,7 +22,7 @@ var config = {
   route: {
     "/": __dirname + "/index.html",
     "/zen.js": __dirname + "/../../zen.js",
-    "/sea.js": __dirname + "/../../zen.js",
+    "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
   },
 };
@@ -79,7 +79,7 @@ describe(
     // So lets up the timeout so we have time to do that.
 
     it("Generate keypair", async function () {
-      return (config.pair = await __sea.pair());
+      return (config.pair = await __zen.pair());
     });
 
     it("Servers have joined!", function () {
@@ -151,7 +151,7 @@ describe(
       return browsers.atLeast(config.browsers);
     });
 
-    it("Browsers load SEA!", function () {
+    it("Browsers load ZEN!", function () {
       //return carl.run(function(test){
       var tests = [],
         i = 0;
@@ -167,7 +167,7 @@ describe(
                 script.src = src;
                 document.head.appendChild(script);
               }
-              load("sea.js", function () {
+              load("zen.js", function () {
                 test.done();
               });
             },

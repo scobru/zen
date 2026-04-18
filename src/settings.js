@@ -34,7 +34,7 @@ settings.check = function (t) {
   if (typeof t !== "string") {
     return false;
   }
-  if ("SEA{" === t.slice(0, 4)) {
+  if ("ZEN{" === t.slice(0, 4)) {
     return true;
   }
   if ("{" !== t.slice(0, 1)) {
@@ -57,7 +57,7 @@ settings.check = function (t) {
 settings.parse = async function (t) {
   try {
     const yes = typeof t === "string";
-    if (yes && "SEA{" === t.slice(0, 4)) {
+    if (yes && "ZEN{" === t.slice(0, 4)) {
       t = t.slice(3);
     }
     return yes ? await shim.parse(t) : t;

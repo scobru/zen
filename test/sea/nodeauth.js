@@ -4,9 +4,9 @@ import http from "http";
 import "../../lib/promise.js";
 let gunClient, server;
 
-// MOVED TO SEA!!!!!!!
+// MOVED TO ZEN!!!!!!!
 
-describe("SEA node client auth", () => {
+describe("ZEN node client auth", () => {
   it("should  start server", (done) => {
     server = http.createServer().listen(8765, done);
 

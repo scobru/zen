@@ -38,10 +38,10 @@ __def('./src/base64.js', function(module, __exp){
 __def('./src/array.js', function(module, __exp){
   __req('./src/base64.js');
   // This is Array extended to have .toString(['utf8'|'hex'|'base64'])
-  function SeaArray() {}
-  Object.assign(SeaArray, { from: Array.from });
-  SeaArray.prototype = Object.create(Array.prototype);
-  SeaArray.prototype.toString = function (enc, start, end) {
+  function ZenArray() {}
+  Object.assign(ZenArray, { from: Array.from });
+  ZenArray.prototype = Object.create(Array.prototype);
+  ZenArray.prototype.toString = function (enc, start, end) {
     enc = enc || "utf8";
     start = start || 0;
     const length = this.length;
@@ -61,18 +61,18 @@ __def('./src/array.js', function(module, __exp){
     }
   };
 
-  __exp.default = SeaArray;
+  __exp.default = ZenArray;
 });
 
 __def('./src/buffer.js', function(module, __exp){
   __req('./src/base64.js');
   var __array = __req('./src/array.js').default;
-  // This is Buffer implementation used in SEA. Functionality is mostly
+  // This is Buffer implementation used in ZEN. Functionality is mostly
   // compatible with NodeJS 'safe-buffer' and is used for encoding conversions
   // between binary and 'hex' | 'utf8' | 'base64'
   // See documentation and validation for safe implementation in:
   // https://github.com/feross/safe-buffer#update
-  var SeaArray = __array;
+  var ZenArray = __array;
   function SafeBuffer(...props) {
     console.warn("new SafeBuffer() is depreciated, please use SafeBuffer.from()");
     return SafeBuffer.from(...props);
@@ -97,7 +97,7 @@ __def('./src/buffer.js', function(module, __exp){
           if (!bytes || !bytes.length) {
             throw new TypeError("Invalid first argument for type 'hex'.");
           }
-          buf = SeaArray.from(bytes);
+          buf = ZenArray.from(bytes);
         } else if (enc === "utf8" || "binary" === enc) {
           // EDIT BY MARK: I think this is safe, tested it against a couple "binary" strings. This lets SafeBuffer match NodeJS Buffer behavior more where it safely btoas regular strings.
           const length = input.length;
@@ -106,7 +106,7 @@ __def('./src/buffer.js', function(module, __exp){
             { length: length },
             (_, i) => (words[i] = input.charCodeAt(i)),
           );
-          buf = SeaArray.from(words);
+          buf = ZenArray.from(words);
         } else if (enc === "base64") {
           const dec = atob(input);
           const length = dec.length;
@@ -115,10 +115,10 @@ __def('./src/buffer.js', function(module, __exp){
             { length: length },
             (_, i) => (bytes[i] = dec.charCodeAt(i)),
           );
-          buf = SeaArray.from(bytes);
+          buf = ZenArray.from(bytes);
         } else if (enc === "binary") {
           // deprecated by above comment
-          buf = SeaArray.from(input); // some btoas were mishandled.
+          buf = ZenArray.from(input); // some btoas were mishandled.
         } else {
           console.info("SafeBuffer.from unknown encoding: " + enc);
         }
@@ -131,18 +131,18 @@ __def('./src/buffer.js', function(module, __exp){
         if (input instanceof ArrayBuffer) {
           buf = new Uint8Array(input);
         }
-        return SeaArray.from(buf || input);
+        return ZenArray.from(buf || input);
       }
     },
     // This is 'safe-buffer.alloc' sans encoding support
     alloc(length, fill = 0 /*, enc*/) {
-      return SeaArray.from(
+      return ZenArray.from(
         new Uint8Array(Array.from({ length: length }, () => fill)),
       );
     },
     // This is normal UNSAFE 'buffer.alloc' or 'new Buffer(length)' - don't use!
     allocUnsafe(length) {
-      return SeaArray.from(new Uint8Array(Array.from({ length: length })));
+      return ZenArray.from(new Uint8Array(Array.from({ length: length })));
     },
     // This puts together array of array like members
     concat(arr) {
@@ -152,13 +152,13 @@ __def('./src/buffer.js', function(module, __exp){
           "First argument must be Array containing ArrayBuffer or Uint8Array instances.",
         );
       }
-      return SeaArray.from(
+      return ZenArray.from(
         arr.reduce((ret, item) => ret.concat(Array.from(item)), []),
       );
     },
   });
   SafeBuffer.prototype.from = SafeBuffer.from;
-  SafeBuffer.prototype.toString = SeaArray.prototype.toString;
+  SafeBuffer.prototype.toString = ZenArray.prototype.toString;
 
   __exp.default = SafeBuffer;
 });
@@ -935,7 +935,7 @@ __def('./src/root.js', function(module, __exp){
       pop();
     }
     Zen.on.put = put;
-    // TODO: MARK!!! clock below, reconnect sync, SEA certify wire merge, User.auth taking multiple times, // msg put, put, say ack, hear loop...
+    // TODO: MARK!!! clock below, reconnect sync, ZEN certify wire merge, User.auth taking multiple times, // msg put, put, say ack, hear loop...
     // WASIS BUG! local peer not ack. .off other people: .open
     function ham(val, key, soul, state, msg) {
       var ctx = msg._ || "",
@@ -987,7 +987,7 @@ __def('./src/root.js', function(module, __exp){
           }
         } // same
       }
-      ctx.stun++; // TODO: 'forget' feature in SEA tied to this, bad approach, but hacked in for now. Any changes here must update there.
+      ctx.stun++; // TODO: 'forget' feature in ZEN tied to this, bad approach, but hacked in for now. Any changes here must update there.
       var aid = msg["#"] + ctx.all++,
         id = {
           toString: function () {
@@ -1025,7 +1025,7 @@ __def('./src/root.js', function(module, __exp){
         tmp;
       if ((tmp = ctx.msg) && (tmp = tmp.put) && (tmp = tmp[soul])) {
         state_ify(tmp, key, state, val, soul);
-      } // necessary! or else out messages do not get SEA transforms.
+      } // necessary! or else out messages do not get ZEN transforms.
       //var bytes = ((graph[soul]||'')[key]||'').length||1;
       graph[soul] = state_ify(graph[soul], key, state, val, soul);
       if ((tmp = (root.next || "")[soul])) {
@@ -1812,7 +1812,7 @@ __def('./src/settings.js', function(module, __exp){
     if (typeof t !== "string") {
       return false;
     }
-    if ("SEA{" === t.slice(0, 4)) {
+    if ("ZEN{" === t.slice(0, 4)) {
       return true;
     }
     if ("{" !== t.slice(0, 1)) {
@@ -1835,7 +1835,7 @@ __def('./src/settings.js', function(module, __exp){
   settings.parse = async function (t) {
     try {
       const yes = typeof t === "string";
-      if (yes && "SEA{" === t.slice(0, 4)) {
+      if (yes && "ZEN{" === t.slice(0, 4)) {
         t = t.slice(3);
       }
       return yes ? await shim.parse(t) : t;
@@ -2999,28 +2999,28 @@ __def('./src/security.js', function(module, __exp){
     check.plugins.push(fn);
   };
 
-  function initSeaOpt(msg, ctx) {
+  function initZenOpt(msg, ctx) {
     var o = Object.assign({}, ctx);
     try {
-      Object.defineProperty(msg._, "sea", {
+      Object.defineProperty(msg._, "zen", {
         value: o,
         enumerable: false,
         configurable: true,
         writable: true,
       });
     } catch (e) {
-      msg._.sea = o;
+      msg._.zen = o;
     }
     return o;
   }
 
-  check.$sea = function (msg, user, pub) {
+  check.$zen = function (msg, user, pub) {
     var scope = msg._ || {};
     var ctx = scope.opt || (scope.msg || {}).opt || {};
-    var opt = scope.sea || initSeaOpt(msg, ctx);
-    var sea = (user && user._) || {};
+    var opt = scope.zen || initZenOpt(msg, ctx);
+    var zen = (user && user._) || {};
     var is = (user && user.is) || {};
-    var authenticator = opt.authenticator || sea.sea;
+    var authenticator = opt.authenticator || zen.zen;
     var upub = opt.pub || (authenticator || {}).pub || is.pub || pub;
     if (!scope.done) {
       delete ctx.authenticator;
@@ -3358,7 +3358,7 @@ __def('./src/security.js', function(module, __exp){
     var $next = function () {
       return check.next(eve, msg, no);
     };
-    var sec = check.$sea(msg, user, pub);
+    var sec = check.$zen(msg, user, pub);
     var opt = sec.opt,
       authenticator = sec.authenticator,
       upub = sec.upub;
@@ -3416,7 +3416,7 @@ __def('./src/security.js', function(module, __exp){
         }
         var lnk = link_is(data);
         if (lnk && pub === settings.pub(lnk)) {
-          (at.sea.own[lnk] = at.sea.own[lnk] || {})[pub] = 1;
+          (at.zen.own[lnk] = at.zen.own[lnk] || {})[pub] = 1;
         }
         $hash(data, function () {
           check.pass(eve, msg, raw, data, $verify);
@@ -3449,7 +3449,7 @@ __def('./src/security.js', function(module, __exp){
       if (link !== "~" + leaf) {
         return no("Shard leaf link must point to ~pub.");
       }
-      var lsec = check.$sea(msg, user, leaf);
+      var lsec = check.$zen(msg, user, leaf);
       var lauthenticator = lsec.authenticator,
         lupub = lsec.upub || (lauthenticator || {}).pub;
       if (!lauthenticator) {
@@ -3478,7 +3478,7 @@ __def('./src/security.js', function(module, __exp){
       if (link !== expected) {
         return no("Invalid shard link target.");
       }
-      var sec2 = check.$sea(msg, user);
+      var sec2 = check.$zen(msg, user);
       var authenticator2 = sec2.authenticator;
       claim = sec2.upub || (authenticator2 || {}).pub;
       if (!authenticator2) {
@@ -3554,8 +3554,8 @@ __def('./src/security.js', function(module, __exp){
   // --------------- zen plugin ---------------
 
   Zen.on("opt", function (at) {
-    if (!at.sea) {
-      at.sea = { own: {} };
+    if (!at.zen) {
+      at.zen = { own: {} };
       at.on("put", check, at);
     }
     this.to.next(at);
@@ -4200,7 +4200,7 @@ __def('./src/pen.js', function(module, __exp){
       }
 
       if (policy.sign) {
-        var sec = chk.$sea(msg, at.user || "", null);
+        var sec = chk.$zen(msg, at.user || "", null);
         if (sec.authenticator) {
           chk.auth(msg, reject, sec.authenticator, function () {
             chk.next(eve, msg, reject);
@@ -4244,8 +4244,8 @@ __def('./src/pen.js', function(module, __exp){
 
       var policy = scanpolicy(bytecode);
       var sec =
-        runtime.check && runtime.check.$sea
-          ? runtime.check.$sea(ctx.msg, (ctx.at && ctx.at.user) || "", null)
+        runtime.check && runtime.check.$zen
+          ? runtime.check.$zen(ctx.msg, (ctx.at && ctx.at.user) || "", null)
           : {};
       var writer = sec.upub || (sec.authenticator || {}).pub || "";
       var regs = [

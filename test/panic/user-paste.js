@@ -20,7 +20,7 @@ var config = {
     "/": __dirname + "/index.html",
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
-    "/sea.js": __dirname + "/../../zen.js",
+    "/zen.js": __dirname + "/../../zen.js",
     "/yson.js": __dirname + "/../../lib/yson.js",
   },
   dir: __dirname,
@@ -135,7 +135,7 @@ describe(
       return browsers.atLeast(config.browsers);
     });
 
-    it("Browsers load SEA!", function () {
+    it("Browsers load ZEN!", function () {
       var tests = [],
         i = 0;
       browsers.each(function (client, id) {
@@ -150,7 +150,7 @@ describe(
                 script.src = src;
                 document.head.appendChild(script);
               }
-              load("sea.js", function () {
+              load("zen.js", function () {
                 load("yson.js", function () {
                   test.done();
                 });

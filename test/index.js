@@ -21,8 +21,8 @@ var Zen = __gun;
 import "../lib/file.js";
 import serve from "../lib/server.js";
 
-if (process.env.SEA) {
-  Zen.SEA = __ZEN;
+if (process.env.ZEN) {
+  Zen.ZEN = __ZEN;
 }
 
 const myDir = dirname(fileURLToPath(import.meta.url));

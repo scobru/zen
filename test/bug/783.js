@@ -40,11 +40,11 @@ describe('ZEN', function(){
         }
 	}(this));
 
-	describe('erro sea', function(){
+	describe('erro zen', function(){
 		it('verbose console.log debugging', function(done) {
 			var zen = Zen({multicast:false, axe:false});
 			var ref = zen.get('test').get('1');
-			var vput = 'SEA{}';
+			var vput = 'ZEN{}';
 			ref.put(vput, function(ack, yay){ console.log('ACK: ', ack); /// must ack all
 		          ref.once(function(v,k) { console.log('SALVOU k:%s, v:', k, v);
                             expect(v===vput).to.be(true);

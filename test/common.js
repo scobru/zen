@@ -5345,7 +5345,7 @@ describe("ZEN", function () {
       });
 
       setTimeout(async function () {
-        var pair = await SEA.pair();
+        var pair = await ZEN.pair();
         var user = alice.user();
         setTimeout(function () {
           var c = 0;

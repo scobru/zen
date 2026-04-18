@@ -75,7 +75,7 @@ var RFS;
 
   try { var expect = global.expect = __expect } catch (e) { }
 
-  if (!root.Zen.SEA) {}
+  if (!root.Zen.ZEN) {}
 }(this));
 
 Zen = root.Zen;

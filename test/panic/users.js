@@ -20,7 +20,7 @@ var config = {
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
     "/cryptomodules.js": __dirname + "/../../lib/cryptomodules.js",
-    "/sea.js": __dirname + "/../../zen.js",
+    "/zen.js": __dirname + "/../../zen.js",
   },
 };
 
@@ -93,7 +93,7 @@ describe("End-to-End Encryption on User Accounts", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers load SEA!", function () {
+  it("Browsers load ZEN!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -109,7 +109,7 @@ describe("End-to-End Encryption on User Accounts", function () {
               document.head.appendChild(script);
             }
             load("cryptomodules.js", function () {
-              load("sea.js", function () {
+              load("zen.js", function () {
                 test.done();
               });
             });

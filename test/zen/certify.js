@@ -1,4 +1,4 @@
-// Tests for zen.certify() — ZEN port of sea.certify
+// Tests for zen.certify() — ZEN port of zen.certify
 import assert from "assert";
 import ZEN from "../../zen.js";
 

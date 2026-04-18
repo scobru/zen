@@ -20,7 +20,7 @@ var config = {
     "/": __dirname + "/index.html",
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
-    "/sea.js": __dirname + "/../../zen.js",
+    "/zen.js": __dirname + "/../../zen.js",
   },
 };
 
@@ -97,7 +97,7 @@ describe("Private Message Threading", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers load SEA!", function () {
+  it("Browsers load ZEN!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -112,7 +112,7 @@ describe("Private Message Threading", function () {
               script.src = src;
               document.head.appendChild(script);
             }
-            load("sea.js", function () {
+            load("zen.js", function () {
               test.done();
             });
           },
@@ -167,7 +167,7 @@ describe("Private Message Threading", function () {
                     if (!chat.msg) {
                       return;
                     }
-                    var msg = await SEA.decrypt(chat.msg, sec);
+                    var msg = await ZEN.decrypt(chat.msg, sec);
                     console.log("chat:::::::::::::::::", msg);
                     window.check[chat.pub + chat.count] = msg;
                     $("<li>").text(msg).appendTo("#chats");
@@ -186,7 +186,7 @@ describe("Private Message Threading", function () {
               }, 2000);
             });
             async function start() {
-              sec = window.sec = await SEA.secret(me.epub, them);
+              sec = window.sec = await ZEN.secret(me.epub, them);
               to = window.to = zen.user().get("pchat").get(them.pub);
               fro = window.fro = zen.user(them.pub).get("pchat").get(me.pub);
               // TODO: THIS SHOULD DO THE THREADING FOR US LOL!! We have to manually do it.
@@ -195,7 +195,7 @@ describe("Private Message Threading", function () {
             }
             window.send = async function send(text, my, their, me, cb) {
               var time = +new Date();
-              var enc = await SEA.encrypt(text, sec);
+              var enc = await ZEN.encrypt(text, sec);
               var msg = {
                 msg: enc,
                 pub: my.pub,

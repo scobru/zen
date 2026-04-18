@@ -22,19 +22,19 @@ var root;
 })(this);
 
 {
-  const SEA = Zen.SEA;
+  const ZEN = Zen.ZEN;
 
-  if (!SEA) {
+  if (!ZEN) {
     return;
   }
 
-  const { Buffer, EasyIndexedDB } = SEA;
+  const { Buffer, EasyIndexedDB } = ZEN;
 
-  const seaIndexedDb = new SEA.EasyIndexedDB("SEA", "GunDB", 1);
+  const zenIndexedDb = new ZEN.EasyIndexedDB("ZEN", "GunDB", 1);
 
   const checkIndexedDB = (key, prop, resolve_) => {
     const doIt = (resolve, reject) =>
-      seaIndexedDb.get(key, prop).then(resolve).catch(reject);
+      zenIndexedDb.get(key, prop).then(resolve).catch(reject);
 
     if (resolve_) {
       doIt(resolve_, (e) => {
@@ -47,7 +47,7 @@ var root;
 
   const setIndexedDB = (key, auth, resolve_) => {
     const doIt = (resolve, reject) =>
-      seaIndexedDb.put(key, { auth }).then(resolve).catch(reject);
+      zenIndexedDb.put(key, { auth }).then(resolve).catch(reject);
 
     if (resolve_) {
       doIt(resolve_, (e) => {
@@ -58,9 +58,9 @@ var root;
     }
   };
 
-  SEA &&
-    describe("SEA", function () {
-      console.log("TODO: SEA! THIS IS AN EARLY ALPHA!!!");
+  ZEN &&
+    describe("ZEN", function () {
+      console.log("TODO: ZEN! THIS IS AN EARLY ALPHA!!!");
       var alias = "dude";
       var pass = "my secret password";
       var userKeys = ["pub", "priv"];
@@ -76,7 +76,7 @@ var root;
         };
         // proof - generates PBKDF2 hash from user's alias and password
         // which is then used to decrypt user's auth record
-        SEA.proof(pass, Zen.text.random(64)).then(check).catch(done);
+        ZEN.proof(pass, Zen.text.random(64)).then(check).catch(done);
       });
 
       it("pair", function (done) {
@@ -91,11 +91,11 @@ var root;
           done();
         };
         // pair - generates ECDH key pair (for new user when created)
-        SEA.pair().then(check).catch(done);
+        ZEN.pair().then(check).catch(done);
       });
 
       it("keyid", function (done) {
-        SEA.pair()
+        ZEN.pair()
           .then(function (key) {
             var check = function (keyid) {
               expect(keyid).to.not.be(undefined);
@@ -104,7 +104,7 @@ var root;
               done();
             };
             // keyid - creates 8 byte KeyID from public key
-            SEA.keyid(key.pub).then(check);
+            ZEN.keyid(key.pub).then(check);
           })
           .catch(function (e) {
             done(e);
@@ -112,7 +112,7 @@ var root;
       });
 
       it("enc", function (done) {
-        SEA.pair()
+        ZEN.pair()
           .then(function (key) {
             var check = function (jsonSecret) {
               expect(jsonSecret).to.not.be(undefined);
@@ -127,7 +127,7 @@ var root;
               done();
             };
             // en - encrypts JSON data using user's private or derived ECDH key
-            SEA.enc(clearText, key.priv).then(check);
+            ZEN.enc(clearText, key.priv).then(check);
           })
           .catch(function (e) {
             done(e);
@@ -135,7 +135,7 @@ var root;
       });
 
       it("sign", function (done) {
-        SEA.pair()
+        ZEN.pair()
           .then(function (key) {
             var check = function (signature) {
               expect(signature).to.not.be(undefined);
@@ -144,7 +144,7 @@ var root;
               done();
             };
             // sign - calculates signature for data using user's private ECDH key
-            SEA.sign(key.pub, key).then(check);
+            ZEN.sign(key.pub, key).then(check);
           })
           .catch(function (e) {
             done(e);
@@ -152,7 +152,7 @@ var root;
       });
 
       it("verify", function (done) {
-        SEA.pair()
+        ZEN.pair()
           .then(function (key) {
             var check = function (ok) {
               expect(ok).to.not.be(undefined);
@@ -161,8 +161,8 @@ var root;
               done();
             };
             // sign - calculates signature for data using user's private ECDH key
-            SEA.sign(key.pub, key).then(function (signature) {
-              SEA.verify(key.pub, key.pub, signature).then(check);
+            ZEN.sign(key.pub, key).then(function (signature) {
+              ZEN.verify(key.pub, key.pub, signature).then(check);
             });
           })
           .catch(function (e) {
@@ -171,7 +171,7 @@ var root;
       });
 
       it("dec", function (done) {
-        SEA.pair()
+        ZEN.pair()
           .then(function (key) {
             var check = function (decText) {
               expect(decText).to.not.be(undefined);
@@ -179,9 +179,9 @@ var root;
               expect(decText).to.be.eql(clearText);
               done();
             };
-            SEA.enc(clearText, key.priv).then(function (jsonSecret) {
+            ZEN.enc(clearText, key.priv).then(function (jsonSecret) {
               // de - decrypts JSON data using user's private or derived ECDH key
-              SEA.dec(jsonSecret, key.priv).then(check);
+              ZEN.dec(jsonSecret, key.priv).then(check);
             });
           })
           .catch(function (e) {
@@ -190,9 +190,9 @@ var root;
       });
 
       it("derive", function (done) {
-        SEA.pair()
+        ZEN.pair()
           .then(function (txKey) {
-            return SEA.pair().then(function (rxKey) {
+            return ZEN.pair().then(function (rxKey) {
               return { tx: txKey, rx: rxKey };
             });
           })
@@ -209,7 +209,7 @@ var root;
             };
             // derive - provides shared secret for both receiver and sender
             // which can be used to encrypt or sign data
-            SEA.derive(keys.rx.pub, keys.tx).then(check);
+            ZEN.derive(keys.rx.pub, keys.tx).then(check);
           })
           .catch(function (e) {
             done(e);
@@ -217,15 +217,15 @@ var root;
       });
 
       it("write", function (done) {
-        SEA.pair()
+        ZEN.pair()
           .then(function (key) {
-            SEA.sign(key.pub, key).then(function (signature) {
+            ZEN.sign(key.pub, key).then(function (signature) {
               var check = function (result) {
                 var parts;
                 try {
                   expect(result).to.not.be(undefined);
                   expect(result).to.not.be("");
-                  expect(result.slice(0, 4)).to.eql("SEA[");
+                  expect(result.slice(0, 4)).to.eql("ZEN[");
                   parts = JSON.parse(result.slice(3));
                   expect(parts).to.not.be(undefined);
                   expect(parts[0]).to.be.eql(key.pub);
@@ -233,13 +233,13 @@ var root;
                 } catch (e) {
                   return done(e);
                 }
-                SEA.verify(key.pub, key.pub, parts[1]).then(function (flag) {
+                ZEN.verify(key.pub, key.pub, parts[1]).then(function (flag) {
                   expect(flag).to.be.true;
                   done();
                 });
               };
-              // write - wraps data to 'SEA["data","signature"]'
-              SEA.write(key.pub, key).then(check);
+              // write - wraps data to 'ZEN["data","signature"]'
+              ZEN.write(key.pub, key).then(check);
             });
           })
           .catch(function (e) {
@@ -248,7 +248,7 @@ var root;
       });
 
       it("read", function (done) {
-        SEA.pair()
+        ZEN.pair()
           .then(function (key) {
             var check = function (result) {
               expect(result).to.not.be(undefined);
@@ -256,10 +256,10 @@ var root;
               expect(result).to.be.equal(key.pub);
               done();
             };
-            SEA.sign(key.pub, key).then(function (signature) {
-              SEA.write(key.pub, key).then(function (signed) {
-                // read - unwraps data from 'SEA["data","signature"]'
-                SEA.read(signed, key.pub).then(check);
+            ZEN.sign(key.pub, key).then(function (signature) {
+              ZEN.write(key.pub, key).then(function (signed) {
+                // read - unwraps data from 'ZEN["data","signature"]'
+                ZEN.read(signed, key.pub).then(check);
               });
             });
           })
@@ -283,7 +283,7 @@ var root;
           // Get rid of authenticated Zen user
           var user = zen.back(-1)._.user;
           // TODO: is this correct way to 'logout' user from Zen.User ?
-          ["alias", "sea", "pub"].forEach(function (key) {
+          ["alias", "zen", "pub"].forEach(function (key) {
             delete user._[key];
           });
           user._.is = user.is = {};
@@ -293,10 +293,10 @@ var root;
             sessionStorage.removeItem("remember");
             sessionStorage.removeItem("alias");
             if (typeof done === "function") {
-              seaIndexedDb.wipe().then(done);
+              zenIndexedDb.wipe().then(done);
               return;
             } else {
-              return seaIndexedDb.wipe();
+              return zenIndexedDb.wipe();
             }
           }
           return Promise.resolve();
@@ -538,7 +538,7 @@ var root;
                 expect(ack).to.not.be("");
                 expect(ack).to.not.have.key("err");
                 expect(ack).to.have.key("ok");
-                expect(zen.back(-1)._.user._).to.not.have.keys(["sea", "pub"]);
+                expect(zen.back(-1)._.user._).to.not.have.keys(["zen", "pub"]);
                 // expect(zen.back(-1)._.user).to.not.be.ok();
               } catch (e) {
                 done(e);
@@ -586,7 +586,7 @@ var root;
               }
               done();
             };
-            expect(zen.back(-1)._.user).to.not.have.keys(["sea", "pub"]);
+            expect(zen.back(-1)._.user).to.not.have.keys(["zen", "pub"]);
             user.leave().then(check).catch(done);
           });
         });
@@ -609,7 +609,7 @@ var root;
                 expect(ack).to.not.be("");
                 expect(ack).to.not.have.key("err");
                 expect(ack).to.have.key("ok");
-                expect(zen.back(-1)._.user).to.not.have.keys(["sea", "pub"]);
+                expect(zen.back(-1)._.user).to.not.have.keys(["zen", "pub"]);
               } catch (e) {
                 done(e);
                 return;
@@ -685,7 +685,7 @@ var root;
 
               var ret;
               if (wantAck && ack) {
-                ["err", "pub", "sea", "alias", "put"].forEach(function (key) {
+                ["err", "pub", "zen", "alias", "put"].forEach(function (key) {
                   if (typeof ack[key] !== "undefined") {
                     (ret = ret || {})[key] = ack[key];
                   }
@@ -714,7 +714,7 @@ var root;
             var usr = zen.back(-1)._.user;
             expect(usr).to.not.be(undefined);
             expect(usr).to.have.key("_");
-            expect(usr._).to.have.keys(["pub", "sea"]);
+            expect(usr._).to.have.keys(["pub", "zen"]);
             // ... to validate 'remember' data
             pin = pin && Buffer.from(pin, "utf8").toString("base64");
             return !pin
@@ -723,8 +723,8 @@ var root;
                   checkIndexedDB(usr._.alias, "auth", resolve);
                 })
                   .then(function (remember) {
-                    return SEA.read(remember, usr._.pub).then(function (props) {
-                      return !pin ? props : SEA.dec(props, pin);
+                    return ZEN.read(remember, usr._.pub).then(function (props) {
+                      return !pin ? props : ZEN.dec(props, pin);
                     });
                   })
                   .then(function (props) {
@@ -737,12 +737,12 @@ var root;
                   .then(function (props) {
                     expect(props).to.not.be(undefined);
                     expect(props).to.not.be("");
-                    var keys = { pub: usr._.pub, priv: usr._.sea.priv };
-                    return SEA.write(JSON.stringify(props), keys).then(
+                    var keys = { pub: usr._.pub, priv: usr._.zen.priv };
+                    return ZEN.write(JSON.stringify(props), keys).then(
                       function (remember) {
                         return !pin
                           ? sessionStorage.setItem("remember", remember)
-                          : SEA.enc(remember, pin).then(function (encauth) {
+                          : ZEN.enc(remember, pin).then(function (encauth) {
                               return new Promise(function (resolve) {
                                 setIndexedDB(usr._.alias, encauth, resolve);
                               });
@@ -825,7 +825,7 @@ var root;
                     try {
                       expect(ack).to.have.key("ok");
                       expect(zen.back(-1)._.user).to.not.have.keys([
-                        "sea",
+                        "zen",
                         "pub",
                       ]);
                       expect(root.sessionStorage.getItem("user")).to.not.be(
@@ -915,7 +915,7 @@ var root;
                     try {
                       expect(ack).to.have.key("ok");
                       expect(zen.back(-1)._.user).to.not.have.keys([
-                        "sea",
+                        "zen",
                         "pub",
                       ]);
                       expect(root.sessionStorage.getItem("user")).to.not.be(
@@ -978,7 +978,7 @@ var root;
                       try {
                         expect(ack).to.have.key("ok");
                         expect(zen.back(-1)._.user).to.not.have.keys([
-                          "sea",
+                          "zen",
                           "pub",
                         ]);
                         expect(root.sessionStorage.getItem("user")).to.not.be(
@@ -1074,7 +1074,7 @@ var root;
                       try {
                         expect(ack).to.have.key("ok");
                         expect(zen.back(-1)._.user).to.not.have.keys([
-                          "sea",
+                          "zen",
                           "pub",
                         ]);
                         expect(root.sessionStorage.getItem("user")).to.not.be(
@@ -1156,7 +1156,7 @@ var root;
                 user.recall(60).then((ack) => {
                   expect(ack).to.not.be(undefined);
                   expect(ack).to.not.be("");
-                  expect(ack).to.not.have.keys(["pub", "sea"]);
+                  expect(ack).to.not.have.keys(["pub", "zen"]);
                   expect(ack).to.have.key("err");
                   expect(ack.err).to.not.be(undefined);
                   expect(ack.err).to.not.be("");
@@ -1300,7 +1300,7 @@ var root;
                 expect(ack).to.not.be(undefined);
                 expect(ack).to.not.be("");
                 expect(ack).to.not.have.key("err");
-                expect(ack).to.have.keys(["sea", "pub"]);
+                expect(ack).to.have.keys(["zen", "pub"]);
               } catch (e) {
                 done(e);
                 return;
@@ -1339,7 +1339,7 @@ var root;
               try {
                 expect(ack).to.not.be(undefined);
                 expect(ack).to.not.be("");
-                expect(ack).to.not.have.keys(["sea", "pub"]);
+                expect(ack).to.not.have.keys(["zen", "pub"]);
                 expect(ack).to.have.key("err");
                 expect(ack.err.toLowerCase().indexOf("no session")).not.to.be(
                   -1,
@@ -1365,7 +1365,7 @@ var root;
           });
         });
 
-        process.env.SEA_CHANNEL &&
+        process.env.ZEN_CHANNEL &&
           describe("User channel", function () {
             it.skip("create");
             it.skip("add member");

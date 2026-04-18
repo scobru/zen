@@ -10,7 +10,7 @@ var root = path.resolve(__dirname, "../..");
 var files = {
   "/": path.join(__dirname, "fixtures", "index.html"),
   "/zen.js": path.join(root, "zen.js"),
-  "/sea.js": path.join(root, "zen.js"),
+  "/zen.js": path.join(root, "zen.js"),
   "/lib/opfs.js": path.join(root, "lib", "opfs.js"),
   "/lib/radix.js": path.join(root, "lib", "radix.js"),
   "/lib/radisk.js": path.join(root, "lib", "radisk.js"),

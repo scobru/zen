@@ -194,7 +194,7 @@ Zen.ask = __ask;
     pop();
   }
   Zen.on.put = put;
-  // TODO: MARK!!! clock below, reconnect sync, SEA certify wire merge, User.auth taking multiple times, // msg put, put, say ack, hear loop...
+  // TODO: MARK!!! clock below, reconnect sync, ZEN certify wire merge, User.auth taking multiple times, // msg put, put, say ack, hear loop...
   // WASIS BUG! local peer not ack. .off other people: .open
   function ham(val, key, soul, state, msg) {
     var ctx = msg._ || "",
@@ -246,7 +246,7 @@ Zen.ask = __ask;
         }
       } // same
     }
-    ctx.stun++; // TODO: 'forget' feature in SEA tied to this, bad approach, but hacked in for now. Any changes here must update there.
+    ctx.stun++; // TODO: 'forget' feature in ZEN tied to this, bad approach, but hacked in for now. Any changes here must update there.
     var aid = msg["#"] + ctx.all++,
       id = {
         toString: function () {
@@ -284,7 +284,7 @@ Zen.ask = __ask;
       tmp;
     if ((tmp = ctx.msg) && (tmp = tmp.put) && (tmp = tmp[soul])) {
       state_ify(tmp, key, state, val, soul);
-    } // necessary! or else out messages do not get SEA transforms.
+    } // necessary! or else out messages do not get ZEN transforms.
     //var bytes = ((graph[soul]||'')[key]||'').length||1;
     graph[soul] = state_ify(graph[soul], key, state, val, soul);
     if ((tmp = (root.next || "")[soul])) {

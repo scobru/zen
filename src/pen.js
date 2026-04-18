@@ -624,7 +624,7 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
     }
 
     if (policy.sign) {
-      var sec = chk.$sea(msg, at.user || "", null);
+      var sec = chk.$zen(msg, at.user || "", null);
       if (sec.authenticator) {
         chk.auth(msg, reject, sec.authenticator, function () {
           chk.next(eve, msg, reject);
@@ -668,8 +668,8 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
 
     var policy = scanpolicy(bytecode);
     var sec =
-      runtime.check && runtime.check.$sea
-        ? runtime.check.$sea(ctx.msg, (ctx.at && ctx.at.user) || "", null)
+      runtime.check && runtime.check.$zen
+        ? runtime.check.$zen(ctx.msg, (ctx.at && ctx.at.user) || "", null)
         : {};
     var writer = sec.upub || (sec.authenticator || {}).pub || "";
     var regs = [

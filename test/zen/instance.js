@@ -129,8 +129,8 @@ describe("testZEN", function () {
     var verified = await zen.verify(signed, pair.pub);
     var encrypted = await zen.encrypt("secret", pair);
     var decrypted = await zen.decrypt(encrypted, pair);
-    assert.strictEqual(signed.startsWith("SEA"), false);
-    assert.strictEqual(encrypted.startsWith("SEA"), false);
+    assert.strictEqual(signed.startsWith("ZEN"), false);
+    assert.strictEqual(encrypted.startsWith("ZEN"), false);
     assert.deepStrictEqual(verified, { hello: "zen" });
     assert.strictEqual(decrypted, "secret");
     assert.strictEqual(pair.curve, "secp256k1");

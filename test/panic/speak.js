@@ -24,7 +24,7 @@ var config = {
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
     "/cryptomodules.js": __dirname + "/../../lib/cryptomodules.js",
-    "/sea.js": __dirname + "/../../zen.js",
+    "/zen.js": __dirname + "/../../zen.js",
   },
 };
 
@@ -66,7 +66,7 @@ var browsers = clients.excluding(servers);
 // PANIC works with Mocha and other testing libraries!
 // So it is easy to use PANIC.
 
-describe("Stress test ZEN with SEA users causing PANIC!", function () {
+describe("Stress test ZEN with ZEN users causing PANIC!", function () {
   this.timeout(10 * 60 * 1000);
 
   it("Servers have joined!", function () {
@@ -147,7 +147,7 @@ describe("Stress test ZEN with SEA users causing PANIC!", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers load SEA!", function () {
+  it("Browsers load ZEN!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -162,7 +162,7 @@ describe("Stress test ZEN with SEA users causing PANIC!", function () {
               script.src = src;
               document.head.appendChild(script);
             }
-            load("sea.js", function () {
+            load("zen.js", function () {
               test.done();
             });
           },
@@ -247,7 +247,7 @@ describe("Stress test ZEN with SEA users causing PANIC!", function () {
               }
               var no;
               Zen.node.is(at.put.users, function (val, key) {
-                Zen.SEA.read(val, false, function (val) {
+                Zen.ZEN.read(val, false, function (val) {
                   if ("alias/" + key === Zen.val.link.is(val)) {
                     return;
                   }

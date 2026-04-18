@@ -20,7 +20,7 @@ var config = {
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
     "/cryptomodules.js": __dirname + "/../../lib/cryptomodules.js",
-    "/sea.js": __dirname + "/../../zen.js",
+    "/zen.js": __dirname + "/../../zen.js",
   },
 };
 
@@ -55,7 +55,7 @@ var alice = browsers.pluck(1);
 var bob = browsers.excluding(alice).pluck(1);
 var again = {};
 
-describe("Make sure SEA syncs correctly", function () {
+describe("Make sure ZEN syncs correctly", function () {
   //this.timeout(5 * 60 * 1000);
   this.timeout(10 * 60 * 1000);
 
@@ -93,7 +93,7 @@ describe("Make sure SEA syncs correctly", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers load SEA!", function () {
+  it("Browsers load ZEN!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -109,7 +109,7 @@ describe("Make sure SEA syncs correctly", function () {
               document.head.appendChild(script);
             }
             /*load('cryptomodules.js', function(){
-					load('sea.js', function(){
+					load('zen.js', function(){
 						test.done();
 					});
 				});*/

@@ -37,7 +37,7 @@ describe('ZEN', function(){
         }
 	}(this));
 	var opt = { file: 'radatatest' };
-	describe('SEA', function() {
+	describe('ZEN', function() {
 		it('put null string', function(done) {
 			var zen = Zen(opt);
 			zen.get('test').get('key').put('null', function(ack) {

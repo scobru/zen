@@ -267,13 +267,13 @@ describe("ZEN crypto — pair() key format", function () {
   });
 });
 
-describe("ZEN crypto — wire format (no SEA prefix)", function () {
-  it("sign() and encrypt() omit SEA prefix", async function () {
+describe("ZEN crypto — wire format (no ZEN prefix)", function () {
+  it("sign() and encrypt() omit ZEN prefix", async function () {
     var pair = await ZEN.pair(null, { seed: "zen-wire-format" });
     var sig = await ZEN.sign({ hello: "zen" }, pair);
     var enc = await ZEN.encrypt("secret", pair);
-    assert.strictEqual(sig.startsWith("SEA"), false);
-    assert.strictEqual(enc.startsWith("SEA"), false);
+    assert.strictEqual(sig.startsWith("ZEN"), false);
+    assert.strictEqual(enc.startsWith("ZEN"), false);
   });
 });
 
@@ -526,7 +526,7 @@ describe("ZEN user graph — authenticator", function () {
         if (msg.put) {
           try {
             assert.ok(
-              !Object.prototype.propertyIsEnumerable.call(msg._ || {}, "sea"),
+              !Object.prototype.propertyIsEnumerable.call(msg._ || {}, "zen"),
             );
             assert.ok(!(msg.opt || {}).authenticator);
           } catch (e) {

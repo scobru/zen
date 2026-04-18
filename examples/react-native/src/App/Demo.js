@@ -10,7 +10,7 @@ import {
 
 import Zen from "@akaoio/zen";
 import "zen/lib/open";
-import "../extensions/sea.js";
+import "../extensions/zen.js";
 
 import adapter from "../extensions/asyncStorageAdapter.js";
 
