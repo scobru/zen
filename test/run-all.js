@@ -1,0 +1,49 @@
+import { spawn } from "node:child_process";
+
+const suites = [
+  { name: "PEN unit", args: ["run", "testPEN:unit"] },
+  { name: "ZEN unit", args: ["run", "testZEN:unit"] },
+  { name: "core",     args: ["run", "test:core"] },
+];
+
+var totalPassing = 0;
+var totalPending = 0;
+var totalFailing = 0;
+
+function runsuite(suite) {
+  return new Promise(function (resolve) {
+    var proc = spawn("npm", suite.args, { shell: true, stdio: ["inherit", "pipe", "inherit"] });
+    var output = "";
+    proc.stdout.on("data", function (chunk) {
+      process.stdout.write(chunk);
+      output += chunk.toString();
+    });
+    proc.on("close", function (code) {
+      var m;
+      var re;
+      re = /(\d+) passing/g;
+      while ((m = re.exec(output))) totalPassing += parseInt(m[1]);
+      re = /(\d+) pending/g;
+      while ((m = re.exec(output))) totalPending += parseInt(m[1]);
+      re = /(\d+) failing/g;
+      while ((m = re.exec(output))) totalFailing += parseInt(m[1]);
+      resolve(code);
+    });
+  });
+}
+
+var codes = [];
+for (var i = 0; i < suites.length; i++) {
+  codes.push(await runsuite(suites[i]));
+}
+
+var line = "=".repeat(50);
+console.log("\n" + line);
+console.log(
+  "  " + totalPassing + " passing" +
+  (totalPending ? ", " + totalPending + " pending" : "") +
+  (totalFailing ? ", " + totalFailing + " failing" : "")
+);
+console.log(line);
+
+if (codes.some(function (c) { return c !== 0; })) process.exit(1);

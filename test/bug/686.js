@@ -1,17 +1,17 @@
-import __ZEN from '../../zen.js';
+﻿import zenbase from '../../zen.js';
 import '../../lib/store.js';
 import '../../lib/rfs.js';
-import __fs from 'fs';
-import __fsrm from '../../lib/fsrm.js';
-import __expect from '../expect.js';
-var __gun;
+import fs from 'fs';
+import fsrm from '../../lib/fsrm.js';
+import xpect from '../expect.js';
+var ZEN;
 {
-  var W = function(o){return new __ZEN(o)};
-  Object.setPrototypeOf(W, __ZEN);
-  W.prototype = __ZEN.prototype;
-  __gun = W;
+  var W = function(o){return new zenbase(o)};
+  Object.setPrototypeOf(W, zenbase);
+  W.prototype = zenbase.prototype;
+  ZEN = W;
 }
-import __serve from '../../lib/serve.js';
+import serve from '../../lib/serve.js';
 describe('ZEN', function(){
 	var root;
 	{
@@ -22,18 +22,18 @@ describe('ZEN', function(){
 		try{ env.window && root.localStorage && root.localStorage.clear() }catch(e){}
 		try{ localStorage.clear() }catch(e){}
 		try{ indexedDB.deleteDatabase('radatatest') }catch(e){}
-		try{ __fs.unlinkSync('tmp/data.json') }catch(e){}
- 		try{ __fsrm('tmp/radatatest') }catch(e){}
-		try{ var expect = global.expect = __expect }catch(e){}
+		try{ fs.unlinkSync('tmp/data.json') }catch(e){}
+ 		try{ fsrm('tmp/radatatest') }catch(e){}
+		try{ var expect = global.expect = xpect }catch(e){}
 
 		//root.Zen = root.Zen || load('../zen');
 		if(root.Zen){
 			root.Zen = root.Zen;
 			root.Zen.TESTING = true;
 		} else {
-            root.Zen = __gun;
+            root.Zen = ZEN;
             root.Zen.TESTING = true;
-            Zen.serve = __serve;
+            Zen.serve = serve;
         }
 	}(this));
 	var opt = { file: 'radatatest' };

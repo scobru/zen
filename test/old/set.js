@@ -1,8 +1,8 @@
 import "../lib/set";
-import __zen from "../zen.js";
+import ZEN from "../zen.js";
 {
   return;
-  var Zen = __zen;
+  var Zen = ZEN;
   var done = function () {};
 
   var zen = Zen().get("set").set(),

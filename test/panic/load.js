@@ -1,17 +1,17 @@
-import __ip from "ip";
-import __panic_server from "panic-server";
-import __fs from "fs";
-import __panic_manager from "panic-manager";
-import __http from "http";
-import __index from "./index.js";
-import __open from "./util/open.js";
+﻿import ip from "ip";
+import panicserver from "panic-server";
+import fs from "fs";
+import panicmanager from "panic-manager";
+import nodehttp from "http";
+import zenapp from "./index.js";
+import openutil from "./util/open.js";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 var config = {
-  IP: __ip.address(),
+  IP: ip.address(),
   port: 8420,
   relays: 1,
   browsers: 4,
@@ -26,7 +26,7 @@ var config = {
 
 var panic;
 try {
-  panic = __panic_server;
+  panic = panicserver;
 } catch (e) {
   console.log(
     "PANIC not installed! `npm install panic-server panic-manager panic-client`",
@@ -38,12 +38,12 @@ panic
   .on("request", function (req, res) {
     // Static server
     config.route[req.url] &&
-      __fs.createReadStream(config.route[req.url]).pipe(res);
+      fs.createReadStream(config.route[req.url]).pipe(res);
   })
   .listen(config.port); // Start panic server.
 
 var clients = panic.clients;
-var manager = __panic_manager();
+var manager = panicmanager();
 manager.start({
   clients: Array(config.relays)
     .fill()
@@ -97,15 +97,15 @@ describe(
               test.async();
               // Clean up from previous test.
               try {
-                __fs.unlinkSync(env.i + "data.json");
+                fs.unlinkSync(env.i + "data.json");
               } catch (e) {}
-              var server = __http.createServer(function (req, res) {
+              var server = nodehttp.createServer(function (req, res) {
                 res.end("I am " + env.i + "!");
               });
               // Launch the server and start zen!
               var Zen;
               try {
-                Zen = __index;
+                Zen = zenapp;
               } catch (e) {
                 console.log(
                   "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
@@ -136,7 +136,7 @@ describe(
 
     it(config.browsers + " browser(s) have joined!", function () {
       // Okay! Cool. Now we can move on to the next step...
-      __open.web(config.browsers, "http://" + config.IP + ":" + config.port);
+      openutil.web(config.browsers, "http://" + config.IP + ":" + config.port);
       // Which is to automatically or manually open up a bunch of browser tabs
       // and connect to the PANIC server in the same way
       // the NodeJS relays did.
@@ -329,7 +329,7 @@ describe(
 
     after("Everything shut down.", function () {
       // which is to shut down all the browsers.
-      __open.cleanup() ||
+      openutil.cleanup() ||
         browsers.run(function () {
           setTimeout(function () {
             location.reload();

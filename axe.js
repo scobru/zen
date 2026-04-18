@@ -1,5 +1,5 @@
 import "./lib/axe.js";
-import __zen from "./zen.js";
+import ZEN from "./zen.js";
 
 let __defaultExport;
 
@@ -13,7 +13,7 @@ if ((AXE.window = sT.window)) {
   AXE.window.AXE = AXE;
 }
 
-var Zen = (AXE.window || "").ZEN || (AXE.window || "").ZEN || __zen;
+var Zen = (AXE.window || "").ZEN || (AXE.window || "").ZEN || ZEN;
 (Zen.AXE = AXE).ZEN = AXE.Zen = Zen;
 
 // Browser builds intentionally skip the old AXE side-load here.

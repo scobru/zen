@@ -1,28 +1,28 @@
-import { dirname } from "node:path";
+﻿import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import __ZEN from "../zen.js";
-var __gun;
+import zenbase from "../zen.js";
+var ZEN;
 {
   var W = function (o) {
-    return new __ZEN(o);
+    return new zenbase(o);
   };
-  Object.setPrototypeOf(W, __ZEN);
-  W.prototype = __ZEN.prototype;
+  Object.setPrototypeOf(W, zenbase);
+  W.prototype = zenbase.prototype;
   Object.defineProperty(W.prototype, "_", {
     get: function () {
       return this._graph._;
     },
     configurable: true,
   });
-  __gun = W;
+  ZEN = W;
 }
-var Zen = __gun;
+var Zen = ZEN;
 import "../lib/file.js";
 import serve from "../lib/server.js";
 
 if (process.env.ZEN) {
-  Zen.ZEN = __ZEN;
+  Zen.ZEN = ZEN;
 }
 
 const myDir = dirname(fileURLToPath(import.meta.url));

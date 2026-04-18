@@ -1,16 +1,16 @@
-import __ip from "ip";
-import __fs from "fs";
-import __panic_manager from "panic-manager";
-import __http from "http";
+﻿import ip from "ip";
+import fs from "fs";
+import panicmanager from "panic-manager";
+import nodehttp from "http";
 import panic from "panic-server";
-import __index from "../../index.js";
+import zenapp from "../../index.js";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 var config = {
-  IP: __ip.address(),
+  IP: ip.address(),
   port: 8420,
   servers: 2,
   browsers: 0,
@@ -26,12 +26,12 @@ panic
   .server()
   .on("request", function (req, res) {
     config.route[req.url] &&
-      __fs.createReadStream(config.route[req.url]).pipe(res);
+      fs.createReadStream(config.route[req.url]).pipe(res);
   })
   .listen(config.port);
 
 var clients = panic.clients;
-var manager = __panic_manager();
+var manager = panicmanager();
 
 manager.start({
   clients: Array(config.servers)
@@ -64,13 +64,13 @@ describe("Sync all data from one server to another one added as peer after initi
         test.async();
         global.ALICE = true;
         try {
-          __fs.unlinkSync(env.i + "alldata");
+          fs.unlinkSync(env.i + "alldata");
         } catch (e) {}
-        var server = __http.createServer(function (req, res) {
+        var server = nodehttp.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
         var port = env.config.port + env.i;
-        var Zen = __index;
+        var Zen = zenapp;
 
         var peers = [],
           i = env.config.servers;
@@ -97,13 +97,13 @@ describe("Sync all data from one server to another one added as peer after initi
         var env = test.props;
         test.async();
         try {
-          __fs.unlinkSync(env.i + "alldata");
+          fs.unlinkSync(env.i + "alldata");
         } catch (e) {}
-        var server = __http.createServer(function (req, res) {
+        var server = nodehttp.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
         var port = env.config.port + env.i;
-        var Zen = __index;
+        var Zen = zenapp;
 
         // Initialise zen with no peers
         var peers = [];
@@ -138,7 +138,7 @@ describe("Sync all data from one server to another one added as peer after initi
       function (test) {
         var env = test.props;
         test.async();
-        var raw = __fs.readFileSync(env.i + "alldata");
+        var raw = fs.readFileSync(env.i + "alldata");
         var json = JSON.parse(raw);
         var graph = json.graph;
         console.log("Bob's graph on disk:", json);

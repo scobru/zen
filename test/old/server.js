@@ -1,6 +1,6 @@
-import __theory from "theory";
+﻿import theory from "theory";
 
-export default __theory({
+export default theory({
   name: "echo",
   state: { way: "state", flow: -1 },
   invincible: true,

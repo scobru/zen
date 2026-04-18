@@ -1,5 +1,5 @@
-import __child_process from "child_process";
-import __fs from "fs";
+﻿import childproc from "child_process";
+import fs from "fs";
 import panic from "panic-server";
 import path from "path";
 import http from "http";
@@ -7,10 +7,10 @@ import fs from "fs";
 import ports from "./ports";
 import wd from "selenium-webdriver";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
-var spawn = __child_process.spawn;
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
+var spawn = childproc.spawn;
 
 function open(url) {
   var driver = new wd.Builder().forBrowser("firefox").build();
@@ -121,7 +121,7 @@ describe("The holy grail", function () {
       })
       .then(function () {
         return server.run(function () {
-          var fs = __fs;
+          var fs = fs;
 
           // destroy the data
           fs.unlinkSync(file);

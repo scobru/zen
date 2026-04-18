@@ -1,24 +1,24 @@
-import __index from "../index.js";
-import __panic_server from "panic-server";
-import __http from "http";
-import __path from "path";
-import __fs from "fs";
+﻿import zenapp from "../index.js";
+import panicserver from "panic-server";
+import nodehttp from "http";
+import nodepath from "path";
+import fs from "fs";
 import __selenium_webdriver from "selenium-webdriver";
 import "./holy/grail.js";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 describe("PANIC!", function () {
   this.timeout(1000 * 100);
 
-  var Zen = __index;
+  var Zen = zenapp;
 
-  var panic = __panic_server;
+  var panic = panicserver;
 
-  var server = __http.createServer(function (req, res) {
-    var path = __path;
+  var server = nodehttp.createServer(function (req, res) {
+    var path = nodepath;
     if (req.url === "/") {
       req.url = "/panic.html";
     }
@@ -26,7 +26,7 @@ describe("PANIC!", function () {
       req.url === "/panic.html"
         ? path.join(__dirname, "..", "panic.html")
         : path.join(__dirname, req.url);
-    __fs
+    fs
       .createReadStream(file)
       .on("error", function () {})
       .pipe(res); // stream

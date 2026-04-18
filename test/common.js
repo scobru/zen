@@ -1,17 +1,17 @@
-import "../lib/yson.js";
-import __ZEN from "../zen.js";
+﻿import "../lib/yson.js";
+import zenbase from "../zen.js";
 import "../lib/store.js";
 import "../lib/rfs.js";
 import "./rad/rad.js";
-import __fs from "fs";
-import __fsrm from "../lib/fsrm.js";
-var __gun;
+import fs from "fs";
+import fsrm from "../lib/fsrm.js";
+var ZEN;
 {
   var W = function (o) {
-    return new __ZEN(o);
+    return new zenbase(o);
   };
-  Object.setPrototypeOf(W, __ZEN);
-  W.prototype = __ZEN.prototype;
+  Object.setPrototypeOf(W, zenbase);
+  W.prototype = zenbase.prototype;
   Object.defineProperty(W.prototype, "_", {
     get: function () {
       return this._graph._;
@@ -19,9 +19,9 @@ var __gun;
     configurable: true,
   });
   W.is = function ($) {
-    return $ instanceof __ZEN;
+    return $ instanceof zenbase;
   };
-  __gun = W;
+  ZEN = W;
 }
 describe("ZEN", function () {
   var root;
@@ -41,18 +41,18 @@ describe("ZEN", function () {
       localStorage.clear();
     } catch (e) {}
     try {
-      __fs.unlinkSync("tmp/data.json");
+      fs.unlinkSync("tmp/data.json");
     } catch (e) {}
     try {
-      __fsrm("tmp/radatatest");
+      fsrm("tmp/radatatest");
     } catch (e) {}
     //root.Zen = root.Zen || load('../zen');
-    root.Zen = __gun;
+    root.Zen = ZEN;
     root.Zen.TESTING = true;
   }
   var Zen = root.Zen;
   Zen.is = function ($) {
-    return $ instanceof __ZEN;
+    return $ instanceof ZEN;
   };
   //Zen.log.squelch = true;
   var gleak = {

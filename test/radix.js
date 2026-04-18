@@ -1,6 +1,6 @@
-import __expect from "./expect.js";
+﻿import xpect from "./expect.js";
 import Radix from "../lib/radix.js";
-var expect = (global.expect = __expect);
+var expect = (global.expect = xpect);
 var _ = String.fromCharCode(29);
 
 describe("Radix", function () {

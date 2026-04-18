@@ -1,9 +1,9 @@
-import __zen from "../zen.js";
+﻿import ZEN from "../zen.js";
 
-let __defaultExport;
+let defaultexport;
 {
   return; // this file is for temporary testings and shouldn't get run.
-  var Zen = __zen;
+  var Zen = ZEN;
   var zen = Zen();
   Zen.log.verbose = true;
 
@@ -54,7 +54,7 @@ let __defaultExport;
     return fn;
   }
 
-  __defaultExport = Next;
+  defaultexport = Next;
 
   var next = Next();
   var state = {};
@@ -89,4 +89,4 @@ let __defaultExport;
     n();
   });
 }
-export default __defaultExport;
+export default defaultexport;

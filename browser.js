@@ -1,2 +1,2 @@
-import __zen from "./zen.js";
-export default __zen;
+import ZEN from "./zen.js";
+export default ZEN;

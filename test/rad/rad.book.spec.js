@@ -1,17 +1,17 @@
-import __fs from 'fs';
-import __fsrm from '../../lib/fsrm.js';
-import __ZEN from '../../zen.js';
-var __gun;
+﻿import fs from 'fs';
+import fsrm from '../../lib/fsrm.js';
+import zenbase from '../../zen.js';
+var ZEN;
 {
-  var W = function(o){return new __ZEN(o)};
-  Object.setPrototypeOf(W, __ZEN);
-  W.prototype = __ZEN.prototype;
-  __gun = W;
+  var W = function(o){return new zenbase(o)};
+  Object.setPrototypeOf(W, zenbase);
+  W.prototype = zenbase.prototype;
+  ZEN = W;
 }
-import __expect from '../expect.js';
-import __radix from '../../lib/radix.js';
-import __radisk3 from '../../lib/radisk3';
-import __rfs from '../../lib/rfs.js';
+import xpect from '../expect.js';
+import radix from '../../lib/radix.js';
+import radisk3 from '../../lib/radisk3';
+import rfs from '../../lib/rfs.js';
 import expect from '../expect.js';
 import path from 'path';
 import fs from 'fs';
@@ -19,9 +19,9 @@ import '../../lib/book.js';
 import '../../lib/store.js';
 import '../../lib/rindexed.js';
 import { fileURLToPath } from 'node:url';
-import { dirname as __dirnameOf } from 'node:path';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from 'node:path';
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 const ENABLE_GUN_LOGGING = false;
 const PATH_TO_TEST_FOLDER = path.resolve(__dirname, 'booktestdata');
 const PATH_TO_OLD_DB = path.resolve(PATH_TO_TEST_FOLDER, 'oldradata');
@@ -67,21 +67,21 @@ var RFS;
     root.Zen = root.Zen;
     // root.Zen.TESTING = true;
   } else {
-    try { __fs.unlinkSync('data.json') } catch (e) { }
-    try { __fsrm(PATH_TO_TEST_DB) } catch (e) { }
-    root.Zen = __gun;
+    try { fs.unlinkSync('data.json') } catch (e) { }
+    try { fsrm(PATH_TO_TEST_DB) } catch (e) { }
+    root.Zen = ZEN;
     root.Zen.TESTING = true;
   }
 
-  try { var expect = global.expect = __expect } catch (e) { }
+  try { var expect = global.expect = xpect } catch (e) { }
 
   if (!root.Zen.ZEN) {}
-}(this));
+}(this);
 
 Zen = root.Zen;
-Radix = Zen?.window?.Radix || __radix;
-Radisk = Zen?.window?.Radisk || __radisk3;
-RFS = __rfs;
+Radix = Zen?.window?.Radix || radix;
+Radisk = Zen?.window?.Radisk || radisk3;
+RFS = rfs;
 const RE_UNPRINTABLE = /[^\x20-\x7E]/;
 const RE_APOSTROPHES = /'/g;
 const SKIP_CHARS = false;

@@ -168,10 +168,9 @@ npm run buildZEN
 Follow the `lib/rfs.js` pattern:
 
 ```js
-import __zen from "../zen.js";
-var Zen = __zen;
+import ZEN from "../zen.js";
 
-Zen.on("create", function(root) {
+ZEN.on("create", function(root) {
   this.to.next(root);  // required — pass root through the chain
 
   if (!root.opt.mystore) { return; }  // only activate if opt is set

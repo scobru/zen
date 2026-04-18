@@ -1,8 +1,8 @@
-import __gun from "../../zen.js";
-import __radisk from "../../lib/radisk.js";
-import __rfs from "../../lib/rfs.js";
-var Zen = typeof window !== "undefined" ? window.Zen : __gun;
-var Radisk = (Zen.window && window.Radisk) || __radisk;
+﻿import ZEN from "../../zen.js";
+import radisk from "../../lib/radisk.js";
+import rfs from "../../lib/rfs.js";
+var Zen = typeof window !== "undefined" ? window.Zen : ZEN;
+var Radisk = (Zen.window && window.Radisk) || radisk;
 Zen.TESTING = true;
 try {
   localStorage.clear();
@@ -16,7 +16,7 @@ try {
 
 var opt = { localStorage: false };
 //opt.chunk = 1024;
-opt.store = (Zen.window && window.RindexedDB(opt)) || __rfs(opt);
+opt.store = (Zen.window && window.RindexedDB(opt)) || rfs(opt);
 var rad = Radisk(opt);
 var zen = Zen("http://localhost:8420/zen");
 

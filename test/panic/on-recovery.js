@@ -1,18 +1,18 @@
-import __ip from "ip";
-import __fs from "fs";
-import __panic_manager from "panic-manager";
-import __http from "http";
-import __open from "./util/open.js";
+﻿import ip from "ip";
+import fs from "fs";
+import panicmanager from "panic-manager";
+import nodehttp from "http";
+import openutil from "./util/open.js";
 import { loadBrowserScripts } from "./util/load-browser-scripts.js";
-import __index from "../../index.js";
+import zenapp from "../../index.js";
 import panic from "panic-server";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 var config = {
-  IP: __ip.address(),
+  IP: ip.address(),
   port: 8420,
   servers: 2,
   browsers: 2,
@@ -44,11 +44,11 @@ panic
   .server()
   .on("request", function (req, res) {
     config.route[req.url] &&
-      __fs.createReadStream(config.route[req.url]).pipe(res);
+      fs.createReadStream(config.route[req.url]).pipe(res);
   })
   .listen(config.port);
 
-var manager = __panic_manager();
+var manager = panicmanager();
 var clients = panic.clients;
 var servers = clients.filter("Node.js");
 var bob = servers.pluck(1);
@@ -90,7 +90,7 @@ describe("zen.on should receive updates after crashed relay peer comes back onli
             var env = test.props;
             var filepath = env.dir + "/data";
             test.async();
-            var fs = __fs;
+            var fs = fs;
             try {
               if (fs.existsSync(filepath)) {
                 fs.rmdirSync(filepath, { recursive: true });
@@ -99,12 +99,12 @@ describe("zen.on should receive updates after crashed relay peer comes back onli
               console.error(e);
               test.fail("");
             }
-            var server = __http.createServer(function (req, res) {
+            var server = nodehttp.createServer(function (req, res) {
               res.end("I AM BOB");
             });
             var port = env.config.port + 1;
             try {
-              var Zen = __index;
+              var Zen = zenapp;
             } catch (e) {
               console.error(e);
               test.fail("");
@@ -119,7 +119,7 @@ describe("zen.on should receive updates after crashed relay peer comes back onli
       });
 
       it(config.browsers + " browser(s) have joined!", function () {
-        __open.web(config.browsers, "http://" + config.IP + ":" + config.port, {
+        openutil.web(config.browsers, "http://" + config.IP + ":" + config.port, {
           headless: true,
         });
         return browsers.atLeast(config.browsers);
@@ -243,7 +243,7 @@ describe("zen.on should receive updates after crashed relay peer comes back onli
             var env = test.props;
             var filepath = env.dir + "/data";
             test.async();
-            var fs = __fs;
+            var fs = fs;
             try {
               if (fs.existsSync(filepath)) {
                 fs.rmdirSync(filepath, { recursive: true });
@@ -252,12 +252,12 @@ describe("zen.on should receive updates after crashed relay peer comes back onli
               console.error(e);
               test.fail("");
             }
-            var server = __http.createServer(function (req, res) {
+            var server = nodehttp.createServer(function (req, res) {
               res.end("I AM CARL");
             });
             var port = env.config.port + 1;
             try {
-              var Zen = __index;
+              var Zen = zenapp;
             } catch (e) {
               console.error(e);
               test.fail("");
@@ -336,7 +336,7 @@ describe("zen.on should receive updates after crashed relay peer comes back onli
             process.exit();
           }),
         );
-        promises.push(__open.cleanup());
+        promises.push(openutil.cleanup());
         return Promise.all(promises);
       });
     });

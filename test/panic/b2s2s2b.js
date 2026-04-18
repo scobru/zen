@@ -1,17 +1,17 @@
-import __ip from "ip";
-import __fs from "fs";
-import __panic_manager from "panic-manager";
-import __http from "http";
-import __index from "./index.js";
-import __open from "./util/open.js";
+﻿import ip from "ip";
+import fs from "fs";
+import panicmanager from "panic-manager";
+import nodehttp from "http";
+import zenapp from "./index.js";
+import openutil from "./util/open.js";
 import panic from "panic-server";
 import { fileURLToPath } from "node:url";
-import { dirname as __dirnameOf } from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = __dirnameOf(__filename);
+import { dirname as dirnameOf } from "node:path";
+const filemodname = fileURLToPath(import.meta.url);
+const __dirname = dirnameOf(filemodname);
 
 var config = {
-  IP: __ip.address(),
+  IP: ip.address(),
   port: 8420,
   servers: 2,
   browsers: 2,
@@ -30,12 +30,12 @@ panic
   .server()
   .on("request", function (req, res) {
     config.route[req.url] &&
-      __fs.createReadStream(config.route[req.url]).pipe(res);
+      fs.createReadStream(config.route[req.url]).pipe(res);
   })
   .listen(config.port);
 
 var clients = panic.clients;
-var manager = __panic_manager();
+var manager = panicmanager();
 
 manager.start({
   clients: Array(config.servers)
@@ -76,13 +76,13 @@ describe(
               var env = test.props;
               test.async();
               try {
-                __fs.unlinkSync(env.i + "data");
+                fs.unlinkSync(env.i + "data");
               } catch (e) {}
-              var server = __http.createServer(function (req, res) {
+              var server = nodehttp.createServer(function (req, res) {
                 res.end("I am " + env.i + "!");
               });
               var port = env.config.port + env.i;
-              var Zen = __index;
+              var Zen = zenapp;
               var peers = [],
                 i = env.config.servers;
               while (i--) {
@@ -111,7 +111,7 @@ describe(
     });
 
     it(config.browsers + " browser(s) have joined!", function () {
-      __open.web(config.browsers, "http://" + config.IP + ":" + config.port);
+      openutil.web(config.browsers, "http://" + config.IP + ":" + config.port);
       browsers.atLeast(1).then(function () {
         browsers.run(
           function (test) {
@@ -256,7 +256,7 @@ describe(
     });
 
     after("Everything shut down.", function () {
-      __open.cleanup();
+      openutil.cleanup();
       return servers.run(function () {
         process.exit();
       });
