@@ -76,7 +76,7 @@ describe('ZEN', function() {
     assert.ok(ZEN.graph.is(graph));
   });
 
-  it('mirrors GUN chain and PEN methods onto instances', function() {
+  it('mirrors ZEN chain and PEN methods onto instances', function() {
     var zen = new ZEN({ localStorage: false, peers: [] });
     var raw = Uint8Array.from([1, 2, 3, 4]);
     assert.strictEqual(typeof zen.opt, 'function');

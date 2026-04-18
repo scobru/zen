@@ -153,9 +153,9 @@ document.getElementById("verify").onclick = async () => {
 };
 
 document.getElementById("put").onclick = async () => {
-  gun.get(`~${pub}`).get("test").put("hello world", null, { authenticator });
+  zen.get(`~${pub}`).get("test").put("hello world", null, { authenticator });
   setTimeout(() => {
-    gun
+    zen
       .get(`~${pub}`)
       .get("test")
       .once((data) => {
@@ -166,12 +166,12 @@ document.getElementById("put").onclick = async () => {
 
 document.getElementById("put-with-pair").onclick = async () => {
   const bob = await SEA.pair();
-  gun
+  zen
     .get(`~${bob.pub}`)
     .get("test")
     .put("this is bob", null, { authenticator: bob });
   setTimeout(() => {
-    gun
+    zen
       .get(`~${bob.pub}`)
       .get("test")
       .once((data) => {

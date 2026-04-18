@@ -8,13 +8,13 @@ import {
   AsyncStorage,
 } from "react-native";
 
-import Gun from "@akaoio/zen";
-import "gun/lib/open";
+import Zen from "@akaoio/zen";
+import "zen/lib/open";
 import "../extensions/sea.js";
 
 import adapter from "../extensions/asyncStorageAdapter.js";
 
-Gun.on("create", function (db) {
+Zen.on("create", function (db) {
   this.to.next(db);
   const pluginInterop = function (middleware) {
     return function (request) {
@@ -32,10 +32,10 @@ export class Demo extends React.Component {
   constructor() {
     super();
 
-    this.gun = new ZEN();
-    this.user = this.gun.user();
+    this.zen = new ZEN();
+    this.user = this.zen.user();
 
-    window.gun = this.gun;
+    window.zen = this.zen;
     window.user = this.user;
 
     this.state = {

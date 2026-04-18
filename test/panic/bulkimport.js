@@ -61,7 +61,7 @@ describe("Put ACK", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     var tests = [],
       i = 0;
     servers.each(function (client) {
@@ -80,18 +80,18 @@ describe("Put ACK", function () {
               res.end("I am " + env.i + "!");
             });
             var port = env.config.port + env.i;
-            var Gun = __index;
+            var Zen = __index;
             var peers = [],
               i = env.config.servers;
             while (i--) {
               var tmp = env.config.port + (i + 1);
               if (port != tmp) {
                 // ignore ourselves
-                peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+                peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
               }
             }
             console.log(port, " connect to ", peers);
-            var gun = Gun({ file: env.i + "data", peers: peers, web: server });
+            var zen = Zen({ file: env.i + "data", peers: peers, web: server });
             server.listen(port, function () {
               test.done();
             });
@@ -108,7 +108,7 @@ describe("Put ACK", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -122,10 +122,10 @@ describe("Put ACK", function () {
               indexedDB.deleteDatabase("radata");
             } catch (e) {}
             var env = test.props;
-            var gun = Gun(
-              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+            var zen = Zen(
+              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
             );
-            window.ref = gun.get("test");
+            window.ref = zen.get("test");
           },
           { i: (i += 1), config: config },
         ),

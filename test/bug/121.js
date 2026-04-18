@@ -27,21 +27,21 @@ describe('ZEN', function(){
  		try{ __fsrm('tmp/radatatest') }catch(e){}
 		try{ var expect = global.expect = __expect }catch(e){}
 
-		//root.Gun = root.Gun || load('../gun');
-		if(root.Gun){
-			root.Gun = root.Gun;
-			root.Gun.TESTING = true;
+		//root.Zen = root.Zen || load('../zen');
+		if(root.Zen){
+			root.Zen = root.Zen;
+			root.Zen.TESTING = true;
 		} else {
-            root.Gun = __gun;
-            root.Gun.TESTING = true;
-            Gun.serve = __serve;
+            root.Zen = __gun;
+            root.Zen.TESTING = true;
+            Zen.serve = __serve;
         }
 	}(this));
 
 	describe('API - map', function(){
 		it('map and put', function(done) {
-			var gun = Gun();
-			var ref = gun.get('test');
+			var zen = Zen();
+			var ref = zen.get('test');
 			var value = {1:{v:11},2:{v:22},3:{v:33},4:{v:44},5:{v:55}};
 			ref.put(value, function(ack) {
 				if (ack.err) { expect(!ack.err).to.be(true); done(); return; }

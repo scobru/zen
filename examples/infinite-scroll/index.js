@@ -1,7 +1,7 @@
-const gun = new ZEN();
+const zen = new ZEN();
 
 const size = 20;
-const gunNode = gun.get("posts");
+const gunNode = zen.get("posts");
 
 function debounce(func, wait, immediate) {
   var timeout;

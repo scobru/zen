@@ -17,14 +17,14 @@ var __gun;
   });
   __gun = W;
 }
-var Gun = __gun;
+var Zen = __gun;
 import "../lib/file.js";
 import serve from "../lib/server.js";
 
 if (process.env.SEA) {
-  Gun.SEA = __ZEN;
+  Zen.SEA = __ZEN;
 }
 
 const myDir = dirname(fileURLToPath(import.meta.url));
 
-export default serve(Gun, myDir);
+export default serve(Zen, myDir);

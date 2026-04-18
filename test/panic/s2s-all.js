@@ -57,7 +57,7 @@ describe("Sync all data from one server to another!", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("Alice GUN has spawned!", function () {
+  it("Alice ZEN has spawned!", function () {
     return alice.run(
       function (test) {
         var env = test.props;
@@ -70,16 +70,16 @@ describe("Sync all data from one server to another!", function () {
           res.end("I am " + env.i + "!");
         });
         var port = env.config.port + env.i;
-        var Gun = __index;
+        var Zen = __index;
 
         var peers = [],
           i = env.config.servers;
-        var gun = Gun({ file: env.i + "alldata", peers: peers, web: server });
+        var zen = Zen({ file: env.i + "alldata", peers: peers, web: server });
 
-        gun.get("a1").put({ a: 1 });
-        gun.get("b2").put({ b: 2 });
-        gun.get("c3").put({ c: 3 });
-        gun.get("d4").put({ d: 4 });
+        zen.get("a1").put({ a: 1 });
+        zen.get("b2").put({ b: 2 });
+        zen.get("c3").put({ c: 3 });
+        zen.get("d4").put({ d: 4 });
 
         server.listen(port, function () {
           setTimeout(function () {
@@ -91,7 +91,7 @@ describe("Sync all data from one server to another!", function () {
     );
   });
 
-  it("Bob GUN has spawned!", function () {
+  it("Bob ZEN has spawned!", function () {
     return bob.run(
       function (test) {
         var env = test.props;
@@ -103,22 +103,22 @@ describe("Sync all data from one server to another!", function () {
           res.end("I am " + env.i + "!");
         });
         var port = env.config.port + env.i;
-        var Gun = __index;
+        var Zen = __index;
         var peers = [],
           i = env.config.servers;
         while (i--) {
           var tmp = env.config.port + (i + 1);
           if (port != tmp) {
             // ignore ourselves
-            peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+            peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
           }
         }
         console.log(port, " connect to ", peers);
-        var gun = Gun({ file: env.i + "alldata", peers: peers, web: server });
+        var zen = Zen({ file: env.i + "alldata", peers: peers, web: server });
 
         server.listen(port);
         console.log("IGNORE 'invalid' WARNINGS!");
-        gun.on("out", { "#": "loadthemall", get: { "#": { "*": "" } } });
+        zen.on("out", { "#": "loadthemall", get: { "#": { "*": "" } } });
 
         setTimeout(function () {
           test.done();

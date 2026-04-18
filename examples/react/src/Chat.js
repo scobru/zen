@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import Gun from "@akaoio/zen";
+import Zen from "@akaoio/zen";
 
 const formatMsgs = (msgs) =>
   Object.keys(msgs)
@@ -11,9 +11,9 @@ const formatMsgs = (msgs) =>
     );
 
 export default class Chat extends Component {
-  constructor({ gun }) {
+  constructor({ zen }) {
     super();
-    this.gun = gun.get("chat");
+    this.zen = zen.get("chat");
     this.state = {
       newMsg: "",
       name: (document.cookie.match(/alias\=(.*?)(\&|$|\;)/i) || [])[1] || "",
@@ -22,19 +22,19 @@ export default class Chat extends Component {
   }
   componentWillMount() {
     const tmpState = {};
-    this.gun.map().val((msg, key) => {
+    this.zen.map().val((msg, key) => {
       tmpState[key] = msg;
       this.setState({ msgs: Object.assign({}, this.state.msgs, tmpState) });
     });
   }
   send = (e) => {
     e.preventDefault();
-    const who = this.state.name || "user" + Gun.text.random(6);
+    const who = this.state.name || "user" + Zen.text.random(6);
     this.setState({ name: who });
     document.cookie = "alias=" + who;
-    const when = Gun.time.is();
-    const key = `${when}_${Gun.text.random(4)}`;
-    this.gun.path(key).put({
+    const when = Zen.time.is();
+    const key = `${when}_${Zen.text.random(4)}`;
+    this.zen.path(key).put({
       who,
       when,
       what: this.state.newMsg,

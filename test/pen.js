@@ -21,10 +21,10 @@ import __pen from "../src/pen.js";
 import ZEN from "../src/index.js";
 import assert from "assert";
 ("use strict");
-var Gun, SEA, pen;
+var Zen, SEA, pen;
 
 before(function (done) {
-  Gun = __gun;
+  Zen = __gun;
   SEA = ZEN;
   pen = __pen;
   pen.ready
@@ -986,7 +986,7 @@ describe("SEA + PEN integration", function () {
       assert.ok(typeof enc === "string", "ciphertext is a string");
       SEA.decrypt(enc, pair, function (dec) {
         assert.strictEqual(dec, secret, "decrypted correctly");
-        // encrypted value stored in GUN is a string → PEN ISS passes
+        // encrypted value stored in ZEN is a string → PEN ISS passes
         var bc = pen.unpack(soul.slice(1));
         assert.strictEqual(
           pen.run(bc, ["k", enc, soul, 0, Date.now(), ""]),
@@ -1267,27 +1267,27 @@ describe("SEA + PEN integration", function () {
     seek(0);
   });
 
-  // ── GUN graph put/get with PEN soul ─────────────────────────────────────────
+  // ── ZEN graph put/get with PEN soul ─────────────────────────────────────────
 
-  it("GUN put/get with open PEN soul stores and retrieves value", function (done) {
+  it("ZEN put/get with open PEN soul stores and retrieves value", function (done) {
     this.timeout(10000);
     var soul = SEA.pen({ val: { type: "string" }, open: true });
-    var gun = Gun({ radisk: false, peers: [], localStorage: false });
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
     var value = "market_data_" + Date.now();
-    gun.get(soul).get("price").put(value);
-    gun
+    zen.get(soul).get("price").put(value);
+    zen
       .get(soul)
       .get("price")
       .once(function (v) {
-        assert.strictEqual(v, value, "value round-trips through GUN graph");
+        assert.strictEqual(v, value, "value round-trips through ZEN graph");
         done();
       });
   });
 
-  it("GUN user.auth + signed put: user pub in R[5] satisfies sign policy check", function (done) {
-    // Simulate what GUN does when an authenticated user writes into a sign:true PEN soul:
+  it("ZEN user.auth + signed put: user pub in R[5] satisfies sign policy check", function (done) {
+    // Simulate what ZEN does when an authenticated user writes into a sign:true PEN soul:
     // R[5] = writer's pub, penStage verifies sign policy via applypolicy.
-    // Here we test the predicate + policy detection layer (not the GUN network layer).
+    // Here we test the predicate + policy detection layer (not the ZEN network layer).
     var soul = SEA.pen({ val: { type: "string" }, sign: true });
     var bc = pen.unpack(soul.slice(1));
     var policy = pen.scanpolicy(bc);
@@ -1321,7 +1321,7 @@ describe("SEA + PEN integration", function () {
     });
   });
 
-  it("GUN shared PEN soul: authenticator pub is available in R[5] during predicate evaluation", function (done) {
+  it("ZEN shared PEN soul: authenticator pub is available in R[5] during predicate evaluation", function (done) {
     this.timeout(10000);
     var now = Date.now();
     var size = 300000;
@@ -1361,17 +1361,17 @@ describe("SEA + PEN integration", function () {
       sign: true,
       params: { item: "tea", type: "buy", candle: candle },
     });
-    var gun = Gun({ radisk: false, peers: [], localStorage: false });
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
     var key = now + ":" + pair.pub + ":nonce1";
     SEA.sign("shared_order", pair, function (value) {
-      gun
+      zen
         .get(soul)
         .get(key)
         .put(
           value,
           function (ack) {
             if (ack && ack.err) return done(new Error(ack.err));
-            gun
+            zen
               .get(soul)
               .get(key)
               .once(function (v) {

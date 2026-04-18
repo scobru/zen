@@ -17,12 +17,12 @@ describe("SEA node client auth", () => {
     Zen(gunConfig);
     gunClient = Zen({
       file: "radataclient",
-      peers: ["http://localhost:8765/gun"],
+      peers: ["http://localhost:8765/zen"],
     });
   });
 
   it("should create user", (done) => {
-    gunClient.user().create("gun", "password", (res) => {
+    gunClient.user().create("zen", "password", (res) => {
       //console.log({ res });
       expect(res.err).to.equal(undefined);
       done();
@@ -32,16 +32,16 @@ describe("SEA node client auth", () => {
   it("should not create new user when exists", (done) => {
     gunClient2 = Zen({
       file: "radataclient2",
-      peers: ["http://localhost:8765/gun"],
+      peers: ["http://localhost:8765/zen"],
     });
-    gunClient2.user().create("gun", "password", (res) => {
+    gunClient2.user().create("zen", "password", (res) => {
       expect(res.err).to.equal("User already created!");
       done();
     });
   });
 
   it("should auth user", (done) => {
-    gunClient.user().auth("gun", "password", (res) => {
+    gunClient.user().auth("zen", "password", (res) => {
       expect(res.err).to.equal(undefined);
       done();
     });

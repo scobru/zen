@@ -78,7 +78,7 @@ describe("GET GET", function () {
     return relays.atLeast(config.relays);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     var tests = [],
       i = 0;
     relays.each(function (client) {
@@ -97,12 +97,12 @@ describe("GET GET", function () {
               res.end("I am " + env.i + "!");
             });
             var port = env.config.port + env.i;
-            var Gun;
+            var Zen;
             try {
-              Gun = __index;
+              Zen = __index;
             } catch (e) {
               console.log(
-                "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+                "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
               );
             }
 
@@ -112,12 +112,12 @@ describe("GET GET", function () {
               var tmp = env.config.port + (i + 1);
               if (port != tmp) {
                 // ignore ourselves
-                peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+                peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
               }
             }
             Object.PORT = port;
             console.log(port, " connect to ", peers);
-            var gun = Gun({
+            var zen = Zen({
               file: env.i + "data",
               peers: peers,
               web: server,
@@ -126,7 +126,7 @@ describe("GET GET", function () {
             server.listen(port, function () {
               test.done();
             });
-            global.gun = gun;
+            global.zen = zen;
             global.WHO = port;
           },
           { i: (i += 1), config: config },
@@ -141,7 +141,7 @@ describe("GET GET", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -157,17 +157,17 @@ describe("GET GET", function () {
             var env = test.props;
             window.ID = test.props.i;
 
-            var gun = Gun({
+            var zen = Zen({
               peers:
                 "http://" +
                 env.config.IP +
                 ":" +
                 (env.config.port + (ID === 1 ? 2 : 1)) +
-                "/gun",
+                "/zen",
               localStorage: false,
             });
-            window.gun = gun;
-            window.ref = gun.get("a"); //.on(function(){ });
+            window.zen = zen;
+            window.ref = zen.get("a"); //.on(function(){ });
           },
           { i: (i += 1), config: config },
         ),
@@ -182,7 +182,7 @@ describe("GET GET", function () {
       console.log("I AM ALICE");
       window.WHO = "Alice";
       test.async();
-      gun.get("random").get(function (ack) {
+      zen.get("random").get(function (ack) {
         setTimeout(function () {
           test.done();
         }, 1000);
@@ -209,7 +209,7 @@ describe("GET GET", function () {
         dam.say = say; // restore normal code
         test.done();
 
-        gun.get("a").on(function (data) {});
+        zen.get("a").on(function (data) {});
       }, 1000);
     });
   });
@@ -244,8 +244,8 @@ describe("GET GET", function () {
       tests.push(
         client.run(function (test) {
           test.async();
-          console.log(WHO, "cache:", JSON.stringify(gun._.graph.a));
-          if ("dave" !== gun._.graph.a.hello) {
+          console.log(WHO, "cache:", JSON.stringify(zen._.graph.a));
+          if ("dave" !== zen._.graph.a.hello) {
             throw new Error("not_updated");
             return not_updated;
           }
@@ -260,8 +260,8 @@ describe("GET GET", function () {
     return ed.run(function (test) {
       test.async();
 
-      console.log("Ed's cache:", JSON.stringify(gun._.graph.a));
-      if (gun._.graph.a) {
+      console.log("Ed's cache:", JSON.stringify(zen._.graph.a));
+      if (zen._.graph.a) {
         throw new Error("was_updated");
         return was_updated;
       }

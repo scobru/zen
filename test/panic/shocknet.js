@@ -94,7 +94,7 @@ describe("Shocknet Test!", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("Server Peer initialized gun!", function () {
+  it("Server Peer initialized zen!", function () {
     var tests = [],
       i = 0;
     peerClients.each(function (client, id) {
@@ -125,9 +125,9 @@ describe("Shocknet Test!", function () {
               env.config.IP +
               ":" +
               (env.config.port + peerPort) +
-              "/gun";
-            var Gun = __index;
-            var gun = Gun({
+              "/zen";
+            var Zen = __index;
+            var zen = Zen({
               file: 3 + env.i + "data",
               web: server,
               peers: [peerAddr],
@@ -149,7 +149,7 @@ describe("Shocknet Test!", function () {
     return Promise.all(tests);
   });
 
-  it("Server Clients initialized gun!", function () {
+  it("Server Clients initialized zen!", function () {
     var tests = [],
       i = 0;
     serverClients.each(function (client, id) {
@@ -182,14 +182,14 @@ describe("Shocknet Test!", function () {
             try {
               __fsrm(env.i + 1 + "data");
             } catch (e) {}
-            var Gun = __index;
+            var Zen = __index;
             const peerAddr =
               "http://" +
               env.config.IP +
               ":" +
               (env.config.port + 3 + env.i) +
-              "/gun";
-            var gun = Gun({
+              "/zen";
+            var zen = Zen({
               peers: [peerAddr],
               file: env.i + "data",
               axe: false,
@@ -199,7 +199,7 @@ describe("Shocknet Test!", function () {
               ` I am client #${env.i}, I am connecting to ${peerAddr}`,
               "\x1b[0m",
             );
-            global.gun = gun;
+            global.zen = zen;
           },
           { i: (i += 1), config: config },
         ),
@@ -208,7 +208,7 @@ describe("Shocknet Test!", function () {
     return Promise.all(tests);
   });
 
-  it("Server Clients auth with gun!", function () {
+  it("Server Clients auth with zen!", function () {
     var tests = [],
       i = 0;
     serverClients.each(function (client, id) {
@@ -219,9 +219,9 @@ describe("Shocknet Test!", function () {
               const done = test.async();
               //localStorage.clear();
               var env = test.props;
-              //try{ load('gun/lib/fsrm')(env.i+'data') }catch(e){}
-              //try{ load('gun/lib/fsrm')((env.i+1)+'data') }catch(e){}
-              const user = global.gun.user();
+              //try{ load('zen/lib/fsrm')(env.i+'data') }catch(e){}
+              //try{ load('zen/lib/fsrm')((env.i+1)+'data') }catch(e){}
+              const user = global.zen.user();
               const alias = env.config.names[env.i - 1] + rands(4);
               const pass = rands(8);
 
@@ -317,7 +317,7 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const { pub } = test.props;
         const { keys } = test.props.config;
-        global.gun
+        global.zen
           .user(pub)
           .get(keys.PROFILE)
           .get(keys.DISPLAY_NAME)
@@ -340,7 +340,7 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const { pub } = test.props;
         const { keys } = test.props.config;
-        global.gun
+        global.zen
           .user(pub)
           .get(keys.PROFILE)
           .get(keys.DISPLAY_NAME)
@@ -362,7 +362,7 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const { pub } = test.props;
         const { keys } = test.props.config;
-        const dn = await global.gun
+        const dn = await global.zen
           .user(pub)
           .get(keys.PROFILE)
           .get(keys.DISPLAY_NAME)
@@ -486,7 +486,7 @@ describe("Shocknet Test!", function () {
             const env = test.props;
             const keys = env.config.keys;
             global.pubToEpub = async (pub, fail) => {
-              const epub = await global.gun.user(pub).get("epub").then();
+              const epub = await global.zen.user(pub).get("epub").then();
               if (typeof epub === "string") {
                 return epub;
               } else {
@@ -698,7 +698,7 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const { pub } = test.props;
         const { keys } = test.props.config;
-        const currentHandshakeAddress = await gun
+        const currentHandshakeAddress = await zen
           .user(pub)
           .get(keys.CURRENT_HANDSHAKE_ADDRESS)
           .then();
@@ -729,7 +729,7 @@ describe("Shocknet Test!", function () {
             test.fail("maybeLastRequestIDSentToUser.length < 5");
           }
           const lastRequestIDSentToUser = maybeLastRequestIDSentToUser;
-          const hrInHandshakeNode = await gun
+          const hrInHandshakeNode = await zen
             .get(keys.HANDSHAKE_NODES)
             .get(currentHandshakeAddress)
             .get(lastRequestIDSentToUser)
@@ -1010,7 +1010,7 @@ describe("Shocknet Test!", function () {
       { testData, config: config, index: 1 },
     );
   });
-  it(`Sending handshake request to bob 6: create outgoing feed 5:newHandshakeRequestID in gun !`, function () {
+  it(`Sending handshake request to bob 6: create outgoing feed 5:newHandshakeRequestID in zen !`, function () {
     return alice
       .run(
         function (test) {
@@ -1019,7 +1019,7 @@ describe("Shocknet Test!", function () {
           const keys = env.config.keys;
           const { index } = env;
           const { pub } = env.testData[index];
-          const { user, gun } = global;
+          const { user, zen } = global;
           const { currentHandshakeAddress, encryptedForUsOutgoingFeedID } =
             global.hsData;
           const timestamp = Date.now();
@@ -1028,7 +1028,7 @@ describe("Shocknet Test!", function () {
             response: encryptedForUsOutgoingFeedID,
             timestamp,
           };
-          const hr = gun
+          const hr = zen
             .get(keys.HANDSHAKE_NODES)
             .get(currentHandshakeAddress)
             .set(handshakeRequestData, (ack) => {
@@ -1172,9 +1172,9 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const env = test.props;
         const keys = env.config.keys;
-        const { gun } = global;
+        const { zen } = global;
         const { currentHandshakeAddress } = global.hsData;
-        gun
+        zen
           .get(keys.HANDSHAKE_NODES)
           .get(currentHandshakeAddress)
           .open((receivedReqs) => {
@@ -1192,7 +1192,7 @@ describe("Shocknet Test!", function () {
         const env = test.props;
         const { handshakeRequestID } = env;
         const keys = env.config.keys;
-        const { gun } = global;
+        const { zen } = global;
         const { receivedReqs } = global.hsData;
         const data = receivedReqs[handshakeRequestID];
         if (typeof data.from !== "string") {
@@ -1329,7 +1329,7 @@ describe("Shocknet Test!", function () {
     return bob.run(
       function (test) {
         const done = test.async();
-        const { gun } = global;
+        const { zen } = global;
         const env = test.props;
         const keys = env.config.keys;
         const {
@@ -1338,7 +1338,7 @@ describe("Shocknet Test!", function () {
           handshakeRequestID,
         } = global.hsData;
         const data = { response: encryptedForUsOutgoingID };
-        gun
+        zen
           .get(keys.HANDSHAKE_NODES)
           .get(currentHandshakeAddress)
           .get(handshakeRequestID)

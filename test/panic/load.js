@@ -76,12 +76,12 @@ describe(
     this.timeout(5 * 60 * 1000);
 
     it("Relays have joined!", function () {
-      // Alright, lets wait until enough gun server peers are connected.
+      // Alright, lets wait until enough zen server peers are connected.
       return relays.atLeast(config.relays);
     });
 
-    it("GUN has spawned!", function () {
-      // Once they are, we need to actually spin up the gun server.
+    it("ZEN has spawned!", function () {
+      // Once they are, we need to actually spin up the zen server.
       var tests = [],
         i = 0;
       relays.each(function (client) {
@@ -102,17 +102,17 @@ describe(
               var server = __http.createServer(function (req, res) {
                 res.end("I am " + env.i + "!");
               });
-              // Launch the server and start gun!
-              var Gun;
+              // Launch the server and start zen!
+              var Zen;
               try {
-                Gun = __index;
+                Zen = __index;
               } catch (e) {
                 console.log(
-                  "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+                  "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
                 );
               }
-              // Attach the server to gun.
-              var gun = Gun({
+              // Attach the server to zen.
+              var zen = Zen({
                 file: env.i + "data",
                 web: server,
                 localStorage: false,
@@ -203,7 +203,7 @@ describe(
               // Get access to the "outer scope" which has the browser IDs
               // as well as other configuration information.
               test.async();
-              // Now we want to connect to every gun server peer...
+              // Now we want to connect to every zen server peer...
               var peers = [],
                 i = env.config.relays;
               while (i--) {
@@ -214,19 +214,19 @@ describe(
                     env.config.IP +
                     ":" +
                     (env.config.port + (i + 1)) +
-                    "/gun",
+                    "/zen",
                 );
               }
-              // Pass all the relays we want to connect to into gun.
-              //var gun = Gun();
-              var gun = Gun(peers);
+              // Pass all the relays we want to connect to into zen.
+              //var zen = Zen();
+              var zen = Zen(peers);
               // Now we want to create a list
               // of all the messages that WILL be sent
               // according to the expected configuration.
               // This is equal to...
               var num = 0,
                 total = 0,
-                check = Gun.obj.map(env.ids, function (v, id, t) {
+                check = Zen.obj.map(env.ids, function (v, id, t) {
                   // for each browser ID
                   // they will be saving X number of messages each.
                   var i = env.config.each;
@@ -250,9 +250,9 @@ describe(
                 .text(num + " / " + total + " Verified")
                 .prependTo("body");
               // Add a nifty UI that tells us how many messages have been verified.
-              // FINALLY, tell gun to subscribe to every record
+              // FINALLY, tell zen to subscribe to every record
               // that is is/will be saved to this table.
-              gun
+              zen
                 .get("test")
                 .map()
                 .on(function (data, key) {
@@ -278,7 +278,7 @@ describe(
                   }
                   // This next part is important:
                   if (
-                    Gun.obj.map(check, function (still) {
+                    Zen.obj.map(check, function (still) {
                       // IF THERE ARE ANY RECORDS STILL LEFT TO BE VERIFIED
                       if (still) {
                         return true;
@@ -306,9 +306,9 @@ describe(
                   //to = setTimeout(go, env.config.wait * Math.random()); // add a little jitter.
                   i += 1;
                   var p = env.id + i;
-                  // And actually save the data with gun,
+                  // And actually save the data with zen,
                   // as a record added to one big 'test' table.
-                  gun
+                  zen
                     .get("test")
                     .get(p)
                     .put("Hello world, " + p + "!");
@@ -347,7 +347,7 @@ describe(
 // Or still confused how a single 200 LOC test file
 // Is running correctness verification tests
 // across an entire distributed system of devices/browsers?
-// Well, jump on https://gitter.im/akaoio/gun !
+// Well, jump on https://gitter.im/akaoio/zen !
 
 // Think adding tests like this to your work place would be bomb awesome?
 // We totally sell PANIC training, licenses, and support!

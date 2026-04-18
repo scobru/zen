@@ -1,11 +1,11 @@
 import Zen from "../../index.js";
 var location = { host: "localhost" };
-var gun = Zen({
+var zen = Zen({
   file: "read.json",
   peers: ["http://" + location.host + ":8765/zen"],
 });
 
-gun
+zen
   .get("data")
   .path("stuff")
   .map(function (val, field) {

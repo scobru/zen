@@ -4,11 +4,11 @@ let __defaultExport;
 {
   return; // this file is for temporary testings and shouldn't get run.
   var Zen = __zen;
-  var gun = Gun();
-  Gun.log.verbose = true;
+  var zen = Zen();
+  Zen.log.verbose = true;
 
   /*
-	gun.put({foo: "bar"}).val(function(val){
+	zen.put({foo: "bar"}).val(function(val){
 		console.log("POWR HOUSE", val);
 		this.put({lol: 'pancakes'}).val(function(v){
 			console.log("YEAH CAKES", v);
@@ -16,7 +16,7 @@ let __defaultExport;
 	});
 	*/
 
-  gun
+  zen
     .get("hello/world")
     .put({ hello: "Mark" })
     .path("hello")

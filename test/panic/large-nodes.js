@@ -59,7 +59,7 @@ describe("Put ACK", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     var tests = [],
       i = 0;
     servers.each(function (client) {
@@ -78,18 +78,18 @@ describe("Put ACK", function () {
               res.end("I am " + env.i + "!");
             });
             var port = env.config.port + env.i;
-            var Gun = __index;
+            var Zen = __index;
             var peers = [],
               i = env.config.servers;
             while (i--) {
               var tmp = env.config.port + (i + 1);
               if (port != tmp) {
                 // ignore ourselves
-                peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+                peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
               }
             }
             console.log(port, " connect to ", peers);
-            var gun = Gun({
+            var zen = Zen({
               file: env.i + "data",
               peers: peers,
               web: server,
@@ -119,7 +119,7 @@ describe("Put ACK", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -133,10 +133,10 @@ describe("Put ACK", function () {
               indexedDB.deleteDatabase("radata");
             } catch (e) {}
             var env = test.props;
-            var gun = Gun(
-              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+            var zen = Zen(
+              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
             );
-            window.ref = gun.get("a");
+            window.ref = zen.get("a");
           },
           { i: (i += 1), config: config },
         ),
@@ -153,7 +153,7 @@ describe("Put ACK", function () {
         var i = test.props.each || 25000;
         var put = {};
         while (--i) {
-          put[Gun.text.random(9)] = i;
+          put[Zen.text.random(9)] = i;
         }
         var S = +new Date();
         ref.put(put, function (ack) {
@@ -187,7 +187,7 @@ describe("Put ACK", function () {
         ref.hear = ref.hear || [];
         var hear = ref._.root.opt.mesh.hear;
         ref._.root.opt.mesh.hear = function (raw, peer) {
-          var msg = Gun.obj.ify(raw);
+          var msg = Zen.obj.ify(raw);
           console.log("hear:", msg);
           hear(raw, peer);
           ref.hear.push(msg);

@@ -11,18 +11,18 @@ var root;
   try {
     __fs.unlinkSync("tmp/data.json");
   } catch (e) {}
-  //root.Gun = root.Gun || load('../gun');
-  if (root.Gun) {
-    root.Gun = root.Gun;
+  //root.Zen = root.Zen || load('../zen');
+  if (root.Zen) {
+    root.Zen = root.Zen;
   } else {
     var expect = (global.expect = __expect);
-    root.Gun = __zen;
-    Gun.serve = __serve;
+    root.Zen = __zen;
+    Zen.serve = __serve;
   }
 })(this);
 
 {
-  const SEA = Gun.SEA;
+  const SEA = Zen.SEA;
 
   if (!SEA) {
     return;
@@ -76,7 +76,7 @@ var root;
         };
         // proof - generates PBKDF2 hash from user's alias and password
         // which is then used to decrypt user's auth record
-        SEA.proof(pass, Gun.text.random(64)).then(check).catch(done);
+        SEA.proof(pass, Zen.text.random(64)).then(check).catch(done);
       });
 
       it("pair", function (done) {
@@ -269,20 +269,20 @@ var root;
       });
     });
 
-  Gun().user &&
-    describe("Gun", function () {
+  Zen().user &&
+    describe("Zen", function () {
       describe("User", function () {
         console.log("TODO: User! THIS IS AN EARLY ALPHA!!!");
         var alias = "dude";
         var pass = "my secret password";
-        var gun = Gun();
-        var user = gun.user();
-        Gun.log.off = true; // Suppress all console logging
+        var zen = Zen();
+        var user = zen.user();
+        Zen.log.off = true; // Suppress all console logging
 
         const throwOutUser = (wipeStorageData, done) => {
-          // Get rid of authenticated Gun user
-          var user = gun.back(-1)._.user;
-          // TODO: is this correct way to 'logout' user from Gun.User ?
+          // Get rid of authenticated Zen user
+          var user = zen.back(-1)._.user;
+          // TODO: is this correct way to 'logout' user from Zen.User ?
           ["alias", "sea", "pub"].forEach(function (key) {
             delete user._[key];
           });
@@ -321,7 +321,7 @@ var root;
               }
               done();
             };
-            // Gun.user.create - creates new user
+            // Zen.user.create - creates new user
             user
               .create(alias + type, pass)
               .then(check)
@@ -329,7 +329,7 @@ var root;
           });
 
           it("conflict", function (done) {
-            Gun.log.off = true; // Suppress all console logging
+            Zen.log.off = true; // Suppress all console logging
             var check = function (ack) {
               try {
                 expect(ack).to.not.be(undefined);
@@ -346,7 +346,7 @@ var root;
               }
               done();
             };
-            // Gun.user.create - fails to create existing user
+            // Zen.user.create - fails to create existing user
             user
               .create(alias + type, pass)
               .then(function (ack) {
@@ -398,7 +398,7 @@ var root;
               }
               done();
             };
-            // Gun.user.auth - authenticates existing user
+            // Zen.user.auth - authenticates existing user
             user
               .auth(alias + type, pass)
               .then(check)
@@ -465,7 +465,7 @@ var root;
               }
               done();
             };
-            // Gun.user.auth - with newpass props sets new password
+            // Zen.user.auth - with newpass props sets new password
             user
               .auth(alias + type, pass, { newpass: pass + " new" })
               .then(check)
@@ -538,8 +538,8 @@ var root;
                 expect(ack).to.not.be("");
                 expect(ack).to.not.have.key("err");
                 expect(ack).to.have.key("ok");
-                expect(gun.back(-1)._.user._).to.not.have.keys(["sea", "pub"]);
-                // expect(gun.back(-1)._.user).to.not.be.ok();
+                expect(zen.back(-1)._.user._).to.not.have.keys(["sea", "pub"]);
+                // expect(zen.back(-1)._.user).to.not.be.ok();
               } catch (e) {
                 done(e);
                 return;
@@ -565,7 +565,7 @@ var root;
                       done(e);
                       return;
                     }
-                    // Gun.user.leave - performs logout for authenticated user
+                    // Zen.user.leave - performs logout for authenticated user
                     user.leave().then(check).catch(done);
                   })
                   .catch(done);
@@ -586,7 +586,7 @@ var root;
               }
               done();
             };
-            expect(gun.back(-1)._.user).to.not.have.keys(["sea", "pub"]);
+            expect(zen.back(-1)._.user).to.not.have.keys(["sea", "pub"]);
             user.leave().then(check).catch(done);
           });
         });
@@ -609,7 +609,7 @@ var root;
                 expect(ack).to.not.be("");
                 expect(ack).to.not.have.key("err");
                 expect(ack).to.have.key("ok");
-                expect(gun.back(-1)._.user).to.not.have.keys(["sea", "pub"]);
+                expect(zen.back(-1)._.user).to.not.have.keys(["sea", "pub"]);
               } catch (e) {
                 done(e);
                 return;
@@ -633,7 +633,7 @@ var root;
                       done(e);
                       return;
                     }
-                    // Gun.user.delete - deletes existing user account
+                    // Zen.user.delete - deletes existing user account
                     user.delete(usr, pass).then(check(done)).catch(done);
                   })
                   .catch(done);
@@ -710,8 +710,8 @@ var root;
           // This re-constructs 'remember-me' data modified by manipulate func
           var manipulateStorage = function (manipulate, pin) {
             expect(typeof manipulate).to.be("function");
-            // We'll use Gun internal User data
-            var usr = gun.back(-1)._.user;
+            // We'll use Zen internal User data
+            var usr = zen.back(-1)._.user;
             expect(usr).to.not.be(undefined);
             expect(usr).to.have.key("_");
             expect(usr._).to.have.keys(["pub", "sea"]);
@@ -824,7 +824,7 @@ var root;
                   .then(function (ack) {
                     try {
                       expect(ack).to.have.key("ok");
-                      expect(gun.back(-1)._.user).to.not.have.keys([
+                      expect(zen.back(-1)._.user).to.not.have.keys([
                         "sea",
                         "pub",
                       ]);
@@ -914,7 +914,7 @@ var root;
                   .then(function (ack) {
                     try {
                       expect(ack).to.have.key("ok");
-                      expect(gun.back(-1)._.user).to.not.have.keys([
+                      expect(zen.back(-1)._.user).to.not.have.keys([
                         "sea",
                         "pub",
                       ]);
@@ -977,7 +977,7 @@ var root;
                     }).then(function (ack) {
                       try {
                         expect(ack).to.have.key("ok");
-                        expect(gun.back(-1)._.user).to.not.have.keys([
+                        expect(zen.back(-1)._.user).to.not.have.keys([
                           "sea",
                           "pub",
                         ]);
@@ -1073,7 +1073,7 @@ var root;
                     }).then(function (ack) {
                       try {
                         expect(ack).to.have.key("ok");
-                        expect(gun.back(-1)._.user).to.not.have.keys([
+                        expect(zen.back(-1)._.user).to.not.have.keys([
                           "sea",
                           "pub",
                         ]);
@@ -1326,7 +1326,7 @@ var root;
                       done(e);
                       return;
                     }
-                    // Gun.user.alive - keeps/checks User authentication state
+                    // Zen.user.alive - keeps/checks User authentication state
                     user.alive().then(check).catch(done);
                   })
                   .catch(done);
@@ -1371,7 +1371,7 @@ var root;
             it.skip("add member");
           });
 
-        Gun.log.off = false;
+        Zen.log.off = false;
       });
     });
 }

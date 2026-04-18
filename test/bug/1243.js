@@ -57,7 +57,7 @@ function makeid(length) {
 }
 
 describe("Heroku deploy", function () {
-  const heroku_name = "test-gun-" + makeid(5);
+  const heroku_name = "test-zen-" + makeid(5);
   const dir_cwd = path.join(__dirname, "../..");
 
   it("create herokuapp " + heroku_name, function (done) {

@@ -83,12 +83,12 @@ describe(
     });
 
     it("Servers have joined!", function () {
-      // Alright, lets wait until enough gun server peers are connected.
+      // Alright, lets wait until enough zen server peers are connected.
       return servers.atLeast(config.servers);
     });
 
-    it("GUN has spawned!", function () {
-      // Once they are, we need to actually spin up the gun server.
+    it("ZEN has spawned!", function () {
+      // Once they are, we need to actually spin up the zen server.
       var tests = [],
         i = 0;
       servers.each(function (client) {
@@ -109,17 +109,17 @@ describe(
               var server = __http.createServer(function (req, res) {
                 res.end("I am " + env.i + "!");
               });
-              // Launch the server and start gun!
-              var Gun;
+              // Launch the server and start zen!
+              var Zen;
               try {
-                Gun = __index;
+                Zen = __index;
               } catch (e) {
                 console.log(
-                  "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+                  "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
                 );
               }
-              // Attach the server to gun.
-              var gun = Gun({
+              // Attach the server to zen.
+              var zen = Zen({
                 file: env.i + "data",
                 web: server,
                 axe: false,
@@ -179,7 +179,7 @@ describe(
       //}, config);
     });
 
-    it("Browsers initialized gun!", function () {
+    it("Browsers initialized zen!", function () {
       var tests = [],
         i = 0;
       browsers.each(function (client, id) {
@@ -193,8 +193,8 @@ describe(
                 indexedDB.deleteDatabase("radata");
               } catch (e) {}
               var env = test.props;
-              //var gun = Gun('http://'+ env.config.IP + ':' + (env.config.port + 1) + '/gun');
-              var gun = Gun({
+              //var zen = Zen('http://'+ env.config.IP + ':' + (env.config.port + 1) + '/zen');
+              var zen = Zen({
                 localStorage: false,
                 radisk: false,
                 peers:
@@ -202,11 +202,11 @@ describe(
                   env.config.IP +
                   ":" +
                   (env.config.port + 1) +
-                  "/gun",
+                  "/zen",
               });
-              window.gun = gun;
-              //window.ref = gun.user(env.config.pair.pub);
-              window.ref = gun.get("~" + env.config.pair.pub);
+              window.zen = zen;
+              //window.ref = zen.user(env.config.pair.pub);
+              window.ref = zen.get("~" + env.config.pair.pub);
             },
             { i: (i += 1), config: config },
           ),
@@ -223,13 +223,13 @@ describe(
         );
         test.async();
         var env = test.props;
-        var dam = gun.back("opt.mesh");
+        var dam = zen.back("opt.mesh");
         dam.old = dam.say;
         dam.say = function () {};
-        var rand = String.random || Gun.text.random;
+        var rand = String.random || Zen.text.random;
         var i = test.props.each,
           chat = {},
-          S = Gun.state();
+          S = Zen.state();
         var tmp = "generating " + i + " records...";
         console.log(tmp);
         $("b").text(tmp);
@@ -243,11 +243,11 @@ describe(
             ref.get(i).put(rand(100) + data + big, function (ack) {
               console.log("err?", ack);
             });
-            //Gun.state.ify(chat, i/*+'-'+rand(9)*/, S, rand(100) + data + big, '~'+test.config.pair.pub);
+            //Zen.state.ify(chat, i/*+'-'+rand(9)*/, S, rand(100) + data + big, '~'+test.config.pair.pub);
           }
           if (i === 0) {
             ref.get("1").once(function (x) {
-              //gun._.graph.chat = chat;
+              //zen._.graph.chat = chat;
               dam.say = dam.old;
               test.done();
               //console.log("Done!", x);
@@ -257,10 +257,10 @@ describe(
           }
           setTimeout.turn(gen);
         }
-        gun.on("auth", function (ack) {
+        zen.on("auth", function (ack) {
           setTimeout(gen, 9);
         });
-        window.ref = gun.user().auth(env.pair);
+        window.ref = zen.user().auth(env.pair);
         //window.chat = chat;
         //console.log(JSON.stringify(chat,null,2));
         setInterval(function () {

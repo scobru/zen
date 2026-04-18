@@ -1,14 +1,14 @@
 import panic from "panic-client";
 import ports from "./ports";
-import Gun from "../../../zen.js";
+import Zen from "../../../zen.js";
 import http from "http";
 
 var server = new http.Server();
-var gun = new Gun({
+var zen = new Zen({
   file: "delete-me.json",
   web: server,
 });
 
-server.listen(ports.gun);
+server.listen(ports.zen);
 
 panic.server("http://localhost:" + ports.panic);

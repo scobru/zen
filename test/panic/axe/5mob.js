@@ -78,7 +78,7 @@ describe("Mob test.", function () {
     return relays.atLeast(config.relays);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     var tests = [],
       i = 0;
     relays.each(function (client) {
@@ -94,7 +94,7 @@ describe("Mob test.", function () {
             while (i--) {
               // make sure to connect to self/same.
               var tmp = env.config.port + (i + 1);
-              peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+              peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
             }
 
             if (process.env.ROD_PATH) {
@@ -125,29 +125,29 @@ describe("Mob test.", function () {
             var server = __http.createServer(function (req, res) {
               res.end("I am " + env.i + "!");
             });
-            var Gun;
+            var Zen;
             try {
-              Gun = __index;
+              Zen = __index;
             } catch (e) {
               console.log(
-                "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+                "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
               );
             }
 
             console.log(port, " connect to ", peers);
-            var gun = Gun({
+            var zen = Zen({
               file: env.i + "data",
               peers: peers,
               web: server,
               mob: 3,
               multicast: false,
             });
-            global.gun = gun;
+            global.zen = zen;
             server.listen(port, function () {
               test.done();
             });
 
-            gun.get("a").on(function () {}); // TODO: Wrong! This is an example of the test using GUN in weird ways to work around bugs at the time of writing. This line should not be necessary, AXE should still pass even if this line is commented out, however if it fails then that is a bug in GUN's logic, not AXE.
+            zen.get("a").on(function () {}); // TODO: Wrong! This is an example of the test using ZEN in weird ways to work around bugs at the time of writing. This line should not be necessary, AXE should still pass even if this line is commented out, however if it fails then that is a bug in ZEN's logic, not AXE.
           },
           { i: (i += 1), config: config },
         ),
@@ -162,7 +162,7 @@ describe("Mob test.", function () {
   });
   // end PANIC template -->
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (browser, id) {
@@ -179,17 +179,17 @@ describe("Mob test.", function () {
 
             // start with the first peer:
             var env = test.props;
-            var gun = Gun(
-              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+            var zen = Zen(
+              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
             );
 
-            // NOTE: This "mob" logic will be moved into axe.js (or maybe gun.js itself), but while we're building the logic it is easier to quickly hack/iterate by prototyping here in the test itself until it passes. But it needs to be refactored into the actual code or else you might have false positives of this test overloading "mob" logic.
-            // ^^^^^^^^^ THIS HAS BEEN MOVED TO GUN CORE, HOWEVER,
+            // NOTE: This "mob" logic will be moved into axe.js (or maybe zen.js itself), but while we're building the logic it is easier to quickly hack/iterate by prototyping here in the test itself until it passes. But it needs to be refactored into the actual code or else you might have false positives of this test overloading "mob" logic.
+            // ^^^^^^^^^ THIS HAS BEEN MOVED TO ZEN CORE, HOWEVER,
             // ^^^^^^^^^ EXPERIMENT WITH MORE ADVANCED LOGIC THAT AXE OVERLOADS CORE.
-            var mesh = gun.back("opt.mesh"); // overload...
+            var mesh = zen.back("opt.mesh"); // overload...
             /*mesh.hear['mob'] = function(msg, peer){
 					// TODO: NOTE, code AXE DHT to aggressively drop new peers AFTER superpeer sends this rebalance/disconnect message that contains some other superpeers.
-					clearTimeout(gun.TO); gun.TO = setTimeout(end, 2000);
+					clearTimeout(zen.TO); zen.TO = setTimeout(end, 2000);
 					if(!msg.peers){ return }
 					var peers = Object.keys(msg.peers), one = peers[Math.floor(Math.random()*peers.length)];
 					console.log('Browser', env.i, 'chooses', one, 'from', JSON.stringify(peers), 'that', peer.url, 'suggested, because it is mobbed.');//, 'from', msg.peers+'');
@@ -197,13 +197,13 @@ describe("Mob test.", function () {
 					mesh.hi(one);
 				}*/
 
-            //console.log('Browser', env.i, "started with:", Object.keys(gun._.opt.peers)+'');
-            window.gun = gun;
-            window.ref = gun.get("test");
+            //console.log('Browser', env.i, "started with:", Object.keys(zen._.opt.peers)+'');
+            window.zen = zen;
+            window.ref = zen.get("test");
             function end() {
               test.done();
             }
-            gun.TO = setTimeout(end, 3000);
+            zen.TO = setTimeout(end, 3000);
           },
           { i: (i += 1), config: config },
         ),
@@ -228,7 +228,7 @@ describe("Mob test.", function () {
             test.async();
             ref
               .get("b" + test.props.i)
-              .put("" + Object.keys(gun.back("opt.peers")));
+              .put("" + Object.keys(zen.back("opt.peers")));
             // NOTE: Above line was put here as a workaround. Even if this line was in the prior step, this test should still pass. Make sure there is another test that correctly checks for reconnect logic properly restoring sync.
 
             ref.on(function (data) {
@@ -245,7 +245,7 @@ describe("Mob test.", function () {
                   });
                 delete d._;
                 console.log(test.props.i, "sees", JSON.stringify(d));
-                var now = Object.keys(gun.back("opt.peers"));
+                var now = Object.keys(zen.back("opt.peers"));
                 if (now.length > 1) {
                   console.log("FAIL: too_many_connections");
                   too_many_connections;

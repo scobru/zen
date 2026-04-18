@@ -13,7 +13,7 @@ Trace.log = function (evname, msg) {
   if (!msg) {
     //console.log('WARN, empty message: ',msg);
     //         msg=evname;
-    //         evname = 'GUN';
+    //         evname = 'ZEN';
   }
   if (!Trace.loglastev) {
     Trace.loglastev = evname || "GET";
@@ -51,9 +51,9 @@ Trace.log = function (evname, msg) {
 
   if (dam) {
     if (msg["#"]) {
-      evname = "GUN";
+      evname = "ZEN";
     } else {
-      Trace.loglastev = "GUN";
+      Trace.loglastev = "ZEN";
     }
     Trace.traces.push(
       `${Trace.loglastev}->${evname}: (${Trace.log.i})  {${keys}} ${get} ${put} ${__} ${dam} ${ram} ${id} ${at} ${lS}`,

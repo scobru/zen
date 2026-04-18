@@ -19,7 +19,7 @@ var config = {
   route: {
     "/": __dirname + "/index.html",
     "/zen.js": __dirname + "/../../../zen.js",
-    "/gun/axe.js": __dirname + "/../../../axe.js",
+    "/zen/axe.js": __dirname + "/../../../axe.js",
     "/jquery.js": __dirname + "/../../../examples/jquery.js",
   },
 };
@@ -54,7 +54,7 @@ describe("AXE Test: LOADBALANCE", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     return server.run(
       function (test) {
         var env = test.props;
@@ -69,19 +69,19 @@ describe("AXE Test: LOADBALANCE", function () {
         var server = __http.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
-        var Gun = __index;
-        //			 load('gun/axe');
-        var gun = (global.gun = Gun({
+        var Zen = __index;
+        //			 load('zen/axe');
+        var zen = (global.zen = Zen({
           file: env.i + "dataaxe",
           web: server,
           pid: "Relay_pid",
         }));
-        console.log("		 [ RELAY PID ] " + gun._.opt.pid);
-        Gun.on("create", function (root) {
+        console.log("		 [ RELAY PID ] " + zen._.opt.pid);
+        Zen.on("create", function (root) {
           this.to.next(root);
           root.on("in", function (msg) {
             console.log(
-              "[ GET RELAY ]* PID:" + gun._.opt.pid + " RELAY MESSAGE: ",
+              "[ GET RELAY ]* PID:" + zen._.opt.pid + " RELAY MESSAGE: ",
               msg,
             );
             this.to.next(msg);
@@ -94,7 +94,7 @@ describe("AXE Test: LOADBALANCE", function () {
         server.listen(port, function () {
           test.done();
         });
-        gun.get("ref_soul").put({ hi: "value_" + String.random(3) });
+        zen.get("ref_soul").put({ hi: "value_" + String.random(3) });
       },
       { i: 1, config: config },
     );
@@ -106,7 +106,7 @@ describe("AXE Test: LOADBALANCE", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -116,7 +116,7 @@ describe("AXE Test: LOADBALANCE", function () {
             localStorage.clear(); //console.log('Clear localStorage!!!');
             window.uuid = function (l) {
               return (
-                new Date(Gun.state()).toISOString() +
+                new Date(Zen.state()).toISOString() +
                 "/" +
                 String.random(l || 3)
               );
@@ -128,32 +128,32 @@ describe("AXE Test: LOADBALANCE", function () {
                   env.config.IP +
                   ":" +
                   (env.config.port + 1) +
-                  "/gun",
+                  "/zen",
               ],
               // 				pid:'Peer_'+('0'+(env.config.i+1)).slice(-2)+'_',
               uuid,
             };
 
-            Gun.on("create", function (root) {
+            Zen.on("create", function (root) {
               this.to.next(root);
               root.on("in", function (msg) {
                 this.to.next(msg);
                 if (msg.get && msg.get["#"] && msg.get["#"] !== "balance") {
-                  ++gun.total_gets; /// increment each peer total `in` events
+                  ++zen.total_gets; /// increment each peer total `in` events
                   var hash =
                     (msg["#"] ? "_" + msg["#"] : "") + (msg["><"] ? "_O " : "");
-                  gun
+                  zen
                     .get("balance")
                     .set(
-                      gun._.opt.pid +
+                      zen._.opt.pid +
                         " " +
                         (msg["#"] ? "_msg_id_" + msg["#"] : ""),
                     );
                 }
               });
             });
-            var gun = (window.gun = Gun(opt));
-            gun.total_gets = 0;
+            var zen = (window.zen = Zen(opt));
+            zen.total_gets = 0;
           },
           { i: (i += 1), config: config },
         ),
@@ -172,10 +172,10 @@ describe("AXE Test: LOADBALANCE", function () {
           function (test) {
             test.async();
             function done(v, k) {
-              // 					console.log('!!!!!!! Peer subscribed pid:' + gun._.opt.pid + ' msg:' + JSON.stringify({ k, v }));
+              // 					console.log('!!!!!!! Peer subscribed pid:' + zen._.opt.pid + ' msg:' + JSON.stringify({ k, v }));
               test.done();
             }
-            gun.get("ref_soul").once(done);
+            zen.get("ref_soul").once(done);
           },
           { i: (i += 1), config: config },
         ),
@@ -189,9 +189,9 @@ describe("AXE Test: LOADBALANCE", function () {
       function onlyUnique(value, index, self) {
         return self.indexOf(value) === index;
       }
-      console.log("RELAY PID:" + gun._.opt.pid);
+      console.log("RELAY PID:" + zen._.opt.pid);
       test.async();
-      gun.get("balance").once(function (v, k) {
+      zen.get("balance").once(function (v, k) {
         var tmp = [],
           i = 0,
           participants = [],
@@ -254,7 +254,7 @@ describe("AXE Test: LOADBALANCE", function () {
   });
 
   it("All finished!", function (done) {
-    //		 browsers.each(function(client, id){ client.run(function() { console.log('TOTAL gets PID:'+gun._.opt.pid+': ', gun.total_gets); }); });
+    //		 browsers.each(function(client, id){ client.run(function() { console.log('TOTAL gets PID:'+zen._.opt.pid+': ', zen.total_gets); }); });
     console.log("Done! Cleaning things up...");
     setTimeout(done, 2000);
   });

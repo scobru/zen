@@ -1,15 +1,15 @@
 {
   window.SPAM = function (cb, opt) {
-    opt = Gun.num.is(opt) ? { each: opt } : opt || {};
+    opt = Zen.num.is(opt) ? { each: opt } : opt || {};
     opt.wait = opt.wait || 1;
     setInterval(burst, opt.wait);
 
-    var n = Gun.time.is(),
+    var n = Zen.time.is(),
       i = 0,
       c = 0,
       b = opt.burst || 10,
       l = opt.each || 100;
-    var r = Gun.text.random,
+    var r = Zen.text.random,
       raw;
 
     function save(i) {
@@ -31,12 +31,12 @@
   };
 }
 
-var gun = Gun({ localStorage: false, peers: "http://localhost:8765/gun" });
-var g = gun.get("test");
-var room = Gun.text.random(100);
-var pub = Gun.text.random(1000);
+var zen = Zen({ localStorage: false, peers: "http://localhost:8765/zen" });
+var g = zen.get("test");
+var room = Zen.text.random(100);
+var pub = Zen.text.random(1000);
 SPAM(function (i, v) {
-  //console.log(Gun.state(), i);return;
+  //console.log(Zen.state(), i);return;
   console.log(i);
   var ref = g.set(
     {
@@ -55,7 +55,7 @@ SPAM(function (i, v) {
 {
 	$("#say").on('submit', function(){
 		setTimeout(function(){
-			$("#say").find('input').first().val(Gun.text.random(1000));
+			$("#say").find('input').first().val(Zen.text.random(1000));
 		},1);
 	});
 });

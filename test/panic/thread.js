@@ -61,7 +61,7 @@ describe("Private Message Threading", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     return server.run(
       function (test) {
         var env = test.props;
@@ -82,8 +82,8 @@ describe("Private Message Threading", function () {
         var server = __http.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
-        var Gun = __index;
-        var gun = Gun({ file: env.i + "data", web: server });
+        var Zen = __index;
+        var zen = Zen({ file: env.i + "data", web: server });
         server.listen(port, function () {
           test.done();
         });
@@ -134,8 +134,8 @@ describe("Private Message Threading", function () {
             localStorage.clear();
             var env = test.props;
             console.log("I AM!!!!", env.i);
-            var gun = (window.gun = Gun(
-              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+            var zen = (window.zen = Zen(
+              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
             ));
             var alice = (window.alice = {
               pub: "iYIONCL4rq6-SqmXHjDBoWBJIuhReIHy7MtzBp0zEiw.OXqW4c-FnmcbG2K9IM4avl8WyULHvZxQIyvgTH25PSo",
@@ -171,13 +171,13 @@ describe("Private Message Threading", function () {
                     console.log("chat:::::::::::::::::", msg);
                     window.check[chat.pub + chat.count] = msg;
                     $("<li>").text(msg).appendTo("#chats");
-                    //gun.get('pchat').get(my).get(their).get('new').get(time).put(null);
+                    //zen.get('pchat').get(my).get(their).get('new').get(time).put(null);
                   });
                 }
               });
             };
             var to, fro, sec;
-            gun.user().auth(me, null, function () {
+            zen.user().auth(me, null, function () {
               console.log("logged in");
               start();
               setTimeout(function () {
@@ -187,8 +187,8 @@ describe("Private Message Threading", function () {
             });
             async function start() {
               sec = window.sec = await SEA.secret(me.epub, them);
-              to = window.to = gun.user().get("pchat").get(them.pub);
-              fro = window.fro = gun.user(them.pub).get("pchat").get(me.pub);
+              to = window.to = zen.user().get("pchat").get(them.pub);
+              fro = window.fro = zen.user(them.pub).get("pchat").get(me.pub);
               // TODO: THIS SHOULD DO THE THREADING FOR US LOL!! We have to manually do it.
               thread(to, me.pub, them.pub);
               thread(fro, me.pub, them.pub);
@@ -206,7 +206,7 @@ describe("Private Message Threading", function () {
               console.log("send", msg);
               me.get(time).put(msg, cb);
             };
-            console.log("*****", gun._.opt.pid);
+            console.log("*****", zen._.opt.pid);
           },
           { i: (i += 1), config: config },
         ),

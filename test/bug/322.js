@@ -26,14 +26,14 @@ describe('ZEN', function(){
  		try{ __fsrm('tmp/radatatest') }catch(e){}
 		try{ var expect = global.expect = __expect }catch(e){}
 
-		//root.Gun = root.Gun || load('../gun');
-		if(root.Gun){
-			root.Gun = root.Gun;
-			root.Gun.TESTING = true;
+		//root.Zen = root.Zen || load('../zen');
+		if(root.Zen){
+			root.Zen = root.Zen;
+			root.Zen.TESTING = true;
 		} else {
-            root.Gun = __gun;
-            root.Gun.TESTING = true;
-            Gun.serve = __serve;
+            root.Zen = __gun;
+            root.Zen.TESTING = true;
+            Zen.serve = __serve;
         }
 	}(this));
 
@@ -41,16 +41,16 @@ describe('ZEN', function(){
 
 	describe('API - map', function(){
 		it('Save example data', function(done) {
-			var gun = Gun(opt);
-			gun.get('users').set({u:1});
-			gun.get('users').set({u:2});
-			gun.get('users').set({u:2});
-			gun.get('users').map().on(function(user) { user.index = 'someIndex'; });
+			var zen = Zen(opt);
+			zen.get('users').set({u:1});
+			zen.get('users').set({u:2});
+			zen.get('users').set({u:2});
+			zen.get('users').map().on(function(user) { user.index = 'someIndex'; });
 			setTimeout(function() { done(); }, 200);
 		});
 		it('Make sure the value "someIndex" not be saved in storage', function(done) {
-			var gun = Gun(opt), values=[];
-			gun.get('users').map().once(function(v) { values.push(v.index); });
+			var zen = Zen(opt), values=[];
+			zen.get('users').map().once(function(v) { values.push(v.index); });
 			setTimeout(function() {
 				expect(values.indexOf('someIndex')===-1).to.be(true);
 				done();

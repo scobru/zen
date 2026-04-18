@@ -283,7 +283,7 @@ __def('./src/shim.js', function(module, __exp){
     );
   };
 
-  // JS utility shims (ported from gun/shim.js)
+  // JS utility shims (ported from zen/shim.js)
   String.random =
     String.random ||
     function (l, c) {
@@ -2727,7 +2727,7 @@ __def('./src/security.js', function(module, __exp){
   var sign = __req('./src/sign.js').default;
   var settings = __req('./src/settings.js').default;
   var u;
-  var Gun = ZEN;
+  var Zen = ZEN;
 
   // --------------- pack / unpack ---------------
 
@@ -2753,7 +2753,7 @@ __def('./src/security.js', function(module, __exp){
           "#": s || d["#"],
           ".": k || d["."],
           ":": (meta || "")[":"],
-          ">": d[">"] || (Gun.state && Gun.state.is ? Gun.state.is(n, k) : 0),
+          ">": d[">"] || (Zen.state && Zen.state.is ? Zen.state.is(n, k) : 0),
         },
         s: sig,
       });
@@ -2783,7 +2783,7 @@ __def('./src/security.js', function(module, __exp){
     }
     var soul = (n && n._ && n._["#"]) || settings.fall_soul;
     var s =
-      (Gun.state && Gun.state.is ? Gun.state.is(n, k) : 0) || settings.fall_state;
+      (Zen.state && Zen.state.is ? Zen.state.is(n, k) : 0) || settings.fall_state;
     if (
       d &&
       4 === d.length &&
@@ -2822,9 +2822,9 @@ __def('./src/security.js', function(module, __exp){
     return parts.slice(0, 2).join(".");
   };
 
-  // --------------- gun security middleware ---------------
+  // --------------- zen security middleware ---------------
 
-  var valid = Gun && Gun.valid;
+  var valid = Zen && Zen.valid;
   var link_is = function (d, l) {
     return "string" == typeof (l = valid && valid(d)) && l;
   };
@@ -2938,7 +2938,7 @@ __def('./src/security.js', function(module, __exp){
         tmp2;
       if (0 <= soul.indexOf("<?")) {
         tmp2 = parseFloat(soul.split("<?")[1] || "");
-        if (tmp2 && state < Gun.state() - tmp2 * 1000) {
+        if (tmp2 && state < Zen.state() - tmp2 * 1000) {
           (tmp2 = msg._) && tmp2.stun && tmp2.stun--;
           return;
         }
@@ -3126,7 +3126,7 @@ __def('./src/security.js', function(module, __exp){
           soul.indexOf("/") > -1
             ? soul.replace(soul.substring(0, soul.indexOf("/") + 1), "")
             : "";
-        String.match = String.match || (Gun.text && Gun.text.match);
+        String.match = String.match || (Zen.text && Zen.text.match);
         var w = Array.isArray(data.w)
           ? data.w
           : typeof data.w === "object" || typeof data.w === "string"
@@ -3551,9 +3551,9 @@ __def('./src/security.js', function(module, __exp){
     }).on.on("secure", msg);
   };
 
-  // --------------- gun plugin ---------------
+  // --------------- zen plugin ---------------
 
-  Gun.on("opt", function (at) {
+  Zen.on("opt", function (at) {
     if (!at.sea) {
       at.sea = { own: {} };
       at.on("put", check, at);
@@ -3732,7 +3732,7 @@ __def('./src/pen.js', function(module, __exp){
     };
 
     // ── pack / unpack (bytecode ↔ base62) ────────────────────────────────────────
-    // Used to store bytecode as the soul/node-ID in GUN graph.
+    // Used to store bytecode as the soul/node-ID in ZEN graph.
     // Soul format: '$' + pen.pack(bytecode)
     // e.g. '$abc123...' (variable length base62)
 
@@ -4462,7 +4462,7 @@ __def('./src/pen.js', function(module, __exp){
 
       // Build predicate bytecode, then append tail bytes AFTER expression root.
       // Tail bytes (0xC0..) are unreachable by WASM VM (which stops after root
-      // expression), and are extracted by scanpolicy() on the GUN bridge layer.
+      // expression), and are extracted by scanpolicy() on the ZEN bridge layer.
       var pred = Array.from(bc.prog(root));
 
       if (spec.sign) pred.push(0xc0);

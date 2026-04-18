@@ -51,7 +51,7 @@ const GUN_PRIMITIVES = [
 ];
 
 var root;
-var Gun;
+var Zen;
 var Radix;
 var Radisk;
 var RFS;
@@ -63,24 +63,24 @@ var RFS;
   root = env.window ? env.window : global;
   try { env.window && root.localStorage && root.localStorage.clear() } catch (e) { }
   //try{ indexedDB.deleteDatabase('radatatest') }catch(e){}
-  if (root.Gun) {
-    root.Gun = root.Gun;
-    // root.Gun.TESTING = true;
+  if (root.Zen) {
+    root.Zen = root.Zen;
+    // root.Zen.TESTING = true;
   } else {
     try { __fs.unlinkSync('data.json') } catch (e) { }
     try { __fsrm(PATH_TO_TEST_DB) } catch (e) { }
-    root.Gun = __gun;
-    root.Gun.TESTING = true;
+    root.Zen = __gun;
+    root.Zen.TESTING = true;
   }
 
   try { var expect = global.expect = __expect } catch (e) { }
 
-  if (!root.Gun.SEA) {}
+  if (!root.Zen.SEA) {}
 }(this));
 
-Gun = root.Gun;
-Radix = Gun?.window?.Radix || __radix;
-Radisk = Gun?.window?.Radisk || __radisk3;
+Zen = root.Zen;
+Radix = Zen?.window?.Radix || __radix;
+Radisk = Zen?.window?.Radisk || __radisk3;
 RFS = __rfs;
 const RE_UNPRINTABLE = /[^\x20-\x7E]/;
 const RE_APOSTROPHES = /'/g;

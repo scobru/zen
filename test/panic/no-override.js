@@ -61,7 +61,7 @@ describe("No Empty Object on .Once", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     return server.run(
       function (test) {
         var env = test.props;
@@ -82,13 +82,13 @@ describe("No Empty Object on .Once", function () {
         var server = __http.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
-        var Gun = __index;
-        var gun = Gun({ file: env.i + "data", web: server });
+        var Zen = __index;
+        var zen = Zen({ file: env.i + "data", web: server });
         server.listen(port, function () {});
         setTimeout(function () {
-          gun.get("survey").get("231119").get("x").put({ z: 1 });
-          gun.get("survey").get("231119").get("y").put({ z: 1 });
-          gun
+          zen.get("survey").get("231119").get("x").put({ z: 1 });
+          zen.get("survey").get("231119").get("y").put({ z: 1 });
+          zen
             .get("survey")
             .get("231119")
             .once(function (data) {
@@ -109,7 +109,7 @@ describe("No Empty Object on .Once", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -118,10 +118,10 @@ describe("No Empty Object on .Once", function () {
           function (test) {
             localStorage.clear();
             var env = test.props;
-            var gun = Gun(
-              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+            var zen = Zen(
+              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
             );
-            window.ref = gun.get("survey").get("231119");
+            window.ref = zen.get("survey").get("231119");
           },
           { i: (i += 1), config: config },
         ),

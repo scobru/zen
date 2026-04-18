@@ -1,12 +1,12 @@
 import __zen from "./zen.js";
 
-var Gun = typeof window !== "undefined" ? window.ZEN || window.Zen : __zen;
+var Zen = typeof window !== "undefined" ? window.ZEN || window.Zen : __zen;
 var dam = "nts";
 var smooth = 2;
 
-Gun.on("create", function (root) {
+Zen.on("create", function (root) {
   // switch to DAM, deprecated old
-  Gun.log.once("nts", "gun/nts is removed deprecated old");
+  Zen.log.once("nts", "zen/nts is removed deprecated old");
   this.to.next(root);
   return; // stub out for now. TODO: IMPORTANT! re-add back in later.
   var opt = root.opt,
@@ -30,9 +30,9 @@ Gun.on("create", function (root) {
     var now = Date.now(); // Lack of drift intentional, provides more accurate RTT
     connection.latency = (now - msg.nts[0]) / 2;
     connection.offset =
-      msg.nts[1] + connection.latency - (now + Gun.state.drift);
+      msg.nts[1] + connection.latency - (now + Zen.state.drift);
     console.log(connection.offset);
-    Gun.state.drift += connection.offset / (connections.length + smooth);
+    Zen.state.drift += connection.offset / (connections.length + smooth);
     console.log(
       `Update time by local: ${connection.offset} / ${connections.length + smooth}`,
     );
@@ -41,7 +41,7 @@ Gun.on("create", function (root) {
   // Handle echo & setting based on known connection latency as well
   mesh.hear[dam] = function (msg, peer) {
     console.log("MSG", msg);
-    var now = Date.now() + Gun.state.drift;
+    var now = Date.now() + Zen.state.drift;
     var connection = connections.find(
       (connection) => connection.peer.id == peer.id,
     );
@@ -49,7 +49,7 @@ Gun.on("create", function (root) {
     if (msg.nts.length >= 2) return response(msg, connection);
     mesh.say({ dam, "@": msg["#"], nts: msg.nts.concat(now) }, peer);
     connection.offset = msg.nts[0] + connection.latency - now;
-    Gun.state.drift += connection.offset / (connections.length + smooth);
+    Zen.state.drift += connection.offset / (connections.length + smooth);
     console.log(
       `Update time by remote: ${connection.offset} / ${connections.length + smooth}`,
     );

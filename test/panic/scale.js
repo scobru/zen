@@ -65,15 +65,15 @@ var browsers = clients.excluding(servers);
 // PANIC works with Mocha and other testing libraries!
 // So it is easy to use PANIC.
 
-describe("Stress test GUN with SEA users causing PANIC!", function () {
+describe("Stress test ZEN with SEA users causing PANIC!", function () {
   this.timeout(10 * 60 * 1000);
 
   it("Servers have joined!", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("GUN has spawned!", function () {
-    // Once they are, we need to actually spin up the gun server.
+  it("ZEN has spawned!", function () {
+    // Once they are, we need to actually spin up the zen server.
     var tests = [],
       i = 0;
     servers.each(function (client) {
@@ -286,7 +286,7 @@ describe("Stress test GUN with SEA users causing PANIC!", function () {
   });
 
   /* MODEL TEST
-	it("Browsers initialized gun!", function(){
+	it("Browsers initialized zen!", function(){
 		var tests = [], ids = {}, i = 0;
 		browsers.each(function(client, id){
 			ids[id] = 1;

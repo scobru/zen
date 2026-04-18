@@ -19,9 +19,9 @@ app.use(Zen.serve);
 app.use(express.static(__dirname));
 
 var server = app.listen(port);
-var gun = Zen({ file: "data", web: server });
+var zen = Zen({ file: "data", web: server });
 
 global.ZEN = Zen; /// make global to `node --inspect` - debug only
-global.gun = gun; /// make global to `node --inspect` - debug only
+global.zen = zen; /// make global to `node --inspect` - debug only
 
 console.log("Server started on port " + port + " with /zen");

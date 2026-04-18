@@ -29,21 +29,21 @@ describe('ZEN', function(){
  		try{ __fsrm('tmp/radatatest') }catch(e){}
 		try{ var expect = global.expect = __expect }catch(e){}
 
-		//root.Gun = root.Gun || load('../gun');
-		if(root.Gun){
-			root.Gun = root.Gun;
-			root.Gun.TESTING = true;
+		//root.Zen = root.Zen || load('../zen');
+		if(root.Zen){
+			root.Zen = root.Zen;
+			root.Zen.TESTING = true;
 		} else {
-            root.Gun = __gun;
-            root.Gun.TESTING = true;
-            Gun.serve = __serve;
+            root.Zen = __gun;
+            root.Zen.TESTING = true;
+            Zen.serve = __serve;
         }
 	}(this));
 
 	describe('erro sea', function(){
 		it('verbose console.log debugging', function(done) {
-			var gun = Gun({multicast:false, axe:false});
-			var ref = gun.get('test').get('1');
+			var zen = Zen({multicast:false, axe:false});
+			var ref = zen.get('test').get('1');
 			var vput = 'SEA{}';
 			ref.put(vput, function(ack, yay){ console.log('ACK: ', ack); /// must ack all
 		          ref.once(function(v,k) { console.log('SALVOU k:%s, v:', k, v);

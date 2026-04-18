@@ -1,6 +1,6 @@
 import React, { Component } from "react";
-import Gun from "@akaoio/zen";
-// import path from 'gun/lib/path' // TODO: use zen equivalent
+import Zen from "@akaoio/zen";
+// import path from 'zen/lib/path' // TODO: use zen equivalent
 import "./style.css";
 
 const formatTodos = (todos) =>
@@ -9,14 +9,14 @@ const formatTodos = (todos) =>
     .filter((t) => Boolean(t.val) && t.key !== "_");
 
 export default class Todos extends Component {
-  constructor({ gun }) {
+  constructor({ zen }) {
     super();
-    this.gun = gun.get("todos");
+    this.zen = zen.get("todos");
     this.state = { newTodo: "", todos: [] };
   }
 
   componentWillMount() {
-    this.gun.on((todos) =>
+    this.zen.on((todos) =>
       this.setState({
         todos: formatTodos(todos),
       }),
@@ -25,11 +25,11 @@ export default class Todos extends Component {
 
   add = (e) => {
     e.preventDefault();
-    this.gun.path(Gun.text.random()).put(this.state.newTodo);
+    this.zen.path(Zen.text.random()).put(this.state.newTodo);
     this.setState({ newTodo: "" });
   };
 
-  del = (key) => this.gun.path(key).put(null);
+  del = (key) => this.zen.path(key).put(null);
 
   handleChange = (e) => this.setState({ newTodo: e.target.value });
 

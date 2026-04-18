@@ -13,7 +13,7 @@ const __dirname = __dirnameOf(__filename);
 describe("PANIC!", function () {
   this.timeout(1000 * 100);
 
-  var Gun = __index;
+  var Zen = __index;
 
   var panic = __panic_server;
 
@@ -32,7 +32,7 @@ describe("PANIC!", function () {
       .pipe(res); // stream
   });
 
-  var gun = Gun({
+  var zen = Zen({
     web: server,
   });
 
@@ -84,12 +84,12 @@ describe("PANIC!", function () {
     it("browsers", function (done) {
       alice
         .run(function () {
-          var sync = gun.get("sync");
+          var sync = zen.get("sync");
           sync.put({ hello: "world" });
         })
         .then(function () {
           return bob.run(function (done, ctx) {
-            var sync = gun.get("sync");
+            var sync = zen.get("sync");
             sync.on(function (val) {
               if (val.hello === "world") {
                 done();

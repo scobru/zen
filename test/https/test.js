@@ -30,7 +30,7 @@ export default function (port, file, cb, inject) {
     function (req, res) {
       if (Zen.serve(req, res)) {
         return;
-      } // filters gun requests!
+      } // filters zen requests!
       var file;
       try {
         file = __fs.readFileSync(
@@ -48,7 +48,7 @@ export default function (port, file, cb, inject) {
     },
   );
 
-  var gun = Zen({
+  var zen = Zen({
     file: file || "data",
     web: server,
     localStorage: false,

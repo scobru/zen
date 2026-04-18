@@ -61,7 +61,7 @@ describe("Broadcast Video", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     var tests = [],
       i = 0;
     servers.each(function (client) {
@@ -80,18 +80,18 @@ describe("Broadcast Video", function () {
               res.end("I am " + env.i + "!");
             });
             var port = env.config.port + env.i;
-            var Gun = __index;
+            var Zen = __index;
             var peers = [],
               i = env.config.servers;
             while (i--) {
               var tmp = env.config.port + (i + 1);
               if (port != tmp) {
                 // ignore ourselves
-                peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+                peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
               }
             }
             console.log(port, " connect to ", peers);
-            var gun = Gun({ file: env.i + "data", peers: peers, web: server });
+            var zen = Zen({ file: env.i + "data", peers: peers, web: server });
             server.listen(port, function () {
               test.done();
             });
@@ -155,7 +155,7 @@ describe("Broadcast Video", function () {
     return Promise.all(tests);
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -169,10 +169,10 @@ describe("Broadcast Video", function () {
               indexedDB.deleteDatabase("radata");
             } catch (e) {}
             var env = test.props;
-            var gun = Gun(
-              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+            var zen = Zen(
+              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
             );
-            window.gun = gun;
+            window.zen = zen;
           },
           { i: (i += 1), config: config },
         ),
@@ -188,7 +188,7 @@ describe("Broadcast Video", function () {
         test.async();
         var stream = (window.stream = new GunStreamer({
           url: "https://cdn.jsdelivr.net/gh/QVDev/GunStreamer/js/parser_worker.js",
-          gun: gun,
+          zen: zen,
           streamId: "livestream",
           dbRecord: "streams",
         }));
@@ -236,7 +236,7 @@ describe("Broadcast Video", function () {
           streamerId: "video",
           debug: true, //For debug logs
         });
-        gun.get("livestream").on(function (data) {
+        zen.get("livestream").on(function (data) {
           window.data = data;
           view.onStreamerData(data);
         });

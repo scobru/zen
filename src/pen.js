@@ -156,7 +156,7 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
   };
 
   // ── pack / unpack (bytecode ↔ base62) ────────────────────────────────────────
-  // Used to store bytecode as the soul/node-ID in GUN graph.
+  // Used to store bytecode as the soul/node-ID in ZEN graph.
   // Soul format: '$' + pen.pack(bytecode)
   // e.g. '$abc123...' (variable length base62)
 
@@ -886,7 +886,7 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
 
     // Build predicate bytecode, then append tail bytes AFTER expression root.
     // Tail bytes (0xC0..) are unreachable by WASM VM (which stops after root
-    // expression), and are extracted by scanpolicy() on the GUN bridge layer.
+    // expression), and are extracted by scanpolicy() on the ZEN bridge layer.
     var pred = Array.from(bc.prog(root));
 
     if (spec.sign) pred.push(0xc0);

@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 import { dirname as __dirnameOf } from "node:path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = __dirnameOf(__filename);
-const gun = Zen();
+const zen = Zen();
 
-gun.get("hub").on((data) => {
+zen.get("hub").on((data) => {
   console.log(data);
 });
 

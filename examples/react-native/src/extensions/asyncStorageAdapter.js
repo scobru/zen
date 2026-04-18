@@ -1,4 +1,4 @@
-import * as Gun from "@akaoio/zen";
+import * as Zen from "@akaoio/zen";
 import { AsyncStorage } from "react-native";
 
 const readNode = (key, cb) => {
@@ -22,7 +22,7 @@ const read = (request, db) => {
     } else {
       db.on("in", {
         "@": dedupid,
-        put: Gun.graph.node(data),
+        put: Zen.graph.node(data),
         err,
       });
     }

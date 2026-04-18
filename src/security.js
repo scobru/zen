@@ -5,7 +5,7 @@ import sign from "./sign.js";
 import settings from "./settings.js";
 
 var u;
-var Gun = ZEN;
+var Zen = ZEN;
 
 // --------------- pack / unpack ---------------
 
@@ -31,7 +31,7 @@ settings.pack = function (d, cb, k, n, s) {
         "#": s || d["#"],
         ".": k || d["."],
         ":": (meta || "")[":"],
-        ">": d[">"] || (Gun.state && Gun.state.is ? Gun.state.is(n, k) : 0),
+        ">": d[">"] || (Zen.state && Zen.state.is ? Zen.state.is(n, k) : 0),
       },
       s: sig,
     });
@@ -61,7 +61,7 @@ settings.unpack = function (d, k, n) {
   }
   var soul = (n && n._ && n._["#"]) || settings.fall_soul;
   var s =
-    (Gun.state && Gun.state.is ? Gun.state.is(n, k) : 0) || settings.fall_state;
+    (Zen.state && Zen.state.is ? Zen.state.is(n, k) : 0) || settings.fall_state;
   if (
     d &&
     4 === d.length &&
@@ -100,9 +100,9 @@ settings.pub = function (s) {
   return parts.slice(0, 2).join(".");
 };
 
-// --------------- gun security middleware ---------------
+// --------------- zen security middleware ---------------
 
-var valid = Gun && Gun.valid;
+var valid = Zen && Zen.valid;
 var link_is = function (d, l) {
   return "string" == typeof (l = valid && valid(d)) && l;
 };
@@ -216,7 +216,7 @@ check.pipe = {
       tmp2;
     if (0 <= soul.indexOf("<?")) {
       tmp2 = parseFloat(soul.split("<?")[1] || "");
-      if (tmp2 && state < Gun.state() - tmp2 * 1000) {
+      if (tmp2 && state < Zen.state() - tmp2 * 1000) {
         (tmp2 = msg._) && tmp2.stun && tmp2.stun--;
         return;
       }
@@ -404,7 +404,7 @@ check.$vfy = function (
         soul.indexOf("/") > -1
           ? soul.replace(soul.substring(0, soul.indexOf("/") + 1), "")
           : "";
-      String.match = String.match || (Gun.text && Gun.text.match);
+      String.match = String.match || (Zen.text && Zen.text.match);
       var w = Array.isArray(data.w)
         ? data.w
         : typeof data.w === "object" || typeof data.w === "string"
@@ -829,9 +829,9 @@ check.any = function (eve, msg, val, key, soul, at, no) {
   }).on.on("secure", msg);
 };
 
-// --------------- gun plugin ---------------
+// --------------- zen plugin ---------------
 
-Gun.on("opt", function (at) {
+Zen.on("opt", function (at) {
   if (!at.sea) {
     at.sea = { own: {} };
     at.on("put", check, at);

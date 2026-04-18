@@ -79,7 +79,7 @@ describe("Dedup load balancing GETs", function () {
     return relays.atLeast(config.relays);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     var tests = [],
       i = 0;
     relays.each(function (client) {
@@ -98,12 +98,12 @@ describe("Dedup load balancing GETs", function () {
               res.end("I am " + env.i + "!");
             });
             var port = env.config.port + env.i;
-            var Gun;
+            var Zen;
             try {
-              Gun = __index;
+              Zen = __index;
             } catch (e) {
               console.log(
-                "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+                "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
               );
             }
             var peers = [],
@@ -112,7 +112,7 @@ describe("Dedup load balancing GETs", function () {
               var tmp = env.config.port + (i + 1);
               if (port != tmp) {
                 // ignore ourselves
-                peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+                peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
               }
             }
 
@@ -135,7 +135,7 @@ describe("Dedup load balancing GETs", function () {
               return;
             }
 
-            var gun = Gun({
+            var zen = Zen({
               peers: peers,
               web: server,
               rad: false,
@@ -147,7 +147,7 @@ describe("Dedup load balancing GETs", function () {
               test.done();
             });
 
-            //gun.get('test').put({tmp: 1}); // temporary workaround for bug.
+            //zen.get('test').put({tmp: 1}); // temporary workaround for bug.
           },
           { i: (i += 1), config: config },
         ),
@@ -162,7 +162,7 @@ describe("Dedup load balancing GETs", function () {
   });
   // end PANIC template -->
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (browser, id) {
@@ -178,18 +178,18 @@ describe("Dedup load balancing GETs", function () {
 
             // start with the first peer:
             var env = test.props;
-            var gun = Gun({
+            var zen = Zen({
               peers:
                 "http://" +
                 env.config.IP +
                 ":" +
                 (env.config.port + 1) +
-                "/gun",
+                "/zen",
               localStorage: false,
             });
 
-            window.gun = gun;
-            window.ref = gun.get("test");
+            window.zen = zen;
+            window.ref = zen.get("test");
 
             ref.on(function (data) {});
           },
@@ -222,7 +222,7 @@ describe("Dedup load balancing GETs", function () {
 					hear(raw, peer);
 				}*/
 
-            gun.on("put", function (msg) {
+            zen.on("put", function (msg) {
               var ok = msg.ok;
               if (ok["@"] > 2) {
                 console.log("Relay did not decrement!");
@@ -234,7 +234,7 @@ describe("Dedup load balancing GETs", function () {
                 return;
               }
               //console.log("WAS THE SPECIAL ONE TO ACK!", JSON.stringify(msg));
-              gun.on("out", { "@": msg["#"], ok: { yay: 1 } });
+              zen.on("out", { "@": msg["#"], ok: { yay: 1 } });
             });
           },
           { i: (i += 1), config: config },
@@ -260,7 +260,7 @@ describe("Dedup load balancing GETs", function () {
 			var say = dam.say;
 			dam.say = function(raw, peer){
 				say(raw, peer);
-				//console.log("said:", JSON.stringify(raw), dam.near, Object.keys(gun._.opt.peers).join(','));
+				//console.log("said:", JSON.stringify(raw), dam.near, Object.keys(zen._.opt.peers).join(','));
 			}
 			var hear = dam.hear;
 			dam.hear = function(raw, peer){
