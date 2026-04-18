@@ -42,9 +42,9 @@ Private keys are never written to the graph, but now use the same base62 alphabe
 
 **Backward compatibility:**
 
-- `SEA.sign`, `SEA.secret` — accept **both** old (43-char base64url) and new (44-char base62) `priv`/`epriv` transparently.
-- `SEA.verify`, `SEA.sign`, `SEA.secret` — accept **both** old (87-char) and new (88-char) `pub`/`epub` transparently.
-- `gun.user().auth()` / `gun.user().create()` — continues to work; old user nodes at `~oldPub` are routed correctly.
+- `ZEN.sign`, `ZEN.secret` — accept **both** old (43-char base64url) and new (44-char base62) `priv`/`epriv` transparently.
+- `ZEN.verify`, `ZEN.sign`, `ZEN.secret` — accept **both** old (87-char) and new (88-char) `pub`/`epub` transparently.
+- `zen.user().auth()` / `zen.user().create()` — continues to work; old user nodes at `~oldPub` are routed correctly.
 - **Tilde shard (`~/...`)** — **strictly requires base62 pub** (shard segment `bad` regex is `/[^0-9a-zA-Z]/`). Old-format pubs cannot be registered in shard paths.
 
 **Detection:**
@@ -59,18 +59,18 @@ Private keys are never written to the graph, but now use the same base62 alphabe
 // New:  priv.length === 44 && /^[A-Za-z0-9]{44}$/.test(priv)
 ```
 
-**`SEA.base62` utility (exposed by `sea.js`):**
+**`ZEN.base62` utility (exposed by `sea.js`):**
 
 ```javascript
 // 32-byte Uint8Array → 44-char base62 (useful for WebAuthn raw coordinates)
-SEA.base62.bufToB62(uint8array); // → "44charBase62String"
+ZEN.base62.bufToB62(uint8array); // → "44charBase62String"
 
 // Convert between base64url ↔ base62 (for JWK interop)
-SEA.base62.b64ToB62(base64urlStr); // → 44-char base62
-SEA.base62.b62ToB64(b62str); // → 43-char base64url  (WebCrypto JWK input)
+ZEN.base62.b64ToB62(base64urlStr); // → 44-char base62
+ZEN.base62.b62ToB64(b62str); // → 43-char base64url  (WebCrypto JWK input)
 
 // Parse either format → { x, y } base64url (for WebCrypto JWK import)
-SEA.base62.pubToJwkXY(pub); // accepts both 87-char and 88-char pub
+ZEN.base62.pubToJwkXY(pub); // accepts both 87-char and 88-char pub
 ```
 
 ---
@@ -172,8 +172,8 @@ Instead of random key generation, you can create reproducible keys from a passph
 
 ```javascript
 // Same seed always produces the same keys
-const pair1 = await SEA.pair(null, { seed: "my secret passphrase" });
-const pair2 = await SEA.pair(null, { seed: "my secret passphrase" });
+const pair1 = await ZEN.pair(null, { seed: "my secret passphrase" });
+const pair2 = await ZEN.pair(null, { seed: "my secret passphrase" });
 console.log(pair1.pub === pair2.pub); // true
 ```
 
@@ -200,14 +200,14 @@ Derive child keys from parent keys using additive elliptic curve operations. Ena
 - Shared public key derivation
 
 ```javascript
-const master = await SEA.pair();
-const child = await SEA.pair(null, {
+const master = await ZEN.pair();
+const child = await ZEN.pair(null, {
   priv: master.priv,
   seed: "child-1",
 });
 
 // Multiple parties can derive the same public key independently
-const aliceView = await SEA.pair(null, {
+const aliceView = await ZEN.pair(null, {
   pub: master.pub,
   seed: "child-1",
 });
@@ -280,7 +280,7 @@ Bring your own key management system or signing service:
 
 ```javascript
 // Use any key pair without maintaining a session
-const pair = await SEA.pair();
+const pair = await ZEN.pair();
 gun
   .get(`~${pair.pub}`)
   .get("data")
@@ -332,15 +332,15 @@ Focus areas:
 SEA firewall rules that let anyone build a peer-discoverable index of public keys without any central authority:
 
 - Root node (`~`) and intermediate shard nodes must be exact links to their canonical child soul
-- **Intermediate writes require an `authenticator`** whose pub key starts with the path prefix — prevents spam; signature is bound to the Gun state timestamp via `SEA.opt.pack` so pre-signed writes are rejected
+- **Intermediate writes require an `authenticator`** whose pub key starts with the path prefix — prevents spam; signature is bound to the ZEN state timestamp via `ZEN.opt.pack` so pre-signed writes are rejected
 - Leaf nodes hold a signed scalar payload that must equal the reconstructed public key
-- Standard authenticator support: `SEA.pair` object or async signing function
+- Standard authenticator support: `ZEN.pair` object or async signing function
 - When using a function authenticator on an **intermediate** node, pass `opt.pub` explicitly (a function has no `.pub` property)
 - Configurable via `check.$sh` — chunk size, max depth, pub length, etc.
 
 ```javascript
 // Write a first-level intermediate node
-const pair = await SEA.pair();
+const pair = await ZEN.pair();
 const key = pair.pub.slice(0, 2);
 gun
   .get("~")
@@ -351,7 +351,7 @@ gun
 const chunks = pair.pub.match(/.{1,2}/g) || [];
 const leafKey = chunks.pop();
 const leafSoul = chunks.length ? "~/" + chunks.join("/") : "~";
-gun.get(leafSoul).get(leafKey).put(pair.pub, null, { authenticator: pair });
+zen.get(leafSoul).get(leafKey).put(pair.pub, null, { authenticator: pair });
 ```
 
 📖 **[Read full documentation →](./tilde-shard.md)**
@@ -366,17 +366,17 @@ This makes GUN's entire library layer runnable in Web Workers, Service Workers, 
 
 - Every `window` reference in `lib/*.js` replaced with `globalThis`
 - Storage adapters (`opfs.js`, `rindexed.js`, `radisk.js`, `rls.js`) self-register on `globalThis` — discoverable inside Workers
-- `Gun` class resolution from global scope works in all environments
-- `Gun.window` property retained as an internal sentential — set to `globalThis` when running in a Worker
+- `ZEN` class resolution from global scope works in all environments
+- `ZEN.window` property retained as an internal sentential — set to `globalThis` when running in a Worker
 - DOM-dependent helpers (`dom.js`, `fun.js`) silently no-op in headless environments
 
 ```javascript
 // worker.js — GUN now works fully inside a Web Worker
-import Gun from "/gun.js";
+import ZEN from "/zen.js";
 import "/lib/opfs.js"; // OPFS — Worker-safe where supported
 import "/lib/rindexed.js"; // IndexedDB — Worker-safe
 
-const gun = Gun({ peers: ["https://relay.example.com/gun"] });
+const zen = ZEN({ peers: ["https://relay.example.com/gun"] });
 gun
   .get("~")
   .map()
@@ -397,17 +397,17 @@ These features are designed to work together seamlessly:
 
 ```javascript
 // Master key from mnemonic
-const master = await SEA.pair(null, {
+const master = await ZEN.pair(null, {
   seed: "correct horse battery staple quantum entropy",
 });
 
 // Derive child keys for different purposes
-const account0 = await SEA.pair(null, {
+const account0 = await ZEN.pair(null, {
   priv: master.priv,
   seed: "m/44'/0'/0'/0",
 });
 
-const account1 = await SEA.pair(null, {
+const account1 = await ZEN.pair(null, {
   priv: master.priv,
   seed: "m/44'/0'/1'/0",
 });
@@ -428,12 +428,12 @@ gun
 const { credential, pub, authenticator } = await setupWebAuthn();
 
 // Derive context-specific keys from WebAuthn base
-const workKey = await SEA.pair(null, {
+const workKey = await ZEN.pair(null, {
   pub: pub,
   seed: "work-context",
 });
 
-const personalKey = await SEA.pair(null, {
+const personalKey = await ZEN.pair(null, {
   pub: pub,
   seed: "personal-context",
 });
@@ -445,7 +445,7 @@ const personalKey = await SEA.pair(null, {
 
 ```javascript
 // On Device 1: Generate and use keys
-const pair = await SEA.pair(null, { seed: userPassphrase });
+const pair = await ZEN.pair(null, { seed: userPassphrase });
 gun
   .get(`~${pair.pub}`)
   .get("data")
@@ -454,7 +454,7 @@ gun
   });
 
 // On Device 2: Recover same keys
-const recoveredPair = await SEA.pair(null, { seed: userPassphrase });
+const recoveredPair = await ZEN.pair(null, { seed: userPassphrase });
 console.log(recoveredPair.pub === pair.pub); // true
 gun
   .get(`~${recoveredPair.pub}`)
@@ -479,18 +479,18 @@ npm install gun
 Or use directly in browser:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gun/zen.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
 ```
 
 ### Basic Usage
 
 ```javascript
-// Initialize Gun
-const gun = Gun();
+// Initialize ZEN
+const zen = ZEN();
 
 // Create deterministic keys
-const pair = await SEA.pair(null, { seed: "my-recovery-phrase" });
+const pair = await ZEN.pair(null, { seed: "my-recovery-phrase" });
 
 // Write data with external authenticator
 gun
@@ -581,7 +581,7 @@ Working examples are provided in the `examples/` directory:
 
 ## 📖 API Reference
 
-### `SEA.pair(callback, options)`
+### `ZEN.pair(callback, options)`
 
 Generate a cryptographic key pair.
 
@@ -597,13 +597,13 @@ Generate a cryptographic key pair.
 
 ```javascript
 // Random generation (original)
-const pair1 = await SEA.pair();
+const pair1 = await ZEN.pair();
 
 // Seed-based generation (new)
-const pair2 = await SEA.pair(null, { seed: "my-seed" });
+const pair2 = await ZEN.pair(null, { seed: "my-seed" });
 
 // Additive derivation (new)
-const pair3 = await SEA.pair(null, {
+const pair3 = await ZEN.pair(null, {
   priv: pair1.priv,
   seed: "child",
 });
@@ -611,11 +611,11 @@ const pair3 = await SEA.pair(null, {
 
 ### External Authenticator Options
 
-When using `gun.get().put(data, ack, options)`:
+When using `zen.get().put(data, ack, options)`:
 
 **`options.opt.authenticator`:**
 
-- `SEA.pair` object: Use key pair directly
+- `ZEN.pair` object: Use key pair directly
 - `Function`: Custom signing function `(data) => Promise<Signature>`
 - `WebAuthn Response`: WebAuthn assertion response
 
@@ -630,12 +630,12 @@ When using `gun.get().put(data, ack, options)`:
 
 ```javascript
 // Own graph - just authenticator
-gun.get(`~${pub}`).put(data, null, {
+zen.get(`~${pub}`).put(data, null, {
   opt: { authenticator: pair },
 });
 
 // Other's graph - need pub and cert
-gun.get(`~${ownerPub}`).put(data, null, {
+zen.get(`~${ownerPub}`).put(data, null, {
   opt: {
     authenticator: myPair,
     pub: myPair.pub,
@@ -666,8 +666,8 @@ Same as GunDB - see [LICENSE.md](../LICENSE.md)
 
 ## 🔗 Resources
 
-- [GunDB Main Documentation](https://gun.eco/docs/)
-- [SEA Documentation](https://gun.eco/docs/SEA)
+- [GunDB Main Documentation](https://zen.eco/docs/)
+- [SEA Documentation](https://zen.eco/docs/SEA)
 - [WebAuthn Specification](https://www.w3.org/TR/webauthn-2/)
 - [BIP32 - Hierarchical Deterministic Wallets](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)
 - [BIP39 - Mnemonic Phrases](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
