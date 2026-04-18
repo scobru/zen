@@ -237,27 +237,101 @@ src/                  — runtime source (source of truth)
   valid.js            — value validation
   onto.js             — doubly-linked list event emitter
   root.js             — ZEN constructor, universe() pipeline
+  index.js            — main entry point
   core.js             — graph operations
   mesh.js             — P2P networking, JSON parse, batching
-  sea/                — crypto: pair, sign, verify, encrypt, hash, certify
-  curves/             — ECC (secp256k1, P-256) BigInt + Zig sources
-  keccak256.js        — WASM-accelerated Keccak-256
-  ripemd160.js        — WASM-accelerated RIPEMD-160
-  base62.js           — WASM-accelerated base62
+  websocket.js        — WebSocket transport layer
+  chain.js            — method chaining logic
+  get.js              — graph navigation
+  put.js              — graph writes
+  on.js               — event subscriptions
+  map.js              — map/reduce operations
+  set.js              — unordered collections
+  back.js             — chain traversal
+  
+  # Crypto (formerly SEA, now integrated into ZEN)
+  pair.js             — key pair generation
+  sign.js             — signing
+  verify.js           — signature verification
+  encrypt.js          — encryption
+  decrypt.js          — decryption
+  secret.js           — ECDH shared secrets
+  hash.js             — hashing (SHA-256, Keccak-256)
+  certify.js          — certificates
+  aeskey.js           — AES key derivation
+  
+  # Curves & formats
+  curves/             — ECC implementations
+    secp256k1.js      — secp256k1 curve (Bitcoin/Ethereum)
+    secp256k1.zig     — Zig implementation
+    p256.js           — P-256/secp256r1 curve
+    p256.zig          — Zig implementation
+    utils.js          — curve utilities
+    utils.zig         — Zig utilities
+  curves.js           — curve registry
+  format.js           — key format conversions (base62, EVM, BTC)
+  keyid.js            — key identifiers
+  
+  # WASM-accelerated crypto
+  keccak256.js        — Keccak-256 wrapper
+  keccak256.zig       — Zig implementation
+  ripemd160.js        — RIPEMD-160 wrapper
+  ripemd160.zig       — Zig implementation
+  base62.js           — base62 encode/decode wrapper
+  base62.zig          — Zig implementation
+  sha256.js           — SHA-256 wrapper
+  sha256.zig          — Zig implementation
+  hmac_sha256.zig     — HMAC-SHA-256 implementation
   crypto_wasm_bridge.js — lazy WASM loader + typed wrappers
+  crypto_wasm.zig     — WASM crypto module source
+  wasm.zig            — WASM utilities
+  
+  # Policy engine
   pen.js              — PEN policy VM
+  pen.zig             — PEN implementation in Zig
+  
+  # Utilities
+  json.js             — JSON parsing & YSON
+  buffer.js           — buffer utilities
+  array.js            — array utilities
+  ask.js              — query handling
+  book.js             — peer registry
+  graph.js            — graph utilities
+  locstore.js         — local storage adapter
+  runtime.js          — runtime detection
+  security.js         — security utilities
+  settings.js         — configuration
 
 zen.js               — bundled browser/Node.js artifact
 zen.min.js           — minified
 crypto.wasm          — 66KB WASM crypto module
 pen.wasm             — ~27KB WASM policy engine
 
-lib/                 — storage adapters, build scripts
+lib/                 — storage adapters, extensions, build scripts
   server.js          — ZEN relay / server identity
   build-zen.js       — bundle script
   build-pen.js       — PEN WASM build
   build-crypto.js    — crypto WASM build
-  radisk.js / rfs.js / rindexed.js / rs3.js / ...
+  
+  # Storage adapters
+  store.js           — storage abstraction
+  radisk.js          — RAD/Radisk (default)
+  radix.js           — Radix tree implementation
+  rfs.js             — filesystem (Node.js)
+  rindexed.js        — IndexedDB (browser)
+  opfs.js            — OPFS (browser)
+  rs3.js             — AWS S3
+  memdisk.js         — in-memory storage
+  
+  # Extensions & utilities
+  axe.js             — automatic peering / DHT
+  webrtc.js          — WebRTC transport
+  promise.js         — Promise API
+  then.js            — Promise chaining
+  yson.js            — YSON parser
+  verify.js          — verification utilities
+  cryptomodules.js   — crypto module loader
+  and 100+ other adapters, utilities, middleware...
 
 test/
   bench/             — micro-benchmark harness + 7 suites
