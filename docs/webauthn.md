@@ -457,39 +457,6 @@ const relaxedAuth = async (data) => {
 7. **Handle errors gracefully** with user-friendly messages
 8. **Verify RP ID** matches your domain exactly
 
-## Migration Guide
-
-### From Traditional SEA Authentication
-
-```javascript
-// OLD: Traditional SEA auth
-const user = zen.user();
-await user.create("alice", "password123");
-await user.auth("alice", "password123");
-
-// NEW: WebAuthn
-const { credential, pub, authenticator } = await registerWebAuthn();
-zen.get(`~${pub}`).get("data").put("value", null, {
-  opt: { authenticator },
-});
-```
-
-### Hybrid Approach
-
-```javascript
-// Support both traditional and WebAuthn
-async function hybridAuth(gun, username, password, useWebAuthn) {
-  if (useWebAuthn) {
-    const { pub, authenticator } = await webAuthnLogin(username);
-    return { pub, authenticator };
-  } else {
-    const user = zen.user();
-    await user.auth(username, password);
-    return { pub: user.is.pub, authenticator: user._.sea };
-  }
-}
-```
-
 ## Example: Complete WebAuthn Flow
 
 See [examples/webauthn.html](../examples/webauthn.html) and [examples/webauthn.js](../examples/webauthn.js) for a complete working example with UI.

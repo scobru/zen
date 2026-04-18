@@ -668,7 +668,7 @@ function penStage(ctx, next, reject) {
     soul,
     ctx.state || 0,
     Date.now(),
-    (ctx.at && ctx.at.user && ctx.at.user.is && ctx.at.user.is.pub) || "",
+    (ctx.at && ctx.at.user && ctx.at.user.is && ctx.at.user.is.pub) || "", // legacy internal structure
   ];
 
   // 4. Run predicate on WASM (synchronous)

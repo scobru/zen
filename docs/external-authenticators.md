@@ -521,17 +521,17 @@ type SEAPair = {
 3. **Don't skip certificate validation**: Always verify certificates when writing to others' graphs
 4. **Don't ignore errors**: Handle signing failures gracefully
 
-## Comparison: Session vs External Authenticator
+## Comparison: External Authenticator Approach
 
-| Feature              | Session (`user.auth()`) | External Authenticator |
-| -------------------- | ----------------------- | ---------------------- |
-| Setup                | Login required          | No session needed      |
-| State                | Stateful                | Stateless              |
-| Switching identities | Logout/login            | Per-operation          |
-| Custom signing       | ❌ Not supported        | ✅ Supported           |
-| Hardware keys        | ❌ Limited              | ✅ Full support        |
-| Complexity           | Simple                  | More flexible          |
-| Use case             | Traditional apps        | Modern, multi-identity |
+| Feature              | External Authenticator |
+| -------------------- | ---------------------- |
+| Setup                | No session needed      |
+| State                | Stateless              |
+| Switching identities | Per-operation          |
+| Custom signing       | ✅ Supported           |
+| Hardware keys        | ✅ Full support        |
+| Complexity           | Flexible               |
+| Use case             | Modern, multi-identity |
 
 ## Testing
 
@@ -612,51 +612,6 @@ zen
   .get(`~${pub}`)
   .get("debug")
   .put("debug data", null, { authenticator: debugAuth });
-```
-
-## Migration from Session-Based Auth
-
-### Before (Session-based)
-
-```javascript
-const zen = new ZEN();
-const user = zen.user();
-
-await user.create("alice", "password");
-await user.auth("alice", "password");
-
-user.get("profile").put({ name: "Alice" });
-```
-
-### After (External Authenticator)
-
-```javascript
-const zen = new ZEN();
-const pair = await ZEN.pair(null, { seed: "alice-recovery-seed" });
-
-zen
-  .get(`~${pair.pub}`)
-  .get("profile")
-  .put({ name: "Alice" }, null, { authenticator: pair });
-```
-
-### Hybrid Approach
-
-Support both for backward compatibility:
-
-```javascript
-async function hybridPut(gun, user, path, data, authenticator) {
-  if (authenticator) {
-    // New way: external authenticator
-    const pub = authenticator.pub || user.is?.pub;
-    zen.get(`~${pub}`).get(path).put(data, null, {
-      opt: { authenticator },
-    });
-  } else {
-    // Old way: authenticated session
-    user.get(path).put(data);
-  }
-}
 ```
 
 ## See Also

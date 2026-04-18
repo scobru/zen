@@ -44,7 +44,6 @@ Private keys are never written to the graph, but now use the same base62 alphabe
 
 - `ZEN.sign`, `ZEN.secret` — accept **both** old (43-char base64url) and new (44-char base62) `priv`/`epriv` transparently.
 - `ZEN.verify`, `ZEN.sign`, `ZEN.secret` — accept **both** old (87-char) and new (88-char) `pub`/`epub` transparently.
-- `zen.user().auth()` / `zen.user().create()` — continues to work; old user nodes at `~oldPub` are routed correctly.
 - **Tilde shard (`~/...`)** — **strictly requires base62 pub** (shard segment `bad` regex is `/[^0-9a-zA-Z]/`). Old-format pubs cannot be registered in shard paths.
 
 **Detection:**
