@@ -5,10 +5,10 @@ describe("All", function () {
   return;
   var expect = (global.expect = __expect);
 
-  var Gun = Gun || __zen;
+  var Zen = Zen || __zen;
   typeof window === "undefined" && __file;
 
-  var gun = Gun({ file: "data.json" });
+  var zen = Zen({ file: "data.json" });
 
   var keys = {
     "emails/aquiva@gmail.com": "asdf",
@@ -28,7 +28,7 @@ describe("All", function () {
   };
 
   it("from", function () {
-    var r = gun.__.opt.hooks.all(keys, { from: "user/" });
+    var r = zen.__.opt.hooks.all(keys, { from: "user/" });
     //console.log(r);
     expect(r).to.be.eql({
       "user/marknadal": { "#": "asdf" },
@@ -44,7 +44,7 @@ describe("All", function () {
   });
 
   it("from and upto", function () {
-    var r = gun.__.opt.hooks.all(keys, { from: "user/", upto: "/" });
+    var r = zen.__.opt.hooks.all(keys, { from: "user/", upto: "/" });
     //console.log('upto', r);
     expect(r).to.be.eql({
       "user/marknadal": { "#": "asdf" },
@@ -54,7 +54,7 @@ describe("All", function () {
   });
 
   it("from and upto and start and end", function () {
-    var r = gun.__.opt.hooks.all(keys, {
+    var r = zen.__.opt.hooks.all(keys, {
       from: "user/",
       upto: "/",
       start: "c",
@@ -68,7 +68,7 @@ describe("All", function () {
 
   it("map", function (done) {
     return done();
-    var users = gun.put({
+    var users = zen.put({
       a: { name: "Mark Nadal" },
       b: { name: "timber Nadal" },
       c: { name: "Charlie Chapman" },

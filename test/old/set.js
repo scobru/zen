@@ -5,9 +5,9 @@ import __zen from "../zen.js";
   var Zen = __zen;
   var done = function () {};
 
-  var gun = Gun().get("set").set(),
+  var zen = Zen().get("set").set(),
     i = 0;
-  gun
+  zen
     .val(function (val) {
       console.log("t1", val);
     })
@@ -17,28 +17,28 @@ import __zen from "../zen.js";
     .set(4) // if you set an object you'd have to do a `.back`
     .map()
     .val(function (val) {
-      // TODO! BUG? If we do gun.set it immediately calls and we get stale data. Is this wrong?
+      // TODO! BUG? If we do zen.set it immediately calls and we get stale data. Is this wrong?
       console.log("t2", val, ++i);
       if (4 === i) {
-        console.log("TODO? BUG! Double soul?", gun.__.graph);
+        console.log("TODO? BUG! Double soul?", zen.__.graph);
         done();
       }
     });
 
   return; // TODO! BUG! Causes tests to crash and burn badly.
 
-  var gun = Gun();
+  var zen = Zen();
 
-  var list = gun.get("thoughts");
+  var list = zen.get("thoughts");
   list.set("a");
   list.set("b");
   list.set("c");
   list.set("d").val(function (val) {
     console.log("what", val, "\n\n");
-    console.log(gun.__.graph);
+    console.log(zen.__.graph);
   });
   return;
-  gun
+  zen
     .set({
       name: "Mark Nadal",
       age: 23,

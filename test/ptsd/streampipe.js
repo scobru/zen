@@ -1,5 +1,5 @@
 import stream from "stream";
-import Gun from "../../zen.js";
+import Zen from "../../zen.js";
 
 const randomString = (length) => {
   const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -81,7 +81,7 @@ class Graph extends stream.Transform {
   constructor() {
     super();
 
-    this.db = new Gun({
+    this.db = new Zen({
       //file: 'graph.json'
       localStorage: false,
     });

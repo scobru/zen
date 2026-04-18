@@ -8,7 +8,7 @@ import http from "http";
 import https from "https";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
-import GUN from "../index.js";
+import ZEN from "../index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -72,7 +72,7 @@ function validatePeers(peers) {
   });
 }
 
-let gun;
+let zen;
 
 if (isMain && cluster.isPrimary) {
   console.log("Master process " + process.pid + " starting...");
@@ -182,7 +182,7 @@ if (isMain && cluster.isPrimary) {
       process.exit(1);
     }
 
-    opt.server = https.createServer(opt, GUN.serve(__dirname));
+    opt.server = https.createServer(opt, ZEN.serve(__dirname));
 
     if (httpsPort == 443 || env.HTTP_REDIRECT === "true") {
       try {
@@ -215,12 +215,12 @@ if (isMain && cluster.isPrimary) {
     opt.port = actualHttpsPort;
     console.log("HTTPS server will start on port " + actualHttpsPort);
   } else {
-    opt.server = http.createServer(GUN.serve(__dirname));
+    opt.server = http.createServer(ZEN.serve(__dirname));
     console.log("HTTP server will start on port " + opt.port);
   }
 
-  gun = GUN({ web: opt.server.listen(opt.port), peers: opt.peers });
-  console.log("Relay peer started on port " + opt.port + " with /gun");
+  zen = ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
+  console.log("Relay peer started on port " + opt.port + " with /zen");
 }
 
-export default gun;
+export default zen;

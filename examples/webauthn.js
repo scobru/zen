@@ -1,12 +1,12 @@
 /*
 DISCUSSION WITH AI:
-UPGRADE SEA.verify to allow put with signed
+UPGRADE ZEN.verify to allow put with signed
 
-The goal of this dev session is to make the check() function in SEA handle signed puts, but without having the user to be authenticated. It should check if the signature matches the pub, thats it.
+The goal of this dev session is to make the check() function in ZEN handle signed puts, but without having the user to be authenticated. It should check if the signature matches the pub, thats it.
 
-There are files that are related to this mission: sign.js, verify.js and index.js, they are in /sea folder.
+There are files that are related to this mission: sign.js, verify.js and index.js, they are in /zen folder.
 
-The sign() function in sign.js create signature from given SEA pair. We will modify it to also be able to request WebAuthn signature. We must transform (normalize) the signature of passkey to make it look like SEA signature. But we must keep its current functionalities remain working.
+The sign() function in sign.js create signature from given ZEN pair. We will modify it to also be able to request WebAuthn signature. We must transform (normalize) the signature of passkey to make it look like ZEN signature. But we must keep its current functionalities remain working.
 
 MUST KEEP IN MIND: webauthn sign doesn't sign the original data alone, instead, it wrap the original data in an object 
 
@@ -14,29 +14,29 @@ The verify() function in verify.js verifies if signature matches pub. We will mo
 
 The check() function in index.js handles every data packet that flows through the system. It works like a filter to filter out bad (signature not matched) datas.
 
-We must also modify index.js in sea, the check.pub() function. It handles outgoing and incoming put data. In there we will make it to be able to use SEA.sign with external authenticator which is WebAuthn.
+We must also modify index.js in zen, the check.pub() function. It handles outgoing and incoming put data. In there we will make it to be able to use ZEN.sign with external authenticator which is WebAuthn.
 
 We must edit slowly. After every edition, we must debug on browser using examples/webauthn.html and examples/webauthn.js to check if it works, then keep editing slowly until it works.
 
 What should we edit?
-The sea.js in the root folder is just a built, it is very heavy and you cannot read it. So we must "blindly" debug in sign.js, verify.js and index.js in /sea folder. 
+The zen.js in the root folder is just a built, it is very heavy and you cannot read it. So we must "blindly" debug in sign.js, verify.js and index.js in /zen folder. 
 
 DO THIS AFTER EVERY EDITION:
-npm run buildSea
+npm run buildZEN
 
-We need to re-build sea before testing it.
+We need to re-build zen before testing it.
 
 BIG UPDATE:
 Now after some coding, the sign.js and verify.js work perfectly in test in webauthn.js. Ok. We should now focus in modifying check.pub in index.js.
 
 How it should work?
 At line 147 in index.js, it currently checks:
-- if user authenticated (in SEA) and must not have wrapped cert
+- if user authenticated (in ZEN) and must not have wrapped cert
     - if user is writing to his graph
     - if he is writing to someone else's graph, must have msg._.msg.opt.cert
 
 Now what we want is to make it to also allows unauthenticated user to make put, using put(data, null, {authenticator}).
-It should detect if authenticator exists, then use that in replace for user._.sea. Then the following logic is the same. But we also must keep the current functionalities remain working.
+It should detect if authenticator exists, then use that in replace for user._.zen. Then the following logic is the same. But we also must keep the current functionalities remain working.
 
 What I want?
 When putting with authenticator (webauthn), the device doesn't provide public key. So user must provide pub via opt.pub if he wants to put data to someone else's graph. If opt.pub doesn't exist, he can only writes to his own graph.
@@ -68,10 +68,10 @@ document.getElementById("create").onclick = async () => {
           displayName: "Example User",
         },
         // See the list of algos: https://www.iana.org/assignments/cose/cose.xhtml#algorithms
-        // The 2 algos below are required in order to work with SEA
+        // The 2 algos below are required in order to work with ZEN
         pubKeyCredParams: [
           { type: "public-key", alg: -7 }, // ECDSA, P-256 curve, for signing
-          { type: "public-key", alg: -25 }, // ECDH, P-256 curve, for creating shared secrets using SEA.secret
+          { type: "public-key", alg: -25 }, // ECDH, P-256 curve, for creating shared secrets using ZEN.secret
           { type: "public-key", alg: -257 },
         ],
         authenticatorSelection: {
@@ -131,7 +131,7 @@ document.getElementById("sign").onclick = async () => {
   }
 
   try {
-    signature = await SEA.sign(data, authenticator);
+    signature = await ZEN.sign(data, authenticator);
     console.log("Signature:", signature);
   } catch (err) {
     console.error("Signing error:", err);
@@ -145,7 +145,7 @@ document.getElementById("verify").onclick = async () => {
   }
 
   try {
-    const verified = await SEA.verify(signature, pub);
+    const verified = await ZEN.verify(signature, pub);
     console.log("Verified:", verified);
   } catch (err) {
     console.error("Verification error:", err);
@@ -153,9 +153,9 @@ document.getElementById("verify").onclick = async () => {
 };
 
 document.getElementById("put").onclick = async () => {
-  gun.get(`~${pub}`).get("test").put("hello world", null, { authenticator });
+  zen.get(`~${pub}`).get("test").put("hello world", null, { authenticator });
   setTimeout(() => {
-    gun
+    zen
       .get(`~${pub}`)
       .get("test")
       .once((data) => {
@@ -165,13 +165,13 @@ document.getElementById("put").onclick = async () => {
 };
 
 document.getElementById("put-with-pair").onclick = async () => {
-  const bob = await SEA.pair();
-  gun
+  const bob = await ZEN.pair();
+  zen
     .get(`~${bob.pub}`)
     .get("test")
     .put("this is bob", null, { authenticator: bob });
   setTimeout(() => {
-    gun
+    zen
       .get(`~${bob.pub}`)
       .get("test")
       .once((data) => {

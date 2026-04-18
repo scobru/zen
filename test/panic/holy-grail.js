@@ -77,7 +77,7 @@ describe("The Holy Grail Test!", function () {
     return relays.atLeast(config.relays);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     return relay.run(
       function (test) {
         var env = test.props;
@@ -117,15 +117,15 @@ describe("The Holy Grail Test!", function () {
         var server = __http.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
-        var Gun;
+        var Zen;
         try {
-          Gun = __index;
+          Zen = __index;
         } catch (e) {
           console.log(
-            "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+            "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
           );
         }
-        var gun = Gun({ file: env.i + "data", web: server });
+        var zen = Zen({ file: env.i + "data", web: server });
         server.listen(port, function () {
           test.done();
         });
@@ -139,7 +139,7 @@ describe("The Holy Grail Test!", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -161,13 +161,13 @@ describe("The Holy Grail Test!", function () {
     return alice.run(function (test) {
       console.log("I AM ALICE");
       var env = window.ENV;
-      var gun = Gun({
+      var zen = Zen({
         peers: [
-          "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+          "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
         ],
         file: "alicedata",
       });
-      window.ref = gun.get("holy").get("grail");
+      window.ref = zen.get("holy").get("grail");
       ref.put("value");
       setTimeout(test.async(), 2000);
     });
@@ -177,13 +177,13 @@ describe("The Holy Grail Test!", function () {
     return bob.run(function (test) {
       console.log("I AM BOB");
       var env = window.ENV;
-      var gun = Gun({
+      var zen = Zen({
         peers: [
-          "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+          "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
         ],
         file: "bobdata",
       });
-      window.ref = gun.get("holy").get("grail");
+      window.ref = zen.get("holy").get("grail");
       test.async();
       ref.on(function (data) {
         if ("value" === data) {
@@ -223,7 +223,7 @@ describe("The Holy Grail Test!", function () {
           var err;
           try {
             new WebSocket(
-              "http://" + env.config.IP + ":" + (env.config.port + 2) + "/gun",
+              "http://" + env.config.IP + ":" + (env.config.port + 2) + "/zen",
             );
           } catch (e) {
             err = e;
@@ -247,7 +247,7 @@ describe("The Holy Grail Test!", function () {
           var err;
           try {
             new WebSocket(
-              "http://" + env.config.IP + ":" + (env.config.port + 2) + "/gun",
+              "http://" + env.config.IP + ":" + (env.config.port + 2) + "/zen",
             );
           } catch (e) {
             err = e;
@@ -294,7 +294,7 @@ describe("The Holy Grail Test!", function () {
     return again.bob.atLeast(1);
   });
 
-  it("GUN spawned!", function () {
+  it("ZEN spawned!", function () {
     return spawn.run(
       function (test) {
         var env = test.props;
@@ -328,8 +328,8 @@ describe("The Holy Grail Test!", function () {
         var server = __http.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
-        var Gun = __index;
-        var gun = Gun({ file: env.i + "data", web: server });
+        var Zen = __index;
+        var zen = Zen({ file: env.i + "data", web: server });
         server.listen(port, function () {
           test.done();
         });
@@ -355,29 +355,29 @@ describe("The Holy Grail Test!", function () {
     return Promise.all(tests);
   });
 
-  it("Alice re-initialized gun!", function () {
+  it("Alice re-initialized zen!", function () {
     return again.alice.run(function (test) {
       var env = window.ENV;
-      var gun = Gun({
+      var zen = Zen({
         peers: [
-          "http://" + env.config.IP + ":" + (env.config.port + 2) + "/gun",
+          "http://" + env.config.IP + ":" + (env.config.port + 2) + "/zen",
         ],
         file: "alicedata",
       });
-      window.ref = gun.get("holy").get("grail");
+      window.ref = zen.get("holy").get("grail");
     });
   });
 
-  it("Bob re-initialized gun!", function () {
+  it("Bob re-initialized zen!", function () {
     return again.bob.run(function (test) {
       var env = window.ENV;
-      var gun = Gun({
+      var zen = Zen({
         peers: [
-          "http://" + env.config.IP + ":" + (env.config.port + 2) + "/gun",
+          "http://" + env.config.IP + ":" + (env.config.port + 2) + "/zen",
         ],
         file: "bobdata",
       });
-      window.ref = gun.get("holy").get("grail");
+      window.ref = zen.get("holy").get("grail");
     });
   });
 

@@ -30,11 +30,11 @@ var config = {
   /** Configuration details for each variant. If unspecified, variant will run with no additional configuration. */
   variantConfigs: {
     radisk: {
-      /** Options to pass the Gun constructor */
+      /** Options to pass the Zen constructor */
       opts: {
         localStorage: false,
       },
-      /** Libraries to import before constructing Gun */
+      /** Libraries to import before constructing Zen */
       imports: ["radix.js", "radisk.js", "store.js", "rindexed.js"],
     },
   },
@@ -58,7 +58,7 @@ var alice = browsers.pluck(1);
 var dave = browsers.excluding(alice).pluck(1);
 
 // Describe the test itself
-describe("gun.on should receive updates after crashed relay peer comes back online", function () {
+describe("zen.on should receive updates after crashed relay peer comes back online", function () {
   this.timeout(10 * 1000);
   config.variants.forEach((variant) => {
     var variantConfig = config.variantConfigs[variant] || {};
@@ -66,7 +66,7 @@ describe("gun.on should receive updates after crashed relay peer comes back onli
     // Describe the variant
     describe(`with ${variant} plugin configuration`, function () {
       before("PANIC manager setup servers", function () {
-        // we are terminating the gun servers after each test variant, so we need to start them up again before each test variant
+        // we are terminating the zen servers after each test variant, so we need to start them up again before each test variant
         manager.start({
           clients: Array(config.servers)
             .fill()
@@ -84,7 +84,7 @@ describe("gun.on should receive updates after crashed relay peer comes back onli
         return servers.atLeast(config.servers);
       });
 
-      it("GUN started!", function () {
+      it("ZEN started!", function () {
         return bob.run(
           function (test) {
             var env = test.props;
@@ -104,12 +104,12 @@ describe("gun.on should receive updates after crashed relay peer comes back onli
             });
             var port = env.config.port + 1;
             try {
-              var Gun = __index;
+              var Zen = __index;
             } catch (e) {
               console.error(e);
               test.fail("");
             }
-            var gun = Gun({ file: filepath, web: server });
+            var zen = Zen({ file: filepath, web: server });
             server.listen(port, function () {
               test.done();
             });
@@ -129,7 +129,7 @@ describe("gun.on should receive updates after crashed relay peer comes back onli
         return loadBrowserScripts(browsers, variantConfig.imports);
       });
 
-      it("Browsers initialized gun!", function () {
+      it("Browsers initialized zen!", function () {
         var tests = [],
           i = 0;
         browsers.each(function (client, id) {
@@ -150,7 +150,7 @@ describe("gun.on should receive updates after crashed relay peer comes back onli
                       env.config.IP +
                       ":" +
                       (env.config.port + 1) +
-                      "/gun",
+                      "/zen",
                   ],
                   ...configOpts,
                 };
@@ -159,8 +159,8 @@ describe("gun.on should receive updates after crashed relay peer comes back onli
                   "using constructor options: ",
                   JSON.stringify(opts),
                 );
-                var gun = Gun(opts);
-                window.ref = gun.get("a");
+                var zen = Zen(opts);
+                window.ref = zen.get("a");
               },
               { i: (i += 1), config: config, variantConfig: variantConfig },
             ),
@@ -169,7 +169,7 @@ describe("gun.on should receive updates after crashed relay peer comes back onli
         return Promise.all(tests);
       });
 
-      it("Dave subscribed to updates using gun.on()", function () {
+      it("Dave subscribed to updates using zen.on()", function () {
         return dave.run(function (test) {
           console.log("I AM DAVE");
           test.async();
@@ -257,12 +257,12 @@ describe("gun.on should receive updates after crashed relay peer comes back onli
             });
             var port = env.config.port + 1;
             try {
-              var Gun = __index;
+              var Zen = __index;
             } catch (e) {
               console.error(e);
               test.fail("");
             }
-            var gun = Gun({ file: filepath, web: server });
+            var zen = Zen({ file: filepath, web: server });
             server.listen(port, function () {
               test.done();
             });
@@ -283,7 +283,7 @@ describe("gun.on should receive updates after crashed relay peer comes back onli
                 var seconds = 15;
                 var timeout = Date.now() + seconds * 1000;
                 var url =
-                  "http://" + config.IP + ":" + (config.port + 1) + "/gun";
+                  "http://" + config.IP + ":" + (config.port + 1) + "/zen";
                 var peers = ref.back(1)._.opt.peers;
                 var i;
                 i = setInterval(function () {

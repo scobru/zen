@@ -21,7 +21,7 @@ var config = {
     "/": __dirname + "/index.html",
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
-    "/sea.js": __dirname + "/../../zen.js",
+    "/zen.js": __dirname + "/../../zen.js",
     "/yson.js": __dirname + "/../../lib/yson.js",
   },
   dir: __dirname,
@@ -68,12 +68,12 @@ describe(
     this.timeout(5 * 60 * 1000);
 
     it("Servers have joined!", function () {
-      // Alright, lets wait until enough gun server peers are connected.
+      // Alright, lets wait until enough zen server peers are connected.
       return servers.atLeast(config.servers);
     });
 
-    it("GUN has spawned!", function () {
-      // Once they are, we need to actually spin up the gun server.
+    it("ZEN has spawned!", function () {
+      // Once they are, we need to actually spin up the zen server.
       var tests = [],
         i = 0;
       servers.each(function (client) {
@@ -94,11 +94,11 @@ describe(
               var server = __http.createServer(function (req, res) {
                 res.end("I am " + env.i + "!");
               });
-              // Launch the server and start gun!
-              var Gun = __index;
-              // Attach the server to gun.
-              //var gun = Gun({file: env.i+'data', web: server});
-              var gun = Gun({
+              // Launch the server and start zen!
+              var Zen = __index;
+              // Attach the server to zen.
+              //var zen = Zen({file: env.i+'data', web: server});
+              var zen = Zen({
                 file: env.i + "data",
                 web: server,
                 rad: false,
@@ -135,7 +135,7 @@ describe(
       return browsers.atLeast(config.browsers);
     });
 
-    it("Browsers initialized gun!", function () {
+    it("Browsers initialized zen!", function () {
       var tests = [],
         i = 0;
       browsers.each(function (client, id) {
@@ -149,16 +149,16 @@ describe(
                 indexedDB.deleteDatabase("radata");
               } catch (e) {}
               var env = test.props;
-              var gun = Gun({
+              var zen = Zen({
                 retry: 2,
                 peers:
                   "http://" +
                   env.config.IP +
                   ":" +
                   (env.config.port + 1) +
-                  "/gun",
+                  "/zen",
               });
-              window.gun = gun;
+              window.zen = zen;
             },
             { i: (i += 1), config: config },
           ),
@@ -178,13 +178,13 @@ describe(
               test.async();
               var config = test.props.config;
 
-              gun.get("test").get("latency").put("hello world");
+              zen.get("test").get("latency").put("hello world");
 
               var go = setInterval(function () {
                 var burst = config.burst;
                 while (--burst) {
                   console.log(burst);
-                  gun
+                  zen
                     .get(String.random(Math.random() * 100))
                     .get(String.random(Math.random() * 10))
                     .put(String.random(Math.random() * 1000));
@@ -207,11 +207,11 @@ describe(
 
     it("Alice reads during flood", function () {
       return alice.run(function (test) {
-        console.log("I AM ALICE", gun.back("opt.pid"));
+        console.log("I AM ALICE", zen.back("opt.pid"));
         $("body").css("background", "red");
         test.async();
         var S = +new Date();
-        gun
+        zen
           .get("test")
           .get("latency")
           .on(function (data) {

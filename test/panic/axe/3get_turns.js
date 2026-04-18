@@ -78,7 +78,7 @@ describe("Dedup load balancing GETs", function () {
     return relays.atLeast(config.relays);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     var tests = [],
       i = 0;
     relays.each(function (client) {
@@ -97,12 +97,12 @@ describe("Dedup load balancing GETs", function () {
               res.end("I am " + env.i + "!");
             });
             var port = env.config.port + env.i;
-            var Gun;
+            var Zen;
             try {
-              Gun = __index;
+              Zen = __index;
             } catch (e) {
               console.log(
-                "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+                "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
               );
             }
             var peers = [],
@@ -110,7 +110,7 @@ describe("Dedup load balancing GETs", function () {
             while (i--) {
               // make sure to connect to self/same.
               var tmp = env.config.port + (i + 1);
-              peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+              peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
             }
 
             if (process.env.ROD_PATH) {
@@ -132,7 +132,7 @@ describe("Dedup load balancing GETs", function () {
               return;
             }
 
-            var gun = Gun({ file: env.i + "data", peers: peers, web: server });
+            var zen = Zen({ file: env.i + "data", peers: peers, web: server });
             server.listen(port, function () {
               test.done();
             });
@@ -150,7 +150,7 @@ describe("Dedup load balancing GETs", function () {
   });
   // end PANIC template -->
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (browser, id) {
@@ -166,12 +166,12 @@ describe("Dedup load balancing GETs", function () {
 
             // start with the first peer:
             var env = test.props;
-            var gun = Gun(
-              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+            var zen = Zen(
+              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
             );
 
-            window.gun = gun;
-            window.ref = gun.get("test");
+            window.zen = zen;
+            window.ref = zen.get("test");
             window.ID = test.props.i;
 
             if (window.ID === 1) {
@@ -179,7 +179,7 @@ describe("Dedup load balancing GETs", function () {
             } // everyone BUT NOT alice yet.
             test.async();
 
-            gun.get("test").on(function (data) {
+            zen.get("test").on(function (data) {
               if (window.C) {
                 return;
               }
@@ -197,7 +197,7 @@ describe("Dedup load balancing GETs", function () {
             });
             if (window.ID == 2) {
               setTimeout(function () {
-                gun.get("test").put({ hello: "world" });
+                zen.get("test").put({ hello: "world" });
               }, 1000);
             }
           },
@@ -218,7 +218,7 @@ describe("Dedup load balancing GETs", function () {
     return b3.run(
       function (test) {
         test.async();
-        if ("world" === gun._.graph.test.hello) {
+        if ("world" === zen._.graph.test.hello) {
           // TODO: BAD! Tests should probably not use non-API ways to check things. But whatever, hacky for now.
           test.done();
         }
@@ -234,7 +234,7 @@ describe("Dedup load balancing GETs", function () {
           console.log("FAIL: Alice not match ID");
           alice_mismatch;
         }
-        if (gun._.graph.test) {
+        if (zen._.graph.test) {
           // TODO: BAD! Tests should probably not use non-API ways to check things. But whatever, hacky for now.
           console.log(
             "FAIL: Alice got synced data she was not subscribed to. This may mean a more basic feature (pub/sub) of AXE is broken.",

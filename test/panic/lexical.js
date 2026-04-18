@@ -17,10 +17,10 @@ var config = {
   route: {
     "/": __dirname + "/index.html",
     "/zen.js": __dirname + "/../../zen.js",
-    "/gun/lib/radix.js": __dirname + "/../../lib/radix.js",
-    "/gun/lib/radisk.js": __dirname + "/../../lib/radisk.js",
-    "/gun/lib/store.js": __dirname + "/../../lib/store.js",
-    "/gun/lib/rindexed.js": __dirname + "/../../lib/rindexed.js",
+    "/zen/lib/radix.js": __dirname + "/../../lib/radix.js",
+    "/zen/lib/radisk.js": __dirname + "/../../lib/radisk.js",
+    "/zen/lib/store.js": __dirname + "/../../lib/store.js",
+    "/zen/lib/rindexed.js": __dirname + "/../../lib/rindexed.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
   },
   wait_map: 700,
@@ -62,7 +62,7 @@ describe("RAD Lexical search Test!           ", function () {
   it("Servers have joined!                   ", function () {
     return servers.atLeast(config.servers);
   });
-  it("GUN server started!                    ", function () {
+  it("ZEN server started!                    ", function () {
     return server.run(
       function (test) {
         var env = test.props;
@@ -77,8 +77,8 @@ describe("RAD Lexical search Test!           ", function () {
         var server = __http.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
-        var Gun = (global.Gun = __index);
-        var gun = (global.gun = Gun({
+        var Zen = (global.Zen = __index);
+        var zen = (global.zen = Zen({
           axe: false,
           multicast: false,
           web: server,
@@ -99,21 +99,21 @@ describe("RAD Lexical search Test!           ", function () {
     return server.run(function (test) {
       test.async();
       var j = 0;
-      ((graph = gun._.graph),
+      ((graph = zen._.graph),
         (timenode = {}),
         (start = new Date("2020-01-01T00:00:00Z")),
         (end = new Date("2020-12-31T23:59:59Z")),
         (startt = start.getTime()),
         (endt = end.getTime()),
         (p = startt));
-      var ref = (global.ref = gun.get("timenode"));
+      var ref = (global.ref = zen.get("timenode"));
       while (p <= endt) {
         //console.log('.... >>> ', p, ++j, new Date(p).toISOString());
         var t = new Date(p);
         var ts = t.toISOString();
         var soul = "timeline_" + ts;
         var d = { msg: " datetime " + ts };
-        var n = gun.get(soul).put(d);
+        var n = zen.get(soul).put(d);
         ref.get(ts).put(n);
 
         p = p + 24 * 60 * 60 * 1000; //24h
@@ -385,7 +385,7 @@ describe("RAD Lexical search Test!           ", function () {
     );
     return browsers.atLeast(config.browsers);
   });
-  it("Browsers initialized gun!              ", function () {
+  it("Browsers initialized zen!              ", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -395,7 +395,7 @@ describe("RAD Lexical search Test!           ", function () {
             test.async();
             localStorage.clear();
             console.log("Clear localStorage!!!");
-            //         ['/gun/lib/radix.js', '/gun/lib/radisk.js', '/gun/lib/store.js', '/gun/lib/rindexed.js'].map(function(src) {
+            //         ['/zen/lib/radix.js', '/zen/lib/radisk.js', '/zen/lib/store.js', '/zen/lib/rindexed.js'].map(function(src) {
             //           var script = document.createElement('script');
             //           script.setAttribute('src', src);
             //           document.head.appendChild(script);
@@ -408,7 +408,7 @@ describe("RAD Lexical search Test!           ", function () {
                   env.config.IP +
                   ":" +
                   (env.config.port + 1) +
-                  "/gun",
+                  "/zen",
               ],
               localStorage: false,
             };
@@ -416,15 +416,15 @@ describe("RAD Lexical search Test!           ", function () {
             if (pid) {
               opt.pid = pid;
             }
-            Gun.on("opt", function (ctx) {
+            Zen.on("opt", function (ctx) {
               this.to.next(ctx);
               ctx.on("hi", function (opt) {
                 document.title = "RAD test PID: " + this.on.opt.pid;
               });
             });
             setTimeout(function () {
-              var gun = (window.gun = Gun(opt));
-              var ref = (window.ref = gun.get("timenode"));
+              var zen = (window.zen = Zen(opt));
+              var ref = (window.ref = zen.get("timenode"));
               test.done();
             }, 1000);
           },

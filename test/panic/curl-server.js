@@ -45,22 +45,22 @@ describe("Server to server sync", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("Start GUN Bob server.", function () {
+  it("Start ZEN Bob server.", function () {
     return bob.run(
       function (test) {
         test.async();
 
         var express = __express;
         var bodyParser = __body_parser;
-        var Gun = __index;
+        var Zen = __index;
 
         var app = express();
 
-        app.use(Gun.serve);
+        app.use(Zen.serve);
         app.use(bodyParser.json());
 
         app.post("/foo", function (req, res) {
-          gun.get("bar").put(req.body);
+          zen.get("bar").put(req.body);
           res.sendStatus(200);
         });
 
@@ -68,9 +68,9 @@ describe("Server to server sync", function () {
           test.done();
         });
 
-        var gun = Gun({ peers: "http://localhost:8081/gun", web: server });
+        var zen = Zen({ peers: "http://localhost:8081/zen", web: server });
 
-        gun.get("bar").on(function (data, key) {
+        zen.get("bar").on(function (data, key) {
           console.log("bob", data, key);
         });
       },
@@ -78,26 +78,26 @@ describe("Server to server sync", function () {
     );
   });
 
-  it("Start GUN Alice server.", function () {
+  it("Start ZEN Alice server.", function () {
     return alice.run(
       function (test) {
         test.async();
 
         var express = __express;
         var bodyParser = __body_parser;
-        var Gun = __index;
+        var Zen = __index;
 
         var app = express();
 
-        app.use(Gun.serve);
+        app.use(Zen.serve);
 
         var server = app.listen(8081, function () {
           test.done();
         });
 
-        var gun = Gun({ peers: "http://localhost:8082/gun", web: server });
+        var zen = Zen({ peers: "http://localhost:8082/zen", web: server });
 
-        gun.get("bar").on(function (data, key) {
+        zen.get("bar").on(function (data, key) {
           console.log("alice", data, key);
           global.DATA = data;
         });

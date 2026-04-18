@@ -6,7 +6,7 @@ import __panic_manager from "panic-manager";
 import __fsrm from "./lib/fsrm";
 import __http from "http";
 import __index from "./index.js";
-import __sea from "./sea";
+import __zen from "./zen";
 import panic from "panic-server";
 import { fileURLToPath } from "node:url";
 import { dirname as __dirnameOf } from "node:path";
@@ -94,7 +94,7 @@ describe("Shocknet Test!", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("Server Peer initialized gun!", function () {
+  it("Server Peer initialized zen!", function () {
     var tests = [],
       i = 0;
     peerClients.each(function (client, id) {
@@ -125,9 +125,9 @@ describe("Shocknet Test!", function () {
               env.config.IP +
               ":" +
               (env.config.port + peerPort) +
-              "/gun";
-            var Gun = __index;
-            var gun = Gun({
+              "/zen";
+            var Zen = __index;
+            var zen = Zen({
               file: 3 + env.i + "data",
               web: server,
               peers: [peerAddr],
@@ -149,7 +149,7 @@ describe("Shocknet Test!", function () {
     return Promise.all(tests);
   });
 
-  it("Server Clients initialized gun!", function () {
+  it("Server Clients initialized zen!", function () {
     var tests = [],
       i = 0;
     serverClients.each(function (client, id) {
@@ -182,14 +182,14 @@ describe("Shocknet Test!", function () {
             try {
               __fsrm(env.i + 1 + "data");
             } catch (e) {}
-            var Gun = __index;
+            var Zen = __index;
             const peerAddr =
               "http://" +
               env.config.IP +
               ":" +
               (env.config.port + 3 + env.i) +
-              "/gun";
-            var gun = Gun({
+              "/zen";
+            var zen = Zen({
               peers: [peerAddr],
               file: env.i + "data",
               axe: false,
@@ -199,7 +199,7 @@ describe("Shocknet Test!", function () {
               ` I am client #${env.i}, I am connecting to ${peerAddr}`,
               "\x1b[0m",
             );
-            global.gun = gun;
+            global.zen = zen;
           },
           { i: (i += 1), config: config },
         ),
@@ -208,7 +208,7 @@ describe("Shocknet Test!", function () {
     return Promise.all(tests);
   });
 
-  it("Server Clients auth with gun!", function () {
+  it("Server Clients auth with zen!", function () {
     var tests = [],
       i = 0;
     serverClients.each(function (client, id) {
@@ -219,9 +219,9 @@ describe("Shocknet Test!", function () {
               const done = test.async();
               //localStorage.clear();
               var env = test.props;
-              //try{ load('gun/lib/fsrm')(env.i+'data') }catch(e){}
-              //try{ load('gun/lib/fsrm')((env.i+1)+'data') }catch(e){}
-              const user = global.gun.user();
+              //try{ load('zen/lib/fsrm')(env.i+'data') }catch(e){}
+              //try{ load('zen/lib/fsrm')((env.i+1)+'data') }catch(e){}
+              const user = global.zen.user();
               const alias = env.config.names[env.i - 1] + rands(4);
               const pass = rands(8);
 
@@ -258,7 +258,7 @@ describe("Shocknet Test!", function () {
     return Promise.all(tests);
   });
 
-  it("Server Clients generating SEA secret!", function () {
+  it("Server Clients generating ZEN secret!", function () {
     var tests = [],
       i = 0;
     serverClients.each(function (client, id) {
@@ -267,10 +267,10 @@ describe("Shocknet Test!", function () {
           async function (test) {
             const done = test.async();
             var env = test.props;
-            const SEA = __sea;
+            const ZEN = __zen;
             const user = global.user;
-            return SEA.secret(user._.sea.epub, user._.sea).then((mySecret) => {
-              global.SEA = SEA;
+            return ZEN.secret(user._.zen.epub, user._.zen).then((mySecret) => {
+              global.ZEN = ZEN;
               global.mySecret = mySecret;
               done();
             });
@@ -317,7 +317,7 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const { pub } = test.props;
         const { keys } = test.props.config;
-        global.gun
+        global.zen
           .user(pub)
           .get(keys.PROFILE)
           .get(keys.DISPLAY_NAME)
@@ -340,7 +340,7 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const { pub } = test.props;
         const { keys } = test.props.config;
-        global.gun
+        global.zen
           .user(pub)
           .get(keys.PROFILE)
           .get(keys.DISPLAY_NAME)
@@ -362,7 +362,7 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const { pub } = test.props;
         const { keys } = test.props.config;
-        const dn = await global.gun
+        const dn = await global.zen
           .user(pub)
           .get(keys.PROFILE)
           .get(keys.DISPLAY_NAME)
@@ -486,7 +486,7 @@ describe("Shocknet Test!", function () {
             const env = test.props;
             const keys = env.config.keys;
             global.pubToEpub = async (pub, fail) => {
-              const epub = await global.gun.user(pub).get("epub").then();
+              const epub = await global.zen.user(pub).get("epub").then();
               if (typeof epub === "string") {
                 return epub;
               } else {
@@ -590,7 +590,7 @@ describe("Shocknet Test!", function () {
           .then();
         if (maybeEncryptedOutgoingID === "string") {
           global.hsData.maybeEncryptedOutgoingID = maybeEncryptedOutgoingID;
-          /*global.SEA.decrypt(maybeEncryptedOutgoingID,global.mySecret)
+          /*global.ZEN.decrypt(maybeEncryptedOutgoingID,global.mySecret)
 						.then(outgoingID => outgoingID ? res(outgoingID) : rej(`expected outgoingID to be exist`))*/
         } else {
           global.hsData.outgoingID = maybeEncryptedOutgoingID;
@@ -609,7 +609,7 @@ describe("Shocknet Test!", function () {
 
         if (maybeEncryptedOutgoingID === "string") {
           global.hsData.maybeEncryptedOutgoingID = maybeEncryptedOutgoingID;
-          global.SEA.decrypt(maybeEncryptedOutgoingID, global.mySecret).then(
+          global.ZEN.decrypt(maybeEncryptedOutgoingID, global.mySecret).then(
             (outgoingID) => {
               if (outgoingID) {
                 global.hsData.outgoingID = outgoingID;
@@ -659,9 +659,9 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const { pub } = test.props;
         const { keys } = test.props.config;
-        const { user, pubToEpub, SEA } = global;
+        const { user, pubToEpub, ZEN } = global;
         pubToEpub(pub, test.fail).then((bobEpub) => {
-          SEA.secret(bobEpub, user._.sea).then((ourSecret) => {
+          ZEN.secret(bobEpub, user._.zen).then((ourSecret) => {
             global.hsData.ourSecret = ourSecret;
             global.hsData.otherEpub = bobEpub;
             done();
@@ -698,7 +698,7 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const { pub } = test.props;
         const { keys } = test.props.config;
-        const currentHandshakeAddress = await gun
+        const currentHandshakeAddress = await zen
           .user(pub)
           .get(keys.CURRENT_HANDSHAKE_ADDRESS)
           .then();
@@ -729,7 +729,7 @@ describe("Shocknet Test!", function () {
             test.fail("maybeLastRequestIDSentToUser.length < 5");
           }
           const lastRequestIDSentToUser = maybeLastRequestIDSentToUser;
-          const hrInHandshakeNode = await gun
+          const hrInHandshakeNode = await zen
             .get(keys.HANDSHAKE_NODES)
             .get(currentHandshakeAddress)
             .get(lastRequestIDSentToUser)
@@ -753,8 +753,8 @@ describe("Shocknet Test!", function () {
         const env = test.props;
         const { index } = env;
         const { pub } = env.testData[index];
-        const { mySecret, SEA } = global;
-        SEA.encrypt(pub, mySecret).then((encryptedForMeRecipientPub) => {
+        const { mySecret, ZEN } = global;
+        ZEN.encrypt(pub, mySecret).then((encryptedForMeRecipientPub) => {
           global.hsData.encryptedForMeRecipientPub = encryptedForMeRecipientPub;
           done();
         });
@@ -766,9 +766,9 @@ describe("Shocknet Test!", function () {
         const env = test.props;
         const { index } = env;
         const { pub } = env.testData[index];
-        const { user, SEA } = global;
+        const { user, ZEN } = global;
         const { otherEpub } = global.hsData;
-        SEA.secret(otherEpub, user._.sea).then((ourSecret) => {
+        ZEN.secret(otherEpub, user._.zen).then((ourSecret) => {
           global.hsData.ourSecret = ourSecret;
           done();
         });
@@ -787,7 +787,7 @@ describe("Shocknet Test!", function () {
           .then();
         if (maybeEncryptedOutgoingID === "string") {
           global.hsData.maybeEncryptedOutgoingID = maybeEncryptedOutgoingID;
-          /*global.SEA.decrypt(maybeEncryptedOutgoingID,global.mySecret)
+          /*global.ZEN.decrypt(maybeEncryptedOutgoingID,global.mySecret)
 						.then(outgoingID => outgoingID ? res(outgoingID) : rej(`expected outgoingID to be exist`))*/
         } else {
           global.hsData.maybeOutgoingID = maybeEncryptedOutgoingID;
@@ -806,7 +806,7 @@ describe("Shocknet Test!", function () {
 
         if (maybeEncryptedOutgoingID === "string") {
           global.hsData.maybeEncryptedOutgoingID = maybeEncryptedOutgoingID;
-          global.SEA.decrypt(maybeEncryptedOutgoingID, global.mySecret).then(
+          global.ZEN.decrypt(maybeEncryptedOutgoingID, global.mySecret).then(
             (outgoingID) => {
               if (outgoingID) {
                 global.hsData.maybeOutgoingID = outgoingID;
@@ -857,9 +857,9 @@ describe("Shocknet Test!", function () {
         const env = test.props;
         const { index } = env;
         const { pub } = env.testData[index];
-        const { mySecret, SEA } = global;
+        const { mySecret, ZEN } = global;
         const { ourSecret } = global.hsData;
-        SEA.encrypt("$$__SHOCKWALLET__INITIAL__MESSAGE", ourSecret).then(
+        ZEN.encrypt("$$__SHOCKWALLET__INITIAL__MESSAGE", ourSecret).then(
           (encryptedForUsInitialMessage) => {
             global.hsData.encryptedForUsInitialMessage =
               encryptedForUsInitialMessage;
@@ -873,7 +873,7 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const env = test.props;
         const keys = env.config.keys;
-        const { user, SEA } = global;
+        const { user, ZEN } = global;
         const {
           maybeOutgoingID,
           newOutgoingFeedID,
@@ -904,13 +904,13 @@ describe("Shocknet Test!", function () {
     it(`${name}: create outgoing feed 3.4:encryptedForMeNewOutgoingFeedID !`, function () {
       return testClient.run(function (test) {
         const done = test.async();
-        const { mySecret, SEA } = global;
+        const { mySecret, ZEN } = global;
         const { maybeOutgoingID, newOutgoingFeedID } = global.hsData;
         if (typeof maybeOutgoingID === "string") {
           done();
           return;
         }
-        SEA.encrypt(newOutgoingFeedID, mySecret).then(
+        ZEN.encrypt(newOutgoingFeedID, mySecret).then(
           (encryptedForMeNewOutgoingFeedID) => {
             global.hsData.encryptedForMeNewOutgoingFeedID =
               encryptedForMeNewOutgoingFeedID;
@@ -997,9 +997,9 @@ describe("Shocknet Test!", function () {
         const keys = env.config.keys;
         const { index } = env;
         const { pub } = env.testData[index];
-        const { SEA } = global;
+        const { ZEN } = global;
         const { outgoingFeedID, ourSecret } = global.hsData;
-        SEA.encrypt(outgoingFeedID, ourSecret).then(
+        ZEN.encrypt(outgoingFeedID, ourSecret).then(
           (encryptedForUsOutgoingFeedID) => {
             global.hsData.encryptedForUsOutgoingFeedID =
               encryptedForUsOutgoingFeedID;
@@ -1010,7 +1010,7 @@ describe("Shocknet Test!", function () {
       { testData, config: config, index: 1 },
     );
   });
-  it(`Sending handshake request to bob 6: create outgoing feed 5:newHandshakeRequestID in gun !`, function () {
+  it(`Sending handshake request to bob 6: create outgoing feed 5:newHandshakeRequestID in zen !`, function () {
     return alice
       .run(
         function (test) {
@@ -1019,7 +1019,7 @@ describe("Shocknet Test!", function () {
           const keys = env.config.keys;
           const { index } = env;
           const { pub } = env.testData[index];
-          const { user, gun } = global;
+          const { user, zen } = global;
           const { currentHandshakeAddress, encryptedForUsOutgoingFeedID } =
             global.hsData;
           const timestamp = Date.now();
@@ -1028,7 +1028,7 @@ describe("Shocknet Test!", function () {
             response: encryptedForUsOutgoingFeedID,
             timestamp,
           };
-          const hr = gun
+          const hr = zen
             .get(keys.HANDSHAKE_NODES)
             .get(currentHandshakeAddress)
             .set(handshakeRequestData, (ack) => {
@@ -1080,9 +1080,9 @@ describe("Shocknet Test!", function () {
         const keys = env.config.keys;
         const { index } = env;
         const { pub } = env.testData[index];
-        const { SEA, mySecret } = global;
+        const { ZEN, mySecret } = global;
         const { newHandshakeRequestID } = global.hsData;
-        SEA.encrypt(newHandshakeRequestID, mySecret).then(
+        ZEN.encrypt(newHandshakeRequestID, mySecret).then(
           (encryptedHandshakeRequestID) => {
             global.hsData.encryptedHandshakeRequestID =
               encryptedHandshakeRequestID;
@@ -1101,9 +1101,9 @@ describe("Shocknet Test!", function () {
         const keys = env.config.keys;
         const { index } = env;
         const { pub } = env.testData[index];
-        const { SEA, mySecret } = global;
+        const { ZEN, mySecret } = global;
         const { currentHandshakeAddress } = global.hsData;
-        SEA.encrypt(currentHandshakeAddress, mySecret).then(
+        ZEN.encrypt(currentHandshakeAddress, mySecret).then(
           (encryptedHandshakeAddress) => {
             global.hsData.encryptedHandshakeAddress = encryptedHandshakeAddress;
             done();
@@ -1121,7 +1121,7 @@ describe("Shocknet Test!", function () {
         const keys = env.config.keys;
         const { index } = env;
         const { pub } = env.testData[index];
-        const { SEA, mySecret } = global;
+        const { ZEN, mySecret } = global;
         const {
           encryptedHandshakeAddress,
           encryptedForMeRecipientPub,
@@ -1172,9 +1172,9 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const env = test.props;
         const keys = env.config.keys;
-        const { gun } = global;
+        const { zen } = global;
         const { currentHandshakeAddress } = global.hsData;
-        gun
+        zen
           .get(keys.HANDSHAKE_NODES)
           .get(currentHandshakeAddress)
           .open((receivedReqs) => {
@@ -1192,7 +1192,7 @@ describe("Shocknet Test!", function () {
         const env = test.props;
         const { handshakeRequestID } = env;
         const keys = env.config.keys;
-        const { gun } = global;
+        const { zen } = global;
         const { receivedReqs } = global.hsData;
         const data = receivedReqs[handshakeRequestID];
         if (typeof data.from !== "string") {
@@ -1238,9 +1238,9 @@ describe("Shocknet Test!", function () {
         const done = test.async();
         const env = test.props;
         const keys = env.config.keys;
-        const { SEA, user } = global;
+        const { ZEN, user } = global;
         const { otherEpub } = global.hsData;
-        SEA.secret(otherEpub, user._.sea).then((ourSecret) => {
+        ZEN.secret(otherEpub, user._.zen).then((ourSecret) => {
           global.hsData.ourSecret = ourSecret;
           done();
         });
@@ -1252,9 +1252,9 @@ describe("Shocknet Test!", function () {
     return bob.run(
       function (test) {
         const done = test.async();
-        const { SEA, user } = global;
+        const { ZEN, user } = global;
         const { data, ourSecret } = global.hsData;
-        SEA.decrypt(data.response, ourSecret).then((incomingID) => {
+        ZEN.decrypt(data.response, ourSecret).then((incomingID) => {
           if (typeof incomingID !== "string") {
             test.fail(
               `expected "incomingID" to be string, found ${typeof incomingID}`,
@@ -1277,9 +1277,9 @@ describe("Shocknet Test!", function () {
     return bob.run(
       function (test) {
         const done = test.async();
-        const { SEA, mySecret } = global;
+        const { ZEN, mySecret } = global;
         const { incomingID } = global.hsData;
-        SEA.encrypt(incomingID, mySecret).then((encryptedForMeIncomingID) => {
+        ZEN.encrypt(incomingID, mySecret).then((encryptedForMeIncomingID) => {
           global.hsData.encryptedForMeIncomingID = encryptedForMeIncomingID;
           done();
         });
@@ -1313,9 +1313,9 @@ describe("Shocknet Test!", function () {
     return bob.run(
       function (test) {
         const done = test.async();
-        const { SEA } = global;
+        const { ZEN } = global;
         const { ourSecret, outgoingFeedID } = global.hsData;
-        SEA.encrypt(outgoingFeedID, ourSecret).then(
+        ZEN.encrypt(outgoingFeedID, ourSecret).then(
           (encryptedForUsOutgoingID) => {
             global.hsData.encryptedForUsOutgoingID = encryptedForUsOutgoingID;
             done();
@@ -1329,7 +1329,7 @@ describe("Shocknet Test!", function () {
     return bob.run(
       function (test) {
         const done = test.async();
-        const { gun } = global;
+        const { zen } = global;
         const env = test.props;
         const keys = env.config.keys;
         const {
@@ -1338,7 +1338,7 @@ describe("Shocknet Test!", function () {
           handshakeRequestID,
         } = global.hsData;
         const data = { response: encryptedForUsOutgoingID };
-        gun
+        zen
           .get(keys.HANDSHAKE_NODES)
           .get(currentHandshakeAddress)
           .get(handshakeRequestID)

@@ -156,7 +156,7 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
   };
 
   // ── pack / unpack (bytecode ↔ base62) ────────────────────────────────────────
-  // Used to store bytecode as the soul/node-ID in GUN graph.
+  // Used to store bytecode as the soul/node-ID in ZEN graph.
   // Soul format: '$' + pen.pack(bytecode)
   // e.g. '$abc123...' (variable length base62)
 
@@ -624,7 +624,7 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
     }
 
     if (policy.sign) {
-      var sec = chk.$sea(msg, at.user || "", null);
+      var sec = chk.$zen(msg, at.user || "", null);
       if (sec.authenticator) {
         chk.auth(msg, reject, sec.authenticator, function () {
           chk.next(eve, msg, reject);
@@ -668,8 +668,8 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
 
     var policy = scanpolicy(bytecode);
     var sec =
-      runtime.check && runtime.check.$sea
-        ? runtime.check.$sea(ctx.msg, (ctx.at && ctx.at.user) || "", null)
+      runtime.check && runtime.check.$zen
+        ? runtime.check.$zen(ctx.msg, (ctx.at && ctx.at.user) || "", null)
         : {};
     var writer = sec.upub || (sec.authenticator || {}).pub || "";
     var regs = [
@@ -886,7 +886,7 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
 
     // Build predicate bytecode, then append tail bytes AFTER expression root.
     // Tail bytes (0xC0..) are unreachable by WASM VM (which stops after root
-    // expression), and are extracted by scanpolicy() on the GUN bridge layer.
+    // expression), and are extracted by scanpolicy() on the ZEN bridge layer.
     var pred = Array.from(bc.prog(root));
 
     if (spec.sign) pred.push(0xc0);

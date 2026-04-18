@@ -61,7 +61,7 @@ describe("Do not connect to self", function () {
     return relays.atLeast(config.relays);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     var tests = [],
       i = 0;
     relays.each(function (client) {
@@ -80,17 +80,17 @@ describe("Do not connect to self", function () {
               res.end("I am " + env.i + "!");
             });
             var port = env.config.port + env.i;
-            var Gun;
+            var Zen;
             try {
-              Gun = __index;
+              Zen = __index;
             } catch (e) {
               console.log(
-                "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+                "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
               );
             }
             var peers = [],
               i = env.config.relays;
-            global.self_url = "http://" + env.config.IP + ":" + port + "/gun";
+            global.self_url = "http://" + env.config.IP + ":" + port + "/zen";
             // make sure to connect to self/same.
             peers.push(self_url);
             console.log(port, " connect to ", peers);
@@ -114,13 +114,13 @@ describe("Do not connect to self", function () {
               return;
             }
 
-            var gun = Gun({
+            var zen = Zen({
               file: env.i + "data",
               peers: peers,
               web: server,
               multicast: false,
             });
-            global.gun = gun;
+            global.zen = zen;
             server.listen(port, function () {
               test.done();
             });
@@ -142,10 +142,10 @@ describe("Do not connect to self", function () {
           function (test) {
             var env = test.props;
             test.async();
-            var peers = gun.back("opt.peers");
+            var peers = zen.back("opt.peers");
             var peer = peers[self_url];
 
-            gun.get("test").on(function (a) {});
+            zen.get("test").on(function (a) {});
 
             setTimeout(function () {
               if (peers[self_url] || peer.wire) {

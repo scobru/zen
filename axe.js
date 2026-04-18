@@ -13,14 +13,14 @@ if ((AXE.window = sT.window)) {
   AXE.window.AXE = AXE;
 }
 
-var Gun = (AXE.window || "").ZEN || (AXE.window || "").GUN || __zen;
-(Gun.AXE = AXE).GUN = AXE.Gun = Gun;
+var Zen = (AXE.window || "").ZEN || (AXE.window || "").ZEN || __zen;
+(Zen.AXE = AXE).ZEN = AXE.Zen = Zen;
 
 // Browser builds intentionally skip the old AXE side-load here.
-if (!Gun.window) {
+if (!Zen.window) {
 }
 
-Gun.on("opt", function (at) {
+Zen.on("opt", function (at) {
   start(at);
   this.to.next(at);
 }); // make sure to call the "next" middleware adapter.
@@ -34,17 +34,17 @@ function start(root) {
   if (false === opt.axe) {
     return;
   }
-  if (!Gun.window) {
+  if (!Zen.window) {
     return;
   } // handled by ^ lib/axe.js
-  var w = Gun.window,
+  var w = Zen.window,
     lS = w.localStorage || opt.localStorage || {},
     loc = w.location || opt.location || {},
     nav = w.navigator || opt.navigator || {};
   var axe = (root.axe = {}),
     tmp,
     id;
-  var mesh = (opt.mesh = opt.mesh || Gun.Mesh(root)); // DAM!
+  var mesh = (opt.mesh = opt.mesh || Zen.Mesh(root)); // DAM!
 
   tmp = peers[(id = loc.origin + "/zen")] = peers[id] || {};
   tmp.id = tmp.url = id;
@@ -52,11 +52,11 @@ function start(root) {
   tmp = peers[(id = "http://localhost:8765/zen")] = peers[id] || {};
   tmp.id = tmp.url = id;
   tmp.retry = tmp.retry || 0;
-  Gun.log.once(
+  Zen.log.once(
     "AXE",
     "AXE enabled: Trying to find network via (1) local peer (2) last used peers (3) a URL parameter, and last (4) hard coded peers.",
   );
-  Gun.log.once("AXEWarn", "Warning: AXE is in alpha, use only for testing!");
+  Zen.log.once("AXEWarn", "Warning: AXE is in alpha, use only for testing!");
   var last = lS.peers || "";
   if (last) {
     last += " ";
@@ -143,7 +143,7 @@ function start(root) {
     tmp = peers[(id = "https://guntest.herokuapp.com/zen")] = peers[id] || {};
     tmp.id = tmp.url = id;
 
-    var mesh = (opt.mesh = opt.mesh || Gun.Mesh(root)); // DAM!
+    var mesh = (opt.mesh = opt.mesh || Zen.Mesh(root)); // DAM!
     mesh.way = function (msg) {
       if (root.$ === msg.$ || (msg._ || "").via) {
         mesh.say(msg, opt.peers);

@@ -26,7 +26,7 @@ describe("ZEN secp256k1", function () {
     var two = await ZEN.sign({ ok: true }, pair);
     var verified = await ZEN.verify(one, pair.pub);
     assert.strictEqual(one, two);
-    assert.strictEqual(one.startsWith("SEA"), false);
+    assert.strictEqual(one.startsWith("ZEN"), false);
     assert.deepStrictEqual(verified, { ok: true });
 
     var tampered = JSON.parse(one);

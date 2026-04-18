@@ -8,9 +8,9 @@ var __gun;
   W.prototype = __ZEN.prototype;
   __gun = W;
 }
-var Gun = __gun;
+var Zen = __gun;
 import "../../lib/memdisk.js";
-var gun = Gun();
+var zen = Zen();
 var TOTAL = 10000000;
 var c = 1000,
   big = "big";
@@ -31,10 +31,10 @@ var to = setInterval(function () {
 
 function it(i) {
   c++;
-  var key = Gun.text.random(5);
-  gun.get(key).put({ data: Math.random() + big + Math.random() });
+  var key = Zen.text.random(5);
+  zen.get(key).put({ data: Math.random() + big + Math.random() });
   setTimeout(function () {
-    gun.get(key).off();
+    zen.get(key).off();
   }, 5);
   if (c % 5000) {
     return;
@@ -46,7 +46,7 @@ function it(i) {
   var mem = process.memoryUsage();
   console.log(
     ((mem.heapUsed / mem.heapTotal) * 100).toFixed(0) + "% memory with",
-    Object.keys(gun._.graph).length,
+    Object.keys(zen._.graph).length,
     "memory nodes, put",
     c,
   );

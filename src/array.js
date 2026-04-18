@@ -1,10 +1,10 @@
 import "./base64.js";
 
 // This is Array extended to have .toString(['utf8'|'hex'|'base64'])
-function SeaArray() {}
-Object.assign(SeaArray, { from: Array.from });
-SeaArray.prototype = Object.create(Array.prototype);
-SeaArray.prototype.toString = function (enc, start, end) {
+function ZenArray() {}
+Object.assign(ZenArray, { from: Array.from });
+ZenArray.prototype = Object.create(Array.prototype);
+ZenArray.prototype.toString = function (enc, start, end) {
   enc = enc || "utf8";
   start = start || 0;
   const length = this.length;
@@ -24,4 +24,4 @@ SeaArray.prototype.toString = function (enc, start, end) {
   }
 };
 
-export default SeaArray;
+export default ZenArray;

@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const isMain = !!process.argv[1] && __filename === process.argv[1];
 
-let gun;
+let zen;
 
 if (isMain && cluster.isPrimary) {
   cluster.setupPrimary({ exec: __filename });
@@ -49,8 +49,8 @@ if (isMain && cluster.isPrimary) {
     opt.server = http.createServer(ZEN.serve(__dirname));
   }
 
-  gun = ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
+  zen = ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
   console.log("Relay peer started on port " + opt.port + " with /zen");
 }
 
-export default gun;
+export default zen;

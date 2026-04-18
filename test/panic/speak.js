@@ -24,7 +24,7 @@ var config = {
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
     "/cryptomodules.js": __dirname + "/../../lib/cryptomodules.js",
-    "/sea.js": __dirname + "/../../zen.js",
+    "/zen.js": __dirname + "/../../zen.js",
   },
 };
 
@@ -66,15 +66,15 @@ var browsers = clients.excluding(servers);
 // PANIC works with Mocha and other testing libraries!
 // So it is easy to use PANIC.
 
-describe("Stress test GUN with SEA users causing PANIC!", function () {
+describe("Stress test ZEN with ZEN users causing PANIC!", function () {
   this.timeout(10 * 60 * 1000);
 
   it("Servers have joined!", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("GUN has spawned!", function () {
-    // Once they are, we need to actually spin up the gun server.
+  it("ZEN has spawned!", function () {
+    // Once they are, we need to actually spin up the zen server.
     var tests = [],
       i = 0;
     servers.each(function (client) {
@@ -147,7 +147,7 @@ describe("Stress test GUN with SEA users causing PANIC!", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers load SEA!", function () {
+  it("Browsers load ZEN!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -162,7 +162,7 @@ describe("Stress test GUN with SEA users causing PANIC!", function () {
               script.src = src;
               document.head.appendChild(script);
             }
-            load("sea.js", function () {
+            load("zen.js", function () {
               test.done();
             });
           },
@@ -173,7 +173,7 @@ describe("Stress test GUN with SEA users causing PANIC!", function () {
     return Promise.all(tests);
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       ids = {},
       i = 0;
@@ -198,14 +198,14 @@ describe("Stress test GUN with SEA users causing PANIC!", function () {
                   env.config.IP +
                   ":" +
                   (env.config.port + (i + 1)) +
-                  "/gun",
+                  "/zen",
               );
             }
-            var gun = (window.gun = Gun(peers));
-            var user = (window.user = gun.user());
+            var zen = (window.zen = Zen(peers));
+            var user = (window.user = zen.user());
             var go = (window.go = { num: 0, total: 0, users: {}, pub: {} });
             window.ID = env.id;
-            go.check = Gun.obj.map(env.ids, function (v, id, t) {
+            go.check = Zen.obj.map(env.ids, function (v, id, t) {
               // for each browser ID
               // they will be saving X number of messages each.
               go.users[id] = true; // set an outstanding flag to check against.
@@ -240,15 +240,15 @@ describe("Stress test GUN with SEA users causing PANIC!", function () {
           function (test) {
             test.async();
 
-            gun.on("secure", function (at) {
+            zen.on("secure", function (at) {
               /* enforce some rules about shared app level data */
               if (!at.put || !at.put.users) {
                 return;
               }
               var no;
-              Gun.node.is(at.put.users, function (val, key) {
-                Gun.SEA.read(val, false, function (val) {
-                  if ("alias/" + key === Gun.val.link.is(val)) {
+              Zen.node.is(at.put.users, function (val, key) {
+                Zen.ZEN.read(val, false, function (val) {
+                  if ("alias/" + key === Zen.val.link.is(val)) {
                     return;
                   }
                   no = true;
@@ -270,10 +270,10 @@ describe("Stress test GUN with SEA users causing PANIC!", function () {
                 return;
               }
               window.pub = ack.pub;
-              gun
+              zen
                 .get("users")
                 .get(ID)
-                .put(gun.get("alias/" + ID));
+                .put(zen.get("alias/" + ID));
               console.log("signed up", ack.pub);
               console.debug.j = 1;
               window.user.auth(ID, unsafepassword, function (ack) {
@@ -306,7 +306,7 @@ describe("Stress test GUN with SEA users causing PANIC!", function () {
           function (test) {
             test.async();
 
-            gun
+            zen
               .get("users")
               .map()
               .map()
@@ -398,7 +398,7 @@ describe("Stress test GUN with SEA users causing PANIC!", function () {
             }
 
             function end() {
-              var wait = Gun.obj.map(go.users, function (v) {
+              var wait = Zen.obj.map(go.users, function (v) {
                 if (v) {
                   return true;
                 }
@@ -406,7 +406,7 @@ describe("Stress test GUN with SEA users causing PANIC!", function () {
               if (wait) {
                 return;
               }
-              var more = Gun.obj.map(go.check, function (v) {
+              var more = Zen.obj.map(go.check, function (v) {
                 if (v) {
                   return true;
                 }
@@ -425,7 +425,7 @@ describe("Stress test GUN with SEA users causing PANIC!", function () {
   });
 
   /* MODEL TEST
-	it("Browsers initialized gun!", function(){
+	it("Browsers initialized zen!", function(){
 		var tests = [], ids = {}, i = 0;
 		browsers.each(function(client, id){
 			ids[id] = 1;

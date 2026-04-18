@@ -26,31 +26,31 @@ describe('ZEN', function(){
  		try{ __fsrm('tmp/radatatest') }catch(e){}
 		try{ var expect = global.expect = __expect }catch(e){}
 
-		//root.Gun = root.Gun || load('../gun');
-		if(root.Gun){
-			root.Gun = root.Gun;
-			root.Gun.TESTING = true;
+		//root.Zen = root.Zen || load('../zen');
+		if(root.Zen){
+			root.Zen = root.Zen;
+			root.Zen.TESTING = true;
 		} else {
-            root.Gun = __gun;
-            root.Gun.TESTING = true;
-            Gun.serve = __serve;
+            root.Zen = __gun;
+            root.Zen.TESTING = true;
+            Zen.serve = __serve;
         }
 	}(this));
 	var opt = { file: 'radatatest' };
-	describe('SEA', function() {
+	describe('ZEN', function() {
 		it('put null string', function(done) {
-			var gun = Gun(opt);
-			gun.get('test').get('key').put('null', function(ack) {
+			var zen = Zen(opt);
+			zen.get('test').get('key').put('null', function(ack) {
 				if (ack.err) { expect(!ack.err).to.be(true); done(); }
-				gun.get('test').get('key').once(function(v) {
+				zen.get('test').get('key').once(function(v) {
 					expect(v === 'null').to.be(true);
 					done();
 				});
 			});
 		});
 		it('put null string in user land', function(done) {
-			var gun = Gun(opt);
-			var user = gun.user();
+			var zen = Zen(opt);
+			var user = zen.user();
 			var u={a:'usr', p:'pass'};
 			var value = 'null';
 			user.create(u.a, u.p, function(ack) {

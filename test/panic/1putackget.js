@@ -76,7 +76,7 @@ describe("Put ACK", function () {
     return relays.atLeast(config.relays);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     var tests = [],
       i = 0;
     relays.each(function (client) {
@@ -95,12 +95,12 @@ describe("Put ACK", function () {
               res.end("I am " + env.i + "!");
             });
             var port = env.config.port + env.i;
-            var Gun;
+            var Zen;
             try {
-              Gun = __index;
+              Zen = __index;
             } catch (e) {
               console.log(
-                "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+                "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
               );
             }
             var peers = [],
@@ -109,7 +109,7 @@ describe("Put ACK", function () {
               var tmp = env.config.port + (i + 1);
               if (port != tmp) {
                 // ignore ourselves
-                peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+                peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
               }
             }
 
@@ -135,7 +135,7 @@ describe("Put ACK", function () {
             }
 
             console.log(port, " connect to ", peers);
-            var gun = Gun({
+            var zen = Zen({
               file: env.i + "data",
               peers: peers,
               web: server,
@@ -157,7 +157,7 @@ describe("Put ACK", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -172,10 +172,10 @@ describe("Put ACK", function () {
             } catch (e) {}
             var env = test.props;
 
-            var gun = Gun(
-              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+            var zen = Zen(
+              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
             );
-            window.ref = gun.get("a");
+            window.ref = zen.get("a");
           },
           { i: (i += 1), config: config },
         ),

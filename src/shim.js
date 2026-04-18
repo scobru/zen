@@ -56,7 +56,7 @@ api.random = function (len) {
   );
 };
 
-// JS utility shims (ported from gun/shim.js)
+// JS utility shims (ported from zen/shim.js)
 String.random =
   String.random ||
   function (l, c) {

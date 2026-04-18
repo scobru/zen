@@ -267,13 +267,13 @@ describe("ZEN crypto — pair() key format", function () {
   });
 });
 
-describe("ZEN crypto — wire format (no SEA prefix)", function () {
-  it("sign() and encrypt() omit SEA prefix", async function () {
+describe("ZEN crypto — wire format (no ZEN prefix)", function () {
+  it("sign() and encrypt() omit ZEN prefix", async function () {
     var pair = await ZEN.pair(null, { seed: "zen-wire-format" });
     var sig = await ZEN.sign({ hello: "zen" }, pair);
     var enc = await ZEN.encrypt("secret", pair);
-    assert.strictEqual(sig.startsWith("SEA"), false);
-    assert.strictEqual(enc.startsWith("SEA"), false);
+    assert.strictEqual(sig.startsWith("ZEN"), false);
+    assert.strictEqual(enc.startsWith("ZEN"), false);
   });
 });
 
@@ -425,17 +425,17 @@ describe("ZEN user graph — authenticator", function () {
   this.timeout(20 * 1000);
 
   it("put to user graph without being authenticated (provide pair)", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
-      gun
+      zen
         .get("~" + bob.pub)
         .get("test")
         .put(
           "this is Bob",
           function (ack) {
             assert.ok(!ack.err);
-            gun
+            zen
               .get("~" + bob.pub)
               .get("test")
               .once(function (data) {
@@ -449,11 +449,11 @@ describe("ZEN user graph — authenticator", function () {
   });
 
   it("put deep path with authenticator", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var enc = await ZEN.encrypt("secret", bob);
-      gun
+      zen
         .get("~" + bob.pub)
         .get("a")
         .get("b")
@@ -463,7 +463,7 @@ describe("ZEN user graph — authenticator", function () {
             if (ack && ack.err) {
               return done(new Error("put failed: " + ack.err));
             }
-            gun
+            zen
               .get("~" + bob.pub)
               .get("a")
               .get("b")
@@ -482,11 +482,11 @@ describe("ZEN user graph — authenticator", function () {
   });
 
   it("accepts top-level authenticator options without mutating caller input", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var opts = { authenticator: bob };
-      gun
+      zen
         .get("~" + bob.pub)
         .get("top")
         .put(
@@ -501,7 +501,7 @@ describe("ZEN user graph — authenticator", function () {
             } catch (e) {
               return done(e);
             }
-            gun
+            zen
               .get("~" + bob.pub)
               .get("top")
               .once(function (data) {
@@ -519,14 +519,14 @@ describe("ZEN user graph — authenticator", function () {
   });
 
   it("does not leak authenticator on out", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
-      gun.on("out", function (msg) {
+      zen.on("out", function (msg) {
         if (msg.put) {
           try {
             assert.ok(
-              !Object.prototype.propertyIsEnumerable.call(msg._ || {}, "sea"),
+              !Object.prototype.propertyIsEnumerable.call(msg._ || {}, "zen"),
             );
             assert.ok(!(msg.opt || {}).authenticator);
           } catch (e) {
@@ -536,7 +536,7 @@ describe("ZEN user graph — authenticator", function () {
         }
         this.to.next(msg);
       });
-      gun
+      zen
         .get("~" + bob.pub)
         .get("a")
         .get("b")
@@ -554,10 +554,10 @@ describe("ZEN user graph — authenticator", function () {
   });
 
   it("rejects write without authenticator", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
-      gun
+      zen
         .get("~" + bob.pub)
         .get("test")
         .put("no auth", function (ack) {
@@ -572,13 +572,13 @@ describe("ZEN user graph — external authenticator", function () {
   this.timeout(20 * 1000);
 
   it("put to user graph using external async authenticator (nested ZEN.sign)", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       async function authenticator(data) {
         return ZEN.sign(data, bob);
       }
-      gun
+      zen
         .get("~" + bob.pub)
         .get("test")
         .put(
@@ -587,7 +587,7 @@ describe("ZEN user graph — external authenticator", function () {
             if (ack && ack.err) {
               return done(new Error("put failed: " + ack.err));
             }
-            gun
+            zen
               .get("~" + bob.pub)
               .get("test")
               .once(function (data) {
@@ -609,12 +609,12 @@ describe("ZEN user graph — shard intermediate", function () {
   this.timeout(20 * 1000);
 
   it("accepts valid shard intermediate", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var key = bob.pub.slice(0, 2);
       var expected = "~/" + key;
-      gun
+      zen
         .get("~")
         .get(key)
         .put(
@@ -629,11 +629,11 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects shard intermediate when link target mismatches", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var key = bob.pub.slice(0, 2);
-      gun
+      zen
         .get("~")
         .get(key)
         .put(
@@ -648,11 +648,11 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects shard intermediate without authenticator", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var key = bob.pub.slice(0, 2);
-      gun
+      zen
         .get("~")
         .get(key)
         .put({ "#": "~/" + key }, function (ack) {
@@ -663,8 +663,8 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects shard path with double slash", function (done) {
-    var gun = makeZen();
-    gun
+    var zen = makeZen();
+    zen
       .get("~/ab//cd")
       .get("ef")
       .put({ "#": "~/ab//cd/ef" }, function (ack) {
@@ -674,8 +674,8 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects shard with invalid key length", function (done) {
-    var gun = makeZen();
-    gun
+    var zen = makeZen();
+    zen
       .get("~")
       .get("abc")
       .put({ "#": "~/abc" }, function (ack) {
@@ -685,10 +685,10 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects hash mismatch inside user graph", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
-      gun
+      zen
         .get("~" + bob.pub)
         .get("payload#deadbeef")
         .put(
@@ -703,10 +703,10 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects hash mismatch at depth 2 under ~pub", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
-      gun
+      zen
         .get("~" + bob.pub)
         .get("parent")
         .get("payload#deadbeef")
@@ -722,10 +722,10 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects hash mismatch at depth 3 under ~pub", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
-      gun
+      zen
         .get("~" + bob.pub)
         .get("parent")
         .get("child")
@@ -742,8 +742,8 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects shard intermediate when value is not link", function (done) {
-    var gun = makeZen();
-    gun
+    var zen = makeZen();
+    zen
       .get("~")
       .get("ab")
       .put("no-link", function (ack) {
@@ -753,7 +753,7 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("accepts shard intermediate with external async authenticator", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var key = bob.pub.slice(0, 2);
@@ -761,7 +761,7 @@ describe("ZEN user graph — shard intermediate", function () {
       async function authenticator(data) {
         return ZEN.sign(data, bob);
       }
-      gun
+      zen
         .get("~")
         .get(key)
         .put(
@@ -776,7 +776,7 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("accepts shard intermediate with top-level function authenticator and pub", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var key = bob.pub.slice(0, 2);
@@ -784,7 +784,7 @@ describe("ZEN user graph — shard intermediate", function () {
       async function authenticator(data) {
         return ZEN.sign(data, bob);
       }
-      gun
+      zen
         .get("~")
         .get(key)
         .put(
@@ -799,7 +799,7 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects shard intermediate with function authenticator but missing opt.pub", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var key = bob.pub.slice(0, 2);
@@ -807,7 +807,7 @@ describe("ZEN user graph — shard intermediate", function () {
       async function authenticator(data) {
         return ZEN.sign(data, bob);
       }
-      gun
+      zen
         .get("~")
         .get(key)
         .put(
@@ -822,13 +822,13 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects shard intermediate with state too far in future", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var key = bob.pub.slice(0, 2);
       var expected = "~/" + key;
       var futureState = ZEN.state() + 1000 * 60 * 60 * 24 * 14; // 2 weeks ahead
-      gun
+      zen
         .get("~")
         .get(key)
         .put(
@@ -843,7 +843,7 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects shard intermediate with wrong pub prefix", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var alice = await ZEN.pair();
@@ -852,7 +852,7 @@ describe("ZEN user graph — shard intermediate", function () {
         alice = await ZEN.pair();
       }
       var expected = "~/" + key;
-      gun
+      zen
         .get("~")
         .get(key)
         .put(
@@ -867,10 +867,10 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects shard write when depth exceeds limit", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     var segs = Array(44).fill("ab");
     var soul = "~/" + segs.join("/");
-    gun
+    zen
       .get(soul)
       .get("cd")
       .put({ "#": soul + "/cd" }, function (ack) {
@@ -880,8 +880,8 @@ describe("ZEN user graph — shard intermediate", function () {
   });
 
   it("rejects shard path with trailing slash", function (done) {
-    var gun = makeZen();
-    gun
+    var zen = makeZen();
+    zen
       .get("~/ab/cd/")
       .get("ef")
       .put({ "#": "~/ab/cd//ef" }, function (ack) {
@@ -895,13 +895,13 @@ describe("ZEN user graph — shard leaf", function () {
   this.timeout(20 * 1000);
 
   it("rejects shard leaf when value is raw pub string", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var chunks = bob.pub.match(/.{1,2}/g) || [];
       var key = chunks.pop();
       var soul = chunks.length ? "~/" + chunks.join("/") : "~";
-      gun
+      zen
         .get(soul)
         .get(key)
         .put(bob.pub, function (ack) {
@@ -912,13 +912,13 @@ describe("ZEN user graph — shard leaf", function () {
   });
 
   it("rejects shard leaf when value is null", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var chunks = bob.pub.match(/.{1,2}/g) || [];
       var key = chunks.pop();
       var soul = chunks.length ? "~/" + chunks.join("/") : "~";
-      gun
+      zen
         .get(soul)
         .get(key)
         .put(null, function (ack) {
@@ -929,13 +929,13 @@ describe("ZEN user graph — shard leaf", function () {
   });
 
   it("rejects shard leaf when value is a number", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var chunks = bob.pub.match(/.{1,2}/g) || [];
       var key = chunks.pop();
       var soul = chunks.length ? "~/" + chunks.join("/") : "~";
-      gun
+      zen
         .get(soul)
         .get(key)
         .put(42, function (ack) {
@@ -946,13 +946,13 @@ describe("ZEN user graph — shard leaf", function () {
   });
 
   it("rejects shard leaf when link points to wrong soul", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var chunks = bob.pub.match(/.{1,2}/g) || [];
       var key = chunks.pop();
       var soul = chunks.length ? "~/" + chunks.join("/") : "~";
-      gun
+      zen
         .get(soul)
         .get(key)
         .put({ "#": soul + "/" + key }, function (ack) {
@@ -963,13 +963,13 @@ describe("ZEN user graph — shard leaf", function () {
   });
 
   it("rejects shard leaf without authenticator", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var chunks = bob.pub.match(/.{1,2}/g) || [];
       var key = chunks.pop();
       var soul = chunks.length ? "~/" + chunks.join("/") : "~";
-      gun
+      zen
         .get(soul)
         .get(key)
         .put({ "#": "~" + bob.pub }, function (ack) {
@@ -980,13 +980,13 @@ describe("ZEN user graph — shard leaf", function () {
   });
 
   it("put to shard leaf with authenticator pair", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var chunks = bob.pub.match(/.{1,2}/g) || [];
       var key = chunks.pop();
       var soul = chunks.length ? "~/" + chunks.join("/") : "~";
-      gun
+      zen
         .get(soul)
         .get(key)
         .put(
@@ -1001,7 +1001,7 @@ describe("ZEN user graph — shard leaf", function () {
   });
 
   it("put to shard leaf with external authenticator", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var chunks = bob.pub.match(/.{1,2}/g) || [];
@@ -1010,7 +1010,7 @@ describe("ZEN user graph — shard leaf", function () {
       async function authenticator(data) {
         return ZEN.sign(data, bob);
       }
-      gun
+      zen
         .get(soul)
         .get(key)
         .put(
@@ -1029,13 +1029,13 @@ describe("ZEN user graph — full shard chain", function () {
   this.timeout(20 * 1000);
 
   it("registers full shard path (soul+key) with authenticator pair", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var chunks = bob.pub.match(/.{1,2}/g) || [];
       var key = chunks.pop();
       var soul = chunks.length ? "~/" + chunks.join("/") : "~";
-      gun
+      zen
         .get(soul)
         .get(key)
         .put(
@@ -1050,13 +1050,13 @@ describe("ZEN user graph — full shard chain", function () {
   });
 
   it("rejects full shard chain when no authenticator", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var bob = await ZEN.pair();
       var chunks = bob.pub.match(/.{1,2}/g) || [];
       var key = chunks.pop();
       var soul = chunks.length ? "~/" + chunks.join("/") : "~";
-      gun
+      zen
         .get(soul)
         .get(key)
         .put({ "#": "~" + bob.pub }, function (ack) {
@@ -1071,12 +1071,12 @@ describe("ZEN — hash-based namespace routing (Frozen/Across spaces)", function
   this.timeout(20 * 1000);
 
   it("stores and retrieves data under a hash-keyed namespace", function (done) {
-    var gun = makeZen();
+    var zen = makeZen();
     (async function () {
       var alice = await ZEN.pair();
       // Write to user graph
       await new Promise(function (res, rej) {
-        gun.get("~" + alice.pub).put(
+        zen.get("~" + alice.pub).put(
           { name: "Alice", country: "USA" },
           function (ack) {
             if (ack && ack.err) {
@@ -1092,7 +1092,7 @@ describe("ZEN — hash-based namespace routing (Frozen/Across spaces)", function
       var hash = await ZEN.hash(data, null, null, { name: "SHA-256" });
       hash = hash.slice(-20);
       await new Promise(function (res, rej) {
-        gun
+        zen
           .get("#users")
           .get(hash)
           .put(data, function (ack) {
@@ -1103,7 +1103,7 @@ describe("ZEN — hash-based namespace routing (Frozen/Across spaces)", function
           });
       });
       var result = await new Promise(function (res) {
-        gun
+        zen
           .get("#users")
           .get(hash)
           .once(function (v) {

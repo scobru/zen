@@ -5,7 +5,7 @@ import sign from "./sign.js";
 import settings from "./settings.js";
 
 var u;
-var Gun = ZEN;
+var Zen = ZEN;
 
 // --------------- pack / unpack ---------------
 
@@ -31,7 +31,7 @@ settings.pack = function (d, cb, k, n, s) {
         "#": s || d["#"],
         ".": k || d["."],
         ":": (meta || "")[":"],
-        ">": d[">"] || (Gun.state && Gun.state.is ? Gun.state.is(n, k) : 0),
+        ">": d[">"] || (Zen.state && Zen.state.is ? Zen.state.is(n, k) : 0),
       },
       s: sig,
     });
@@ -61,7 +61,7 @@ settings.unpack = function (d, k, n) {
   }
   var soul = (n && n._ && n._["#"]) || settings.fall_soul;
   var s =
-    (Gun.state && Gun.state.is ? Gun.state.is(n, k) : 0) || settings.fall_state;
+    (Zen.state && Zen.state.is ? Zen.state.is(n, k) : 0) || settings.fall_state;
   if (
     d &&
     4 === d.length &&
@@ -100,9 +100,9 @@ settings.pub = function (s) {
   return parts.slice(0, 2).join(".");
 };
 
-// --------------- gun security middleware ---------------
+// --------------- zen security middleware ---------------
 
-var valid = Gun && Gun.valid;
+var valid = Zen && Zen.valid;
 var link_is = function (d, l) {
   return "string" == typeof (l = valid && valid(d)) && l;
 };
@@ -216,7 +216,7 @@ check.pipe = {
       tmp2;
     if (0 <= soul.indexOf("<?")) {
       tmp2 = parseFloat(soul.split("<?")[1] || "");
-      if (tmp2 && state < Gun.state() - tmp2 * 1000) {
+      if (tmp2 && state < Zen.state() - tmp2 * 1000) {
         (tmp2 = msg._) && tmp2.stun && tmp2.stun--;
         return;
       }
@@ -277,28 +277,28 @@ check.use = function (fn) {
   check.plugins.push(fn);
 };
 
-function initSeaOpt(msg, ctx) {
+function initZenOpt(msg, ctx) {
   var o = Object.assign({}, ctx);
   try {
-    Object.defineProperty(msg._, "sea", {
+    Object.defineProperty(msg._, "zen", {
       value: o,
       enumerable: false,
       configurable: true,
       writable: true,
     });
   } catch (e) {
-    msg._.sea = o;
+    msg._.zen = o;
   }
   return o;
 }
 
-check.$sea = function (msg, user, pub) {
+check.$zen = function (msg, user, pub) {
   var scope = msg._ || {};
   var ctx = scope.opt || (scope.msg || {}).opt || {};
-  var opt = scope.sea || initSeaOpt(msg, ctx);
-  var sea = (user && user._) || {};
+  var opt = scope.zen || initZenOpt(msg, ctx);
+  var zen = (user && user._) || {};
   var is = (user && user.is) || {};
-  var authenticator = opt.authenticator || sea.sea;
+  var authenticator = opt.authenticator || zen.zen;
   var upub = opt.pub || (authenticator || {}).pub || is.pub || pub;
   if (!scope.done) {
     delete ctx.authenticator;
@@ -404,7 +404,7 @@ check.$vfy = function (
         soul.indexOf("/") > -1
           ? soul.replace(soul.substring(0, soul.indexOf("/") + 1), "")
           : "";
-      String.match = String.match || (Gun.text && Gun.text.match);
+      String.match = String.match || (Zen.text && Zen.text.match);
       var w = Array.isArray(data.w)
         ? data.w
         : typeof data.w === "object" || typeof data.w === "string"
@@ -636,7 +636,7 @@ check.pub = async function (eve, msg, val, key, soul, at, no, user, pub, conf) {
   var $next = function () {
     return check.next(eve, msg, no);
   };
-  var sec = check.$sea(msg, user, pub);
+  var sec = check.$zen(msg, user, pub);
   var opt = sec.opt,
     authenticator = sec.authenticator,
     upub = sec.upub;
@@ -694,7 +694,7 @@ check.pub = async function (eve, msg, val, key, soul, at, no, user, pub, conf) {
       }
       var lnk = link_is(data);
       if (lnk && pub === settings.pub(lnk)) {
-        (at.sea.own[lnk] = at.sea.own[lnk] || {})[pub] = 1;
+        (at.zen.own[lnk] = at.zen.own[lnk] || {})[pub] = 1;
       }
       $hash(data, function () {
         check.pass(eve, msg, raw, data, $verify);
@@ -727,7 +727,7 @@ check.shard = async function (eve, msg, val, key, soul, at, no, user) {
     if (link !== "~" + leaf) {
       return no("Shard leaf link must point to ~pub.");
     }
-    var lsec = check.$sea(msg, user, leaf);
+    var lsec = check.$zen(msg, user, leaf);
     var lauthenticator = lsec.authenticator,
       lupub = lsec.upub || (lauthenticator || {}).pub;
     if (!lauthenticator) {
@@ -756,7 +756,7 @@ check.shard = async function (eve, msg, val, key, soul, at, no, user) {
     if (link !== expected) {
       return no("Invalid shard link target.");
     }
-    var sec2 = check.$sea(msg, user);
+    var sec2 = check.$zen(msg, user);
     var authenticator2 = sec2.authenticator;
     claim = sec2.upub || (authenticator2 || {}).pub;
     if (!authenticator2) {
@@ -829,11 +829,11 @@ check.any = function (eve, msg, val, key, soul, at, no) {
   }).on.on("secure", msg);
 };
 
-// --------------- gun plugin ---------------
+// --------------- zen plugin ---------------
 
-Gun.on("opt", function (at) {
-  if (!at.sea) {
-    at.sea = { own: {} };
+Zen.on("opt", function (at) {
+  if (!at.zen) {
+    at.zen = { own: {} };
     at.on("put", check, at);
   }
   this.to.next(at);

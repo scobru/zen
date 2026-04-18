@@ -16,7 +16,7 @@ import __expect from "../expect.js";
 import __radisk from "../../lib/radisk.js";
 import __rfs from "../../lib/rfs.js";
 var root;
-var Gun;
+var Zen;
 {
   var env;
   if (typeof global !== "undefined") {
@@ -32,9 +32,9 @@ var Gun;
   try {
     indexedDB.deleteDatabase("radatatest");
   } catch (e) {}
-  if (root.Gun) {
-    root.Gun = root.Gun;
-    root.Gun.TESTING = true;
+  if (root.Zen) {
+    root.Zen = root.Zen;
+    root.Zen.TESTING = true;
   } else {
     try {
       __fs.unlinkSync("tmp/data.json");
@@ -42,8 +42,8 @@ var Gun;
     try {
       __fsrm("tmp/radatatest");
     } catch (e) {}
-    root.Gun = __gun;
-    root.Gun.TESTING = true;
+    root.Zen = __gun;
+    root.Zen.TESTING = true;
   }
 
   try {
@@ -53,16 +53,16 @@ var Gun;
 this;
 
 {
-  Gun = root.Gun;
+  Zen = root.Zen;
 
-  if (Gun.window && !Gun.window.RindexedDB) {
+  if (Zen.window && !Zen.window.RindexedDB) {
     return;
   }
 
   var opt = {};
   opt.file = "radatatest";
-  var Radisk = (Gun.window && Gun.window.Radisk) || __radisk;
-  opt.store = ((Gun.window && Gun.window.RindexedDB) || __rfs)(opt);
+  var Radisk = (Zen.window && Zen.window.Radisk) || __radisk;
+  opt.store = ((Zen.window && Zen.window.RindexedDB) || __rfs)(opt);
   opt.chunk = 170;
   var Radix = Radisk.Radix;
   var rad = Radisk(opt),
@@ -70,7 +70,7 @@ this;
 
   describe("RAD Crashes", function () {
     describe("If No File Added to Index, Recover", function () {
-      var gun = Gun({ chunk: opt.chunk });
+      var zen = Zen({ chunk: opt.chunk });
 
       it("write initial", function (done) {
         var all = {},
@@ -81,13 +81,13 @@ this;
         names.forEach(function (v, i) {
           all[++i] = true;
           tmp = v.toLowerCase();
-          gun
+          zen
             .get("names")
             .get(tmp)
             .put(i, function (ack) {
               expect(ack.err).to.not.be.ok();
               delete all[i];
-              if (!Gun.obj.empty(all)) {
+              if (!Zen.obj.empty(all)) {
                 return;
               }
               done();
@@ -102,22 +102,22 @@ this;
           tmp;
         var names = ["alan"];
         console.log(
-          "DID YOU ADD `Gun.CRASH` != 1%C to Radisk f.write list.add callback?",
+          "DID YOU ADD `Zen.CRASH` != 1%C to Radisk f.write list.add callback?",
         );
-        Gun.CRASH = true; // add check for this in f.swap!
+        Zen.CRASH = true; // add check for this in f.swap!
         names.forEach(function (v, i) {
           all[++i] = true;
           tmp = v.toLowerCase();
-          gun.get("names").get(tmp).put(i);
+          zen.get("names").get(tmp).put(i);
         });
         setTimeout(function () {
-          Gun.CRASH = false;
+          Zen.CRASH = false;
           done();
         }, 1000);
       });
 
       it("write zach", function (done) {
-        gun
+        zen
           .get("names")
           .get("zach")
           .put(9, function (ack) {
@@ -130,7 +130,7 @@ this;
         console.log(
           "Better to .skip 1st run, .only 2nd run & prevent clearing radatatest.",
         );
-        var g = Gun();
+        var g = Zen();
         var all = { al: 1, alex: 2, alexander: 3, alice: 4, zach: 9 };
         //g.get('names').get('zach').put(9, function(ack){ done() }); return;
         g.get("names")
@@ -140,7 +140,7 @@ this;
             if (all[k] === v) {
               delete all[k];
             }
-            if (!Gun.obj.empty(all)) {
+            if (!Zen.obj.empty(all)) {
               return;
             }
             done();

@@ -55,7 +55,7 @@ PeerManager.init();
 Helpers.checkColorScheme();
 
 const APPLICATIONS = [
-  // TODO: move editable shortcuts to State.local gun
+  // TODO: move editable shortcuts to State.local zen
   { url: "/", text: t("home"), icon: Icons.home },
   { url: "/feed", text: t("feed"), icon: Icons.feed },
   { url: "/media", text: t("media"), icon: Icons.play },
@@ -65,7 +65,7 @@ const APPLICATIONS = [
   { url: "/chat", text: t("messages"), icon: Icons.chat },
   // {url: '/store', text: t('store'), icon: Icons.store}, // restore when it works!
   {},
-  { url: "../stats.html", text: "Gun node stats" },
+  { url: "../stats.html", text: "Zen node stats" },
   {
     url: "../iris/index.html",
     text: "Iris",
@@ -75,7 +75,7 @@ const APPLICATIONS = [
   { url: "../chat/index.html", text: "Chat" },
   { url: "../game/space.html", text: "Space" },
   {},
-  { url: "https://gun.eco/docs/", text: "Gun documentation" },
+  { url: "https://zen.eco/docs/", text: "Zen documentation" },
   { url: "https://examples.iris.to/components/", text: "Iris web components" },
 ];
 
@@ -86,17 +86,17 @@ const HomeView = () => {
         <h1>Hello, world!</h1>
         <p>
           Here you can find sample applications and utilities for
-          <a href="https://github.com/akaoio/gun">GUN</a>.
+          <a href="https://github.com/akaoio/zen">ZEN</a>.
         </p>
         <p>
-          If you need any help, please feel free to join the GUN community chat:
-          <a href="http://chat.gun.eco">http://chat.gun.eco</a>
+          If you need any help, please feel free to join the ZEN community chat:
+          <a href="http://chat.zen.eco">http://chat.zen.eco</a>
         </p>
         <a href="/explorer" class="msg"
           ><div class="msg-content">
             <b>Explorer</b>
             <p>
-              Explore the data saved on the GUN database. Open to the side while
+              Explore the data saved on the ZEN database. Open to the side while
               using an application and see the data change in real-time.
             </p>
           </div></a
@@ -124,7 +124,7 @@ const HomeView = () => {
         >
         <a native class="msg" href="/chat/index.html"
           ><div class="msg-content">
-            <div class="img-container"><img src="iris/img/gun-chat.jpg" /></div>
+            <div class="img-container"><img src="iris/img/zen-chat.jpg" /></div>
             <b>Chat</b>
             <p>Shoutbox!</p>
           </div></a

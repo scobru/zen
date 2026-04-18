@@ -21,11 +21,10 @@ import __pen from "../src/pen.js";
 import ZEN from "../src/index.js";
 import assert from "assert";
 ("use strict");
-var Gun, SEA, pen;
+var Zen, pen;
 
 before(function (done) {
-  Gun = __gun;
-  SEA = ZEN;
+  Zen = __gun;
   pen = __pen;
   pen.ready
     .then(function () {
@@ -306,23 +305,23 @@ describe("pen.run — ISA", function () {
   });
 });
 
-// ── SEA.pen compiler ──────────────────────────────────────────────────────────
+// ── ZEN.pen compiler ──────────────────────────────────────────────────────────
 
-describe("SEA.pen()", function () {
+describe("ZEN.pen()", function () {
   it("returns a string starting with $", function () {
-    var soul = SEA.pen({});
+    var soul = ZEN.pen({});
     assert.ok(typeof soul === "string");
     assert.strictEqual(soul[0], "$");
   });
 
   it("empty spec → PASS predicate", function () {
-    var soul = SEA.pen({});
+    var soul = ZEN.pen({});
     var bc = pen.unpack(soul.slice(1));
     assert.strictEqual(pen.run(bc, ["k", "v", soul, 0, Date.now(), ""]), true);
   });
 
   it('{ val: { type: "string" } } accepts string values', function () {
-    var soul = SEA.pen({ val: { type: "string" } });
+    var soul = ZEN.pen({ val: { type: "string" } });
     var regs = function (v) {
       return ["k", v, soul, 0, Date.now(), ""];
     };
@@ -333,7 +332,7 @@ describe("SEA.pen()", function () {
   });
 
   it('{ key: "fixed" } enforces exact key match', function () {
-    var soul = SEA.pen({ key: "fixed" });
+    var soul = ZEN.pen({ key: "fixed" });
     var bc = pen.unpack(soul.slice(1));
     assert.strictEqual(
       pen.run(bc, ["fixed", "v", soul, 0, Date.now(), ""]),
@@ -346,7 +345,7 @@ describe("SEA.pen()", function () {
   });
 
   it('{ key: { pre: "foo" } } checks prefix', function () {
-    var soul = SEA.pen({ key: { pre: "foo" } });
+    var soul = ZEN.pen({ key: { pre: "foo" } });
     var bc = pen.unpack(soul.slice(1));
     assert.strictEqual(
       pen.run(bc, ["foobar", "v", soul, 0, Date.now(), ""]),
@@ -359,7 +358,7 @@ describe("SEA.pen()", function () {
   });
 
   it("{ key: { and: [...] } } compiles AND of conditions", function () {
-    var soul = SEA.pen({ key: { and: [{ pre: "foo" }, { suf: "bar" }] } });
+    var soul = ZEN.pen({ key: { and: [{ pre: "foo" }, { suf: "bar" }] } });
     var bc = pen.unpack(soul.slice(1));
     assert.strictEqual(
       pen.run(bc, ["foobar", "v", soul, 0, Date.now(), ""]),
@@ -376,7 +375,7 @@ describe("SEA.pen()", function () {
   });
 
   it('{ path: "exact" } enforces exact path match', function () {
-    var soul = SEA.pen({ path: "exact-path" });
+    var soul = ZEN.pen({ path: "exact-path" });
     var bc = pen.unpack(soul.slice(1));
     var regs = function (p) {
       return ["k", "v", soul, 0, Date.now(), "", p];
@@ -387,7 +386,7 @@ describe("SEA.pen()", function () {
   });
 
   it('{ path: { pre: "usr/" } } checks path prefix', function () {
-    var soul = SEA.pen({ path: { pre: "usr/" } });
+    var soul = ZEN.pen({ path: { pre: "usr/" } });
     var bc = pen.unpack(soul.slice(1));
     var regs = function (p) {
       return ["k", "v", soul, 0, Date.now(), "", p];
@@ -398,7 +397,7 @@ describe("SEA.pen()", function () {
   });
 
   it('{ path: { type: "string" } } accepts non-empty path, rejects missing path', function () {
-    var soul = SEA.pen({ path: { type: "string" } });
+    var soul = ZEN.pen({ path: { type: "string" } });
     var bc = pen.unpack(soul.slice(1));
     assert.strictEqual(
       pen.run(bc, ["k", "v", soul, 0, Date.now(), "", "some/path"]),
@@ -415,7 +414,7 @@ describe("SEA.pen()", function () {
   });
 
   it("path + key + val: all three combine with AND", function () {
-    var soul = SEA.pen({
+    var soul = ZEN.pen({
       key: { type: "string" },
       val: { type: "number" },
       path: { pre: "ns/" },
@@ -439,7 +438,7 @@ describe("SEA.pen()", function () {
   });
 
   it("path seg: validate first segment of path", function () {
-    var soul = SEA.pen({
+    var soul = ZEN.pen({
       path: { seg: { sep: "/", idx: 0, match: { pre: "user-" } } },
     });
     var bc = pen.unpack(soul.slice(1));
@@ -451,7 +450,7 @@ describe("SEA.pen()", function () {
   });
 
   it("multiple fields combine with AND", function () {
-    var soul = SEA.pen({ key: { type: "string" }, val: { type: "number" } });
+    var soul = ZEN.pen({ key: { type: "string" }, val: { type: "number" } });
     var bc = pen.unpack(soul.slice(1));
     assert.strictEqual(pen.run(bc, ["k", 99, soul, 0, Date.now(), ""]), true);
     assert.strictEqual(
@@ -461,7 +460,7 @@ describe("SEA.pen()", function () {
   });
 
   it("{ sign: true } emits 0xC0 policy byte after tree", function () {
-    var soul = SEA.pen({ val: { type: "string" }, sign: true });
+    var soul = ZEN.pen({ val: { type: "string" }, sign: true });
     var bc = pen.unpack(soul.slice(1));
     var p = pen.scanpolicy(bc);
     assert.strictEqual(p.sign, true);
@@ -475,7 +474,7 @@ describe("SEA.pen()", function () {
 
   it("{ cert: pub } emits 0xC1 + pub bytes", function () {
     var pub = "TestPub88CharactersLong0123456789abcdefABCDEF";
-    var soul = SEA.pen({ cert: pub });
+    var soul = ZEN.pen({ cert: pub });
     var bc = pen.unpack(soul.slice(1));
     var p = pen.scanpolicy(bc);
     assert.strictEqual(p.cert, pub);
@@ -483,13 +482,13 @@ describe("SEA.pen()", function () {
   });
 
   it("{ open: true } emits 0xC3", function () {
-    var soul = SEA.pen({ open: true });
+    var soul = ZEN.pen({ open: true });
     var bc = pen.unpack(soul.slice(1));
     assert.strictEqual(pen.scanpolicy(bc).open, true);
   });
 
   it('{ pow: { field:1, difficulty:3 } } emits 0xC4 + field + diff, unit defaults to "0"', function () {
-    var soul = SEA.pen({ pow: { field: 1, difficulty: 3 } });
+    var soul = ZEN.pen({ pow: { field: 1, difficulty: 3 } });
     var bc = pen.unpack(soul.slice(1));
     var p = pen.scanpolicy(bc);
     assert.ok(p.pow);
@@ -503,7 +502,7 @@ describe("SEA.pen()", function () {
   });
 
   it('{ pow: { unit: "asdf", difficulty: 2 } } unit and difficulty round-trip', function () {
-    var soul = SEA.pen({ pow: { field: 0, unit: "asdf", difficulty: 2 } });
+    var soul = ZEN.pen({ pow: { field: 0, unit: "asdf", difficulty: 2 } });
     var bc = pen.unpack(soul.slice(1));
     var p = pen.scanpolicy(bc);
     assert.ok(p.pow);
@@ -513,7 +512,7 @@ describe("SEA.pen()", function () {
   });
 
   it('{ pow: { unit: "abc" } } difficulty defaults to 1', function () {
-    var soul = SEA.pen({ pow: { field: 0, unit: "abc" } });
+    var soul = ZEN.pen({ pow: { field: 0, unit: "abc" } });
     var bc = pen.unpack(soul.slice(1));
     var p = pen.scanpolicy(bc);
     assert.ok(p.pow);
@@ -526,7 +525,7 @@ describe("SEA.pen()", function () {
   });
 
   it('{ pow: { difficulty: 2 } } unit defaults to "0"', function () {
-    var soul = SEA.pen({ pow: { field: 0, difficulty: 2 } });
+    var soul = ZEN.pen({ pow: { field: 0, difficulty: 2 } });
     var bc = pen.unpack(soul.slice(1));
     var p = pen.scanpolicy(bc);
     assert.ok(p.pow);
@@ -535,7 +534,7 @@ describe("SEA.pen()", function () {
   });
 
   it("{ params } salts soul identity and round-trips through scanpolicy", function () {
-    var soul = SEA.pen({
+    var soul = ZEN.pen({
       val: { type: "string" },
       params: { item: "organic-green-tea", type: "buy", candle: 5820000 },
     });
@@ -553,11 +552,11 @@ describe("SEA.pen()", function () {
   });
 
   it("{ params } canonicalizes object key order before salting soul", function () {
-    var a = SEA.pen({
+    var a = ZEN.pen({
       key: { type: "string" },
       params: { item: "tea", type: "buy", candle: 1 },
     });
-    var b = SEA.pen({
+    var b = ZEN.pen({
       key: { type: "string" },
       params: { type: "buy", candle: 1, item: "tea" },
     });
@@ -565,11 +564,11 @@ describe("SEA.pen()", function () {
   });
 
   it("different params produce different souls even when validator is identical", function () {
-    var a = SEA.pen({
+    var a = ZEN.pen({
       key: { type: "string" },
       params: { item: "tea", type: "buy", candle: 1 },
     });
-    var b = SEA.pen({
+    var b = ZEN.pen({
       key: { type: "string" },
       params: { item: "tea", type: "buy", candle: 2 },
     });
@@ -579,7 +578,7 @@ describe("SEA.pen()", function () {
   it("sign + predicate: policy detected without polluting tree", function () {
     // A predicate with integer constants including values near 0xC0 range
     // Use a candle-like predicate with large integer: ensure no false positive
-    var soul = SEA.pen({ key: { gte: 192 }, sign: true }); // 192 = 0xC0 in ULEB
+    var soul = ZEN.pen({ key: { gte: 192 }, sign: true }); // 192 = 0xC0 in ULEB
     var bc = pen.unpack(soul.slice(1));
     var p = pen.scanpolicy(bc);
     assert.strictEqual(p.sign, true, "sign correctly detected via treeskip");
@@ -589,11 +588,11 @@ describe("SEA.pen()", function () {
   });
 });
 
-// ── SEA.candle helper ─────────────────────────────────────────────────────────
+// ── ZEN.candle helper ─────────────────────────────────────────────────────────
 
-describe("SEA.candle()", function () {
+describe("ZEN.candle()", function () {
   it("returns a plain object (expr spec)", function () {
-    var expr = SEA.candle({
+    var expr = ZEN.candle({
       seg: 0,
       sep: "_",
       size: 300000,
@@ -608,8 +607,8 @@ describe("SEA.candle()", function () {
     var now = Date.now();
     var size = 300000;
     var candle = Math.floor(now / size);
-    var soul = SEA.pen({
-      key: SEA.candle({ seg: 0, sep: "_", size: size, back: 100, fwd: 2 }),
+    var soul = ZEN.pen({
+      key: ZEN.candle({ seg: 0, sep: "_", size: size, back: 100, fwd: 2 }),
     });
     var bc = pen.unpack(soul.slice(1));
     var regs = function (key) {
@@ -647,10 +646,10 @@ describe("SEA.candle()", function () {
     var size = 300000;
     var candle = Math.floor(now / size);
 
-    var soul = SEA.pen({
+    var soul = ZEN.pen({
       key: {
         and: [
-          SEA.candle({ seg: 0, sep: "_", size: size, back: 100, fwd: 2 }),
+          ZEN.candle({ seg: 0, sep: "_", size: size, back: 100, fwd: 2 }),
           {
             seg: {
               sep: "_",
@@ -699,7 +698,7 @@ describe("pen.scanpolicy()", function () {
   });
 
   it("detects multiple policies simultaneously", function () {
-    var soul = SEA.pen({ val: { type: "string" }, sign: true, open: true });
+    var soul = ZEN.pen({ val: { type: "string" }, sign: true, open: true });
     var bc = pen.unpack(soul.slice(1));
     var p = pen.scanpolicy(bc);
     assert.strictEqual(p.sign, true);
@@ -724,7 +723,7 @@ describe("pen.scanpolicy()", function () {
   });
 
   it("treeskip-based detection correctly finds sign suffix with large int in tree", function () {
-    var soul = SEA.pen({ key: { gte: 192 }, sign: true });
+    var soul = ZEN.pen({ key: { gte: 192 }, sign: true });
     var bc = pen.unpack(soul.slice(1));
     var p = pen.scanpolicy(bc);
     assert.strictEqual(
@@ -771,9 +770,9 @@ describe("penStage (mocked pipeline)", function () {
     var soul = "$0"; // '0' in base62 decodes to empty
     var r = mockCtx(soul, "k", "v");
     var rejected = null;
-    SEA.check &&
-      SEA.check.plugins &&
-      SEA.check.plugins.forEach(function (fn) {
+    ZEN.check &&
+      ZEN.check.plugins &&
+      ZEN.check.plugins.forEach(function (fn) {
         fn(r.ctx, [null]);
       });
     // Simulate what penStage would do directly
@@ -784,7 +783,7 @@ describe("penStage (mocked pipeline)", function () {
 
   it("rejects when predicate fails (no-policy soul)", function (done) {
     // val must be string, write a number
-    var soul = SEA.pen({ val: { type: "string" } });
+    var soul = ZEN.pen({ val: { type: "string" } });
     var r = mockCtx(soul, "k", 42);
     var rejected = null;
 
@@ -799,7 +798,7 @@ describe("penStage (mocked pipeline)", function () {
   });
 
   it("accepts when predicate passes (no-policy soul) — verify run returns true", function (done) {
-    var soul = SEA.pen({ val: { type: "string" } });
+    var soul = ZEN.pen({ val: { type: "string" } });
     var r = mockCtx(soul, "k", "valid");
     var bc = pen.unpack(soul.slice(1));
     var regs = ["k", "valid", soul, 0, Date.now(), ""];
@@ -808,7 +807,7 @@ describe("penStage (mocked pipeline)", function () {
   });
 
   it("soul with path: penStage extracts path after first / into R[6]", function (done) {
-    var soul = SEA.pen({ path: { pre: "usr/" } });
+    var soul = ZEN.pen({ path: { pre: "usr/" } });
     // Simulate soul with path: '$pencode/usr/alice'
     var soulWithPath = soul + "/usr/alice";
     var slashIdx = soulWithPath.indexOf("/");
@@ -828,7 +827,7 @@ describe("penStage (mocked pipeline)", function () {
   });
 
   it("soul without path: path R[6] defaults to empty string", function (done) {
-    var soul = SEA.pen({ key: "mykey" });
+    var soul = ZEN.pen({ key: "mykey" });
     // No slash in soul — path should be ''
     var pencode = soul.slice(1);
     var pathpart = "";
@@ -843,7 +842,7 @@ describe("penStage (mocked pipeline)", function () {
   });
 
   it("open policy: eve.to.next called without auth", function (done) {
-    var soul = SEA.pen({ open: true });
+    var soul = ZEN.pen({ open: true });
     var r = mockCtx(soul, "k", "hello");
     var called = false;
     r.ctx.eve.to.next = function () {
@@ -860,7 +859,7 @@ describe("penStage (mocked pipeline)", function () {
   });
 
   it("sign policy: detected in scanpolicy, bytecode still evaluates correctly", function (done) {
-    var soul = SEA.pen({ val: { type: "string" }, sign: true });
+    var soul = ZEN.pen({ val: { type: "string" }, sign: true });
     var bc = pen.unpack(soul.slice(1));
     var policy = pen.scanpolicy(bc);
     assert.strictEqual(policy.sign, true);
@@ -875,7 +874,7 @@ describe("penStage (mocked pipeline)", function () {
   });
 
   it("pow policy: field, difficulty, and unit correctly extracted", function (done) {
-    var soul = SEA.pen({ pow: { field: 1, difficulty: 4 } });
+    var soul = ZEN.pen({ pow: { field: 1, difficulty: 4 } });
     var bc = pen.unpack(soul.slice(1));
     var policy = pen.scanpolicy(bc);
     assert.ok(policy.pow);
@@ -903,18 +902,18 @@ describe("penStage (mocked pipeline)", function () {
   });
 });
 
-// ── SEA + PEN integration ─────────────────────────────────────────────────────
-// Real async SEA operations (pair/sign/work/certify/encrypt) feeding into PEN
+// ── ZEN + PEN integration ─────────────────────────────────────────────────────
+// Real async ZEN operations (pair/sign/work/certify/encrypt) feeding into PEN
 
-describe("SEA + PEN integration", function () {
+describe("ZEN + PEN integration", function () {
   this.timeout(15000);
 
   var pair, pair2;
 
   before(function (done) {
-    SEA.pair(function (p) {
+    ZEN.pair(function (p) {
       pair = p;
-      SEA.pair(function (p2) {
+      ZEN.pair(function (p2) {
         pair2 = p2;
         done();
       });
@@ -923,9 +922,9 @@ describe("SEA + PEN integration", function () {
 
   // ── sign round-trip ─────────────────────────────────────────────────────────
 
-  it("sign:true — SEA.sign output is a string satisfying ISS predicate", function (done) {
-    var soul = SEA.pen({ val: { type: "string" }, sign: true });
-    SEA.sign("hello world", pair, function (signed) {
+  it("sign:true — ZEN.sign output is a string satisfying ISS predicate", function (done) {
+    var soul = ZEN.pen({ val: { type: "string" }, sign: true });
+    ZEN.sign("hello world", pair, function (signed) {
       assert.ok(typeof signed === "string", "signed value is a string");
       var bc = pen.unpack(soul.slice(1));
       assert.strictEqual(pen.scanpolicy(bc).sign, true);
@@ -938,11 +937,11 @@ describe("SEA + PEN integration", function () {
     });
   });
 
-  it("sign:true — SEA.verify(SEA.sign(v)) round-trip with PEN string val", function (done) {
-    var soul = SEA.pen({ val: { type: "string" }, sign: true });
+  it("sign:true — ZEN.verify(ZEN.sign(v)) round-trip with PEN string val", function (done) {
+    var soul = ZEN.pen({ val: { type: "string" }, sign: true });
     var original = "order_amount:1.5";
-    SEA.sign(original, pair, function (signed) {
-      SEA.verify(signed, pair.pub, function (verified) {
+    ZEN.sign(original, pair, function (signed) {
+      ZEN.verify(signed, pair.pub, function (verified) {
         assert.strictEqual(verified, original, "verify round-trips correctly");
         var bc = pen.unpack(soul.slice(1));
         assert.strictEqual(
@@ -955,10 +954,10 @@ describe("SEA + PEN integration", function () {
     });
   });
 
-  it("sign:true — wrong key: SEA.verify returns undefined, PEN predicate still true (string check only)", function (done) {
-    var soul = SEA.pen({ val: { type: "string" }, sign: true });
-    SEA.sign("data", pair, function (signed) {
-      SEA.verify(signed, pair2.pub, function (verified) {
+  it("sign:true — wrong key: ZEN.verify returns undefined, PEN predicate still true (string check only)", function (done) {
+    var soul = ZEN.pen({ val: { type: "string" }, sign: true });
+    ZEN.sign("data", pair, function (signed) {
+      ZEN.verify(signed, pair2.pub, function (verified) {
         assert.strictEqual(
           verified,
           undefined,
@@ -979,14 +978,14 @@ describe("SEA + PEN integration", function () {
 
   // ── encrypt round-trip ──────────────────────────────────────────────────────
 
-  it("SEA.encrypt → decrypt round-trip, encrypted value passes PEN string predicate", function (done) {
-    var soul = SEA.pen({ val: { type: "string" }, sign: true });
+  it("ZEN.encrypt → decrypt round-trip, encrypted value passes PEN string predicate", function (done) {
+    var soul = ZEN.pen({ val: { type: "string" }, sign: true });
     var secret = "private_order_price:42.5";
-    SEA.encrypt(secret, pair, function (enc) {
+    ZEN.encrypt(secret, pair, function (enc) {
       assert.ok(typeof enc === "string", "ciphertext is a string");
-      SEA.decrypt(enc, pair, function (dec) {
+      ZEN.decrypt(enc, pair, function (dec) {
         assert.strictEqual(dec, secret, "decrypted correctly");
-        // encrypted value stored in GUN is a string → PEN ISS passes
+        // encrypted value stored in ZEN is a string → PEN ISS passes
         var bc = pen.unpack(soul.slice(1));
         assert.strictEqual(
           pen.run(bc, ["k", enc, soul, 0, Date.now(), ""]),
@@ -998,18 +997,18 @@ describe("SEA + PEN integration", function () {
     });
   });
 
-  it("SEA.secret shared key, wrong pair: decrypt returns undefined", function (done) {
-    SEA.secret(pair2.epub, pair, function (aesKey) {
-      SEA.encrypt("sensitive", aesKey, function (enc) {
-        SEA.secret(pair.epub, pair2, function (aesKey2) {
-          SEA.decrypt(enc, aesKey2, function (dec) {
+  it("ZEN.secret shared key, wrong pair: decrypt returns undefined", function (done) {
+    ZEN.secret(pair2.epub, pair, function (aesKey) {
+      ZEN.encrypt("sensitive", aesKey, function (enc) {
+        ZEN.secret(pair.epub, pair2, function (aesKey2) {
+          ZEN.decrypt(enc, aesKey2, function (dec) {
             assert.strictEqual(
               dec,
               "sensitive",
               "alice→bob shared key decrypts",
             );
             // deliberately use wrong key
-            SEA.decrypt(enc, pair.epub, function (bad) {
+            ZEN.decrypt(enc, pair.epub, function (bad) {
               assert.strictEqual(bad, undefined, "wrong key yields undefined");
               done();
             });
@@ -1021,10 +1020,10 @@ describe("SEA + PEN integration", function () {
 
   // ── PoW ─────────────────────────────────────────────────────────────────────
 
-  it("pow difficulty:1 — SEA.hash produces hex hash starting with enough zeros ~50% of time → verify loop", function (done) {
+  it("pow difficulty:1 — ZEN.hash produces hex hash starting with enough zeros ~50% of time → verify loop", function (done) {
     this.timeout(30000);
     var difficulty = 1;
-    var soul = SEA.pen({ pow: { field: 1, difficulty: difficulty } });
+    var soul = ZEN.pen({ pow: { field: 1, difficulty: difficulty } });
     var bc = pen.unpack(soul.slice(1));
     var policy = pen.scanpolicy(bc);
     assert.strictEqual(policy.pow.difficulty, difficulty, "pow policy parsed");
@@ -1038,7 +1037,7 @@ describe("SEA + PEN integration", function () {
         return done(new Error("could not find PoW solution in 200 tries"));
       }
       var val = "order_data_nonce" + nonce;
-      SEA.hash(
+      ZEN.hash(
         val,
         null,
         function (hash) {
@@ -1062,7 +1061,7 @@ describe("SEA + PEN integration", function () {
   });
 
   it("pow + string predicate combined: val must be string AND have PoW", function (done) {
-    var soul = SEA.pen({
+    var soul = ZEN.pen({
       val: { type: "string" },
       pow: { field: 1, difficulty: 1 },
     });
@@ -1081,11 +1080,11 @@ describe("SEA + PEN integration", function () {
 
   // ── cert ─────────────────────────────────────────────────────────────────────
 
-  it("cert — SEA.certify creates cert; PEN embeds certifier pub correctly", function (done) {
+  it("cert — ZEN.certify creates cert; PEN embeds certifier pub correctly", function (done) {
     // Alice certifies Bob to write; PEN policy embeds Alice's pub (the certifier)
-    // SEA.certify(recipient, policy, pair, null, cb) — but API variations exist.
+    // ZEN.certify(recipient, policy, pair, null, cb) — but API variations exist.
     // Core test: pen embeds cert pub correctly in policy bytes.
-    var soul = SEA.pen({ cert: pair.pub });
+    var soul = ZEN.pen({ cert: pair.pub });
     var bc = pen.unpack(soul.slice(1));
     var policy = pen.scanpolicy(bc);
     assert.strictEqual(
@@ -1095,7 +1094,7 @@ describe("SEA + PEN integration", function () {
     );
     assert.strictEqual(policy.sign, false, "sign not set when cert is used");
     // Second pair: different pub should also embed correctly
-    var soul2 = SEA.pen({ cert: pair2.pub });
+    var soul2 = ZEN.pen({ cert: pair2.pub });
     var bc2 = pen.unpack(soul2.slice(1));
     assert.strictEqual(
       pen.scanpolicy(bc2).cert,
@@ -1113,15 +1112,15 @@ describe("SEA + PEN integration", function () {
 
   // ── full order namespace ─────────────────────────────────────────────────────
 
-  it("order namespace: SEA.candle + sign:true — sign round-trip + candle window", function (done) {
+  it("order namespace: ZEN.candle + sign:true — sign round-trip + candle window", function (done) {
     var now = Date.now();
     var size = 300000;
     var candle = Math.floor(now / size);
 
-    var soul = SEA.pen({
+    var soul = ZEN.pen({
       key: {
         and: [
-          SEA.candle({ seg: 0, sep: "_", size: size, back: 100, fwd: 2 }),
+          ZEN.candle({ seg: 0, sep: "_", size: size, back: 100, fwd: 2 }),
           {
             seg: {
               sep: "_",
@@ -1140,7 +1139,7 @@ describe("SEA + PEN integration", function () {
     var badKey = candle + "_ETH_USDT_hold_" + String.random(6);
     var order = JSON.stringify({ amount: 1.5, price: 3000 });
 
-    SEA.sign(order, pair, function (signed) {
+    ZEN.sign(order, pair, function (signed) {
       var bc = pen.unpack(soul.slice(1));
       var policy = pen.scanpolicy(bc);
       assert.strictEqual(policy.sign, true, "sign policy present");
@@ -1172,12 +1171,12 @@ describe("SEA + PEN integration", function () {
     });
   });
 
-  it('pow unit:"a" difficulty:1 — SEA.hash must start with "a"', function (done) {
+  it('pow unit:"a" difficulty:1 — ZEN.hash must start with "a"', function (done) {
     this.timeout(30000);
     var unit = "a";
     var difficulty = 1;
     var prefix = unit.repeat(difficulty); // 'a'
-    var soul = SEA.pen({
+    var soul = ZEN.pen({
       pow: { field: 1, unit: unit, difficulty: difficulty },
     });
     var bc = pen.unpack(soul.slice(1));
@@ -1191,7 +1190,7 @@ describe("SEA + PEN integration", function () {
       if (tries > 500)
         return done(new Error("could not find PoW solution in 500 tries"));
       var val = "test_data_nonce" + n;
-      SEA.hash(
+      ZEN.hash(
         val,
         null,
         function (hash) {
@@ -1215,15 +1214,15 @@ describe("SEA + PEN integration", function () {
     seek(0);
   });
 
-  it("order namespace: SEA.hash PoW + candle — hostile nonce cannot fake PoW", function (done) {
+  it("order namespace: ZEN.hash PoW + candle — hostile nonce cannot fake PoW", function (done) {
     this.timeout(30000);
     var now = Date.now();
     var size = 300000;
     var candle = Math.floor(now / size);
 
     // Soul: key must be valid candle_dir, val must be string with PoW difficulty:1
-    var soul = SEA.pen({
-      key: SEA.candle({ seg: 0, sep: "_", size: size, back: 50, fwd: 1 }),
+    var soul = ZEN.pen({
+      key: ZEN.candle({ seg: 0, sep: "_", size: size, back: 50, fwd: 1 }),
       pow: { field: 1, difficulty: 1 },
     });
 
@@ -1238,7 +1237,7 @@ describe("SEA + PEN integration", function () {
       tries++;
       if (tries > 200) return done(new Error("too many PoW tries"));
       var val = "amount:100,nonce:" + n;
-      SEA.hash(
+      ZEN.hash(
         val,
         null,
         function (hash) {
@@ -1267,33 +1266,33 @@ describe("SEA + PEN integration", function () {
     seek(0);
   });
 
-  // ── GUN graph put/get with PEN soul ─────────────────────────────────────────
+  // ── ZEN graph put/get with PEN soul ─────────────────────────────────────────
 
-  it("GUN put/get with open PEN soul stores and retrieves value", function (done) {
+  it("ZEN put/get with open PEN soul stores and retrieves value", function (done) {
     this.timeout(10000);
-    var soul = SEA.pen({ val: { type: "string" }, open: true });
-    var gun = Gun({ radisk: false, peers: [], localStorage: false });
+    var soul = ZEN.pen({ val: { type: "string" }, open: true });
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
     var value = "market_data_" + Date.now();
-    gun.get(soul).get("price").put(value);
-    gun
+    zen.get(soul).get("price").put(value);
+    zen
       .get(soul)
       .get("price")
       .once(function (v) {
-        assert.strictEqual(v, value, "value round-trips through GUN graph");
+        assert.strictEqual(v, value, "value round-trips through ZEN graph");
         done();
       });
   });
 
-  it("GUN user.auth + signed put: user pub in R[5] satisfies sign policy check", function (done) {
-    // Simulate what GUN does when an authenticated user writes into a sign:true PEN soul:
+  it("ZEN user.auth + signed put: user pub in R[5] satisfies sign policy check", function (done) {
+    // Simulate what ZEN does when an authenticated user writes into a sign:true PEN soul:
     // R[5] = writer's pub, penStage verifies sign policy via applypolicy.
-    // Here we test the predicate + policy detection layer (not the GUN network layer).
-    var soul = SEA.pen({ val: { type: "string" }, sign: true });
+    // Here we test the predicate + policy detection layer (not the ZEN network layer).
+    var soul = ZEN.pen({ val: { type: "string" }, sign: true });
     var bc = pen.unpack(soul.slice(1));
     var policy = pen.scanpolicy(bc);
     assert.strictEqual(policy.sign, true, "sign policy present");
 
-    SEA.sign("order_data", pair, function (signed) {
+    ZEN.sign("order_data", pair, function (signed) {
       // Verify the signed value passes the string predicate (ISS)
       var regs = ["order_key", signed, soul, 0, Date.now(), pair.pub];
       assert.strictEqual(
@@ -1321,12 +1320,12 @@ describe("SEA + PEN integration", function () {
     });
   });
 
-  it("GUN shared PEN soul: authenticator pub is available in R[5] during predicate evaluation", function (done) {
+  it("ZEN shared PEN soul: authenticator pub is available in R[5] during predicate evaluation", function (done) {
     this.timeout(10000);
     var now = Date.now();
     var size = 300000;
     var candle = Math.floor(now / size);
-    var soul = SEA.pen({
+    var soul = ZEN.pen({
       key: {
         and: [
           {
@@ -1361,17 +1360,17 @@ describe("SEA + PEN integration", function () {
       sign: true,
       params: { item: "tea", type: "buy", candle: candle },
     });
-    var gun = Gun({ radisk: false, peers: [], localStorage: false });
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
     var key = now + ":" + pair.pub + ":nonce1";
-    SEA.sign("shared_order", pair, function (value) {
-      gun
+    ZEN.sign("shared_order", pair, function (value) {
+      zen
         .get(soul)
         .get(key)
         .put(
           value,
           function (ack) {
             if (ack && ack.err) return done(new Error(ack.err));
-            gun
+            zen
               .get(soul)
               .get(key)
               .once(function (v) {

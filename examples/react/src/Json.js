@@ -6,24 +6,24 @@ const formatJson = (json) =>
     .filter((el) => el.key !== "_");
 
 export default class Json extends Component {
-  constructor({ gun }) {
+  constructor({ zen }) {
     super();
-    this.gun = gun.get("json");
+    this.zen = zen.get("json");
     this.state = { newField: "", json: [] };
   }
 
   componentWillMount() {
-    this.gun.on((json) => this.setState({ json: formatJson(json) }));
+    this.zen.on((json) => this.setState({ json: formatJson(json) }));
   }
 
   edit = (key) => (e) => {
     e.preventDefault();
-    this.gun.path(key).put(e.target.value);
+    this.zen.path(key).put(e.target.value);
   };
 
   add = (e) => {
     e.preventDefault();
-    this.gun.path(this.state.newField).put("value");
+    this.zen.path(this.state.newField).put("value");
     this.setState({ newField: "" });
   };
 

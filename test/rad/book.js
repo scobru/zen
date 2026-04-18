@@ -15,7 +15,7 @@ import __radisk from '../../lib/radisk.js';
 import __book from '../../lib/book.js';
 import __rfs from '../../lib/rfs.js';
 var root;
-var Gun;
+var Zen;
 {
   var env;
   if(typeof global !== 'undefined'){ env = global }
@@ -23,14 +23,14 @@ var Gun;
   root = env.window? env.window : global;
   try{ env.window && root.localStorage && root.localStorage.clear() }catch(e){}
   //try{ indexedDB.deleteDatabase('radatatest') }catch(e){}
-  if(root.Gun){
-    root.Gun = root.Gun;
-    root.Gun.TESTING = true;
+  if(root.Zen){
+    root.Zen = root.Zen;
+    root.Zen.TESTING = true;
   } else {
       try{ __fs.unlinkSync('tmp/data.json') }catch(e){}
       try{ __fsrm('tmp/radatatest') }catch(e){}
-      root.Gun = __gun;
-      root.Gun.TESTING = true;
+      root.Zen = __gun;
+      root.Zen.TESTING = true;
   }
 
   try{ var expect = global.expect = __expect }catch(e){}
@@ -38,7 +38,7 @@ var Gun;
 }(this));
 
 {
-Gun = root.Gun
+Zen = root.Zen
 
 describe('RAD', function(){
 
@@ -48,7 +48,7 @@ var names = ["Adalard","Adora","Aia","Albertina","Alfie","Allyn","Amabil","Ammam
   opt.file = 'radatatest';
   var RAD = (setTimeout.RAD) || __radisk;
   var Book = (setTimeout.Book) || __book;
-  opt.store = ((Gun.window && Gun.window.RindexedDB) || __rfs)(opt);
+  opt.store = ((Zen.window && Zen.window.RindexedDB) || __rfs)(opt);
   opt.chunk = 1000;
   var rad = RAD(opt), esc = String.fromCharCode(27);
 
@@ -57,7 +57,7 @@ var names = ["Adalard","Adora","Aia","Albertina","Alfie","Allyn","Amabil","Ammam
 
     /*it('parse', function(done){
         this.timeout(60000);
-        if(Gun.window){ return done() }
+        if(Zen.window){ return done() }
         var raw = __fs.readFileSync(__dirname + '/parse.rad').toString();
         rad.parse('!', function(err, disk){
             console.log("!!!!", err);
@@ -71,7 +71,7 @@ var names = ["Adalard","Adora","Aia","Albertina","Alfie","Allyn","Amabil","Ammam
 
     it('deleted', function(done){
         this.timeout(60 * 1000);
-        if(!Gun.window){ return done() }
+        if(!Zen.window){ return done() }
         root.localStorage && root.localStorage.clear();
         //await new Promise(function(res){ indexedDB.deleteDatabase('radatatest').onsuccess = function(e){ res() } } );
         indexedDB.deleteDatabase('radatatest').onsuccess = function(e){ done() }
@@ -412,21 +412,21 @@ var names = ["Adalard","Adora","Aia","Albertina","Alfie","Allyn","Amabil","Ammam
   });
 
     var ntmp = names;
-  describe.skip('RAD + GUN', function(){ return;
+  describe.skip('RAD + ZEN', function(){ return;
     this.timeout(1000 * 9);
     var ochunk = 1000;
-    Gun.on('opt', function(root){
+    Zen.on('opt', function(root){
         root.opt.localStorage = false;
-        Gun.window && console.log("RAD disabling localStorage during tests.");
+        Zen.window && console.log("RAD disabling localStorage during tests.");
         this.to.next(root);
     })
-    var gun = Gun({chunk: ochunk});
+    var zen = Zen({chunk: ochunk});
 
     /*it('deleting old tests (may take long time)', function(done){
         done(); // Mocha doesn't print test until after its done, so show this first.
     }); it('deleted', function(done){
         this.timeout(60 * 1000);
-        if(!Gun.window){ return done() }
+        if(!Zen.window){ return done() }
         indexedDB.deleteDatabase('radatatest').onsuccess = function(e){ done() }
     });*/
 
@@ -435,7 +435,7 @@ var names = ["Adalard","Adora","Aia","Albertina","Alfie","Allyn","Amabil","Ammam
         names.forEach(function(v,i){
             all[++i] = true;
             tmp = v.toLowerCase();
-            gun.get('names').get(tmp).put({name: v, age: i}, function(ack){
+            zen.get('names').get(tmp).put({name: v, age: i}, function(ack){
                 expect(ack.err).to.not.be.ok();
                 delete all[i];
                 if(!Object.empty(all)){ return }

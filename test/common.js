@@ -46,20 +46,15 @@ describe("ZEN", function () {
     try {
       __fsrm("tmp/radatatest");
     } catch (e) {}
-    //root.Gun = root.Gun || load('../gun');
-    if (root.Gun) {
-      root.Gun = root.Gun;
-      root.Gun.TESTING = true;
-    } else {
-      root.Gun = __gun;
-      root.Gun.TESTING = true;
-    }
+    //root.Zen = root.Zen || load('../zen');
+    root.Zen = __gun;
+    root.Zen.TESTING = true;
   }
-  var Gun = root.Gun;
-  Gun.is = function ($) {
+  var Zen = root.Zen;
+  Zen.is = function ($) {
     return $ instanceof __ZEN;
   };
-  //Gun.log.squelch = true;
+  //Zen.log.squelch = true;
   var gleak = {
     globals: {},
     check: function () {
@@ -86,12 +81,12 @@ describe("ZEN", function () {
   var t = {};
 
   describe("Utility", function () {
-    it("deleting old GUN tests (may take long time)", function (done) {
+    it("deleting old ZEN tests (may take long time)", function (done) {
       done(); // Mocha doesn't print test until after its done, so show this first.
     });
     it("deleted", function (done) {
       this.timeout(60 * 1000);
-      if (!Gun.window) {
+      if (!Zen.window) {
         return done();
       }
       indexedDB.deleteDatabase("radatatest").onsuccess = function (e) {
@@ -102,18 +97,18 @@ describe("ZEN", function () {
     /* // causes logger to no longer log.
 		it('verbose console.log debugging', function(done) {
 
-			var gun = Gun();
+			var zen = Zen();
 			var log = root.console.log, counter = 1;
 			root.console.log = function(a,b,c){
 				--counter;
 				//log(a,b,c);
 			}
-			Gun.log.verbose = true;
-			gun.put('bar', function(err, yay){ // intentionally trigger an error that will get logged.
+			Zen.log.verbose = true;
+			zen.put('bar', function(err, yay){ // intentionally trigger an error that will get logged.
 				expect(counter).to.be(0);
 
-				Gun.log.verbose = false;
-				gun.put('bar', function(err, yay){ // intentionally trigger an error that will get logged.
+				Zen.log.verbose = false;
+				zen.put('bar', function(err, yay){ // intentionally trigger an error that will get logged.
 					expect(counter).to.be(0);
 
 					root.console.log = log;
@@ -317,11 +312,11 @@ describe("ZEN", function () {
       /*
 			it.skip('sum',function(done){ // deprecate?
 				var obj = {a:2, b:2, c:3, d: 9};
-				Gun.obj.map(obj, function(num, key){
+				Zen.obj.map(obj, function(num, key){
 					setTimeout(this.add(function(){
 						this.done(null, num * num);
 					}, key), parseInt((""+Math.random()).substring(2,5)));
-				}, Gun.fn.sum(function(err, val){
+				}, Zen.fn.sum(function(err, val){
 					expect(val.a).to.eql(4);
 					expect(val.b).to.eql(4);
 					expect(val.c).to.eql(9);
@@ -355,7 +350,7 @@ describe("ZEN", function () {
     });
     describe("On", function () {
       it("subscribe", function (done) {
-        var e = { on: Gun.on };
+        var e = { on: Zen.on };
         e.on("foo", function (a) {
           done.first = true;
           expect(a).to.be(1);
@@ -369,7 +364,7 @@ describe("ZEN", function () {
         e.on("foo", 1);
       });
       it("unsubscribe", function (done) {
-        var e = { on: Gun.on };
+        var e = { on: Zen.on };
         e.on("foo", function (a) {
           this.off();
           done.first = a;
@@ -392,7 +387,7 @@ describe("ZEN", function () {
         e.on("foo", 2);
       });
       it("stun", function (done) {
-        var e = { on: Gun.on };
+        var e = { on: Zen.on };
         e.on("foo", function (a, ev) {
           if (2 === a) {
             done.first2 = true;
@@ -417,7 +412,7 @@ describe("ZEN", function () {
         e.on("foo", 2);
       });
       it("resume", function (done) {
-        var e = { on: Gun.on };
+        var e = { on: Zen.on };
         e.on("foo", function (a, ev) {
           var to = this.to;
           setTimeout(function () {
@@ -433,7 +428,7 @@ describe("ZEN", function () {
         e.on("foo", 1);
       });
       it("double resume", function (done) {
-        var e = { on: Gun.on };
+        var e = { on: Zen.on };
         e.on("foo", function (a, ev) {
           var to = this.to;
           setTimeout(function () {
@@ -464,7 +459,7 @@ describe("ZEN", function () {
         e.on("foo", 2);
       });
       it("double resume different event", function (done) {
-        var e = { on: Gun.on };
+        var e = { on: Zen.on };
         e.on("foo", function (a, ev) {
           var to = this.to;
           setTimeout(function () {
@@ -482,7 +477,7 @@ describe("ZEN", function () {
         e.on("bar", 2);
       });
       it("resume params", function (done) {
-        var e = { on: Gun.on };
+        var e = { on: Zen.on };
         e.on("foo", function (a, ev) {
           var to = this.to;
           setTimeout(function () {
@@ -498,7 +493,7 @@ describe("ZEN", function () {
         e.on("foo", 1);
       });
       it("map", function (done) {
-        var e = { on: Gun.on };
+        var e = { on: Zen.on };
         e.on("foo", function (a, ev) {
           var to = this.to;
           Object.keys(a.it).forEach(function (f) {
@@ -526,7 +521,7 @@ describe("ZEN", function () {
         e.on("foo", { field: "where", it: { a: 1, b: 2 } });
       });
       it("map synchronous", function (done) {
-        var e = { on: Gun.on };
+        var e = { on: Zen.on };
         e.on("foo", function (a, ev) {
           var to = this.to;
           Object.keys(a.node).forEach(function (f) {
@@ -558,7 +553,7 @@ describe("ZEN", function () {
         ).on.on("foo", { field: "where", node: { a: 1, b: 2 } });
       });
       it("synchronous async", function (done) {
-        var e = { on: Gun.on };
+        var e = { on: Zen.on };
         e.on("foo", function (a) {
           expect(a.b).to.be(5);
           done.first = true;
@@ -662,11 +657,11 @@ describe("ZEN", function () {
             return;
           }
         }
-        Gun.next = next;
-      })(Gun);
+        Zen.next = next;
+      })(Zen);
       it("intermittent interruptions", function (done) {
         //var f = flow();
-        var f = { next: Gun.next }; // for now
+        var f = { next: Zen.next }; // for now
         f.next(function (f) {
           //console.log(1, f);
           f.next(function (f) {
@@ -699,87 +694,87 @@ describe("ZEN", function () {
         }, 100);
       });
     });
-    describe("Gun Safety", function () {
+    describe("Zen Safety", function () {
       /* WARNING NOTE: Internal API has significant breaking changes! */
 
-      var gun = Gun();
+      var zen = Zen();
       it("is", function () {
-        expect(Gun.is(gun)).to.be(true);
-        expect(Gun.is(true)).to.be(false);
-        expect(Gun.is(false)).to.be(false);
-        expect(Gun.is(0)).to.be(false);
-        expect(Gun.is(1)).to.be(false);
-        expect(Gun.is("")).to.be(false);
-        expect(Gun.is("a")).to.be(false);
-        expect(Gun.is(Infinity)).to.be(false);
-        expect(Gun.is(-Infinity)).to.be(false);
-        expect(Gun.is(NaN)).to.be(false);
-        expect(Gun.is([])).to.be(false);
-        expect(Gun.is([1])).to.be(false);
-        expect(Gun.is({})).to.be(false);
-        expect(Gun.is({ a: 1 })).to.be(false);
-        expect(Gun.is(function () {})).to.be(false);
+        expect(Zen.is(zen)).to.be(true);
+        expect(Zen.is(true)).to.be(false);
+        expect(Zen.is(false)).to.be(false);
+        expect(Zen.is(0)).to.be(false);
+        expect(Zen.is(1)).to.be(false);
+        expect(Zen.is("")).to.be(false);
+        expect(Zen.is("a")).to.be(false);
+        expect(Zen.is(Infinity)).to.be(false);
+        expect(Zen.is(-Infinity)).to.be(false);
+        expect(Zen.is(NaN)).to.be(false);
+        expect(Zen.is([])).to.be(false);
+        expect(Zen.is([1])).to.be(false);
+        expect(Zen.is({})).to.be(false);
+        expect(Zen.is({ a: 1 })).to.be(false);
+        expect(Zen.is(function () {})).to.be(false);
       });
       it("valid", function () {
-        expect(Gun.valid(false)).to.be(true);
-        expect(Gun.valid(true)).to.be(true);
-        expect(Gun.valid(0)).to.be(true);
-        expect(Gun.valid(1)).to.be(true);
-        expect(Gun.valid("")).to.be(true);
-        expect(Gun.valid("a")).to.be(true);
-        expect(Gun.valid({ "#": "somesoulidhere" })).to.be("somesoulidhere");
-        expect(Gun.valid({ "#": "somesoulidhere", and: "nope" })).to.be(false);
-        expect(Gun.valid(Infinity)).to.be(false); // boohoo :(
-        expect(Gun.valid(-Infinity)).to.be(false); // boohoo :(
-        expect(Gun.valid(NaN)).to.be(false);
-        expect(Gun.valid([])).to.be(false);
-        expect(Gun.valid([1])).to.be(false);
-        expect(Gun.valid({})).to.be(false);
-        expect(Gun.valid({ a: 1 })).to.be(false);
-        expect(Gun.valid(function () {})).to.be(false);
+        expect(Zen.valid(false)).to.be(true);
+        expect(Zen.valid(true)).to.be(true);
+        expect(Zen.valid(0)).to.be(true);
+        expect(Zen.valid(1)).to.be(true);
+        expect(Zen.valid("")).to.be(true);
+        expect(Zen.valid("a")).to.be(true);
+        expect(Zen.valid({ "#": "somesoulidhere" })).to.be("somesoulidhere");
+        expect(Zen.valid({ "#": "somesoulidhere", and: "nope" })).to.be(false);
+        expect(Zen.valid(Infinity)).to.be(false); // boohoo :(
+        expect(Zen.valid(-Infinity)).to.be(false); // boohoo :(
+        expect(Zen.valid(NaN)).to.be(false);
+        expect(Zen.valid([])).to.be(false);
+        expect(Zen.valid([1])).to.be(false);
+        expect(Zen.valid({})).to.be(false);
+        expect(Zen.valid({ a: 1 })).to.be(false);
+        expect(Zen.valid(function () {})).to.be(false);
       });
       it("is link", function () {
-        expect(Gun.valid({ "#": "somesoulidhere" })).to.be("somesoulidhere");
-        expect(Gun.valid({ "#": "somethingelsehere" })).to.be(
+        expect(Zen.valid({ "#": "somesoulidhere" })).to.be("somesoulidhere");
+        expect(Zen.valid({ "#": "somethingelsehere" })).to.be(
           "somethingelsehere",
         );
         expect(
-          "string" == typeof Gun.valid({ "#": "somesoulidhere", and: "nope" }),
+          "string" == typeof Zen.valid({ "#": "somesoulidhere", and: "nope" }),
         ).to.be(false);
         expect(
-          "string" == typeof Gun.valid({ or: "nope", "#": "somesoulidhere" }),
+          "string" == typeof Zen.valid({ or: "nope", "#": "somesoulidhere" }),
         ).to.be(false);
-        expect("string" == typeof Gun.valid(false)).to.be(false);
-        expect("string" == typeof Gun.valid(true)).to.be(false);
-        expect("string" == typeof Gun.valid("")).to.be(false);
-        expect("string" == typeof Gun.valid("a")).to.be(false);
-        expect("string" == typeof Gun.valid(0)).to.be(false);
-        expect("string" == typeof Gun.valid(1)).to.be(false);
-        expect("string" == typeof Gun.valid(Infinity)).to.be(false); // boohoo :(
-        expect("string" == typeof Gun.valid(-Infinity)).to.be(false); // boohoo :(
-        expect("string" == typeof Gun.valid(NaN)).to.be(false);
-        expect("string" == typeof Gun.valid([])).to.be(false);
-        expect("string" == typeof Gun.valid([1])).to.be(false);
-        expect("string" == typeof Gun.valid({})).to.be(false);
-        expect("string" == typeof Gun.valid({ a: 1 })).to.be(false);
-        expect("string" == typeof Gun.valid(function () {})).to.be(false);
+        expect("string" == typeof Zen.valid(false)).to.be(false);
+        expect("string" == typeof Zen.valid(true)).to.be(false);
+        expect("string" == typeof Zen.valid("")).to.be(false);
+        expect("string" == typeof Zen.valid("a")).to.be(false);
+        expect("string" == typeof Zen.valid(0)).to.be(false);
+        expect("string" == typeof Zen.valid(1)).to.be(false);
+        expect("string" == typeof Zen.valid(Infinity)).to.be(false); // boohoo :(
+        expect("string" == typeof Zen.valid(-Infinity)).to.be(false); // boohoo :(
+        expect("string" == typeof Zen.valid(NaN)).to.be(false);
+        expect("string" == typeof Zen.valid([])).to.be(false);
+        expect("string" == typeof Zen.valid([1])).to.be(false);
+        expect("string" == typeof Zen.valid({})).to.be(false);
+        expect("string" == typeof Zen.valid({ a: 1 })).to.be(false);
+        expect("string" == typeof Zen.valid(function () {})).to.be(false);
       });
       it.skip("is lex", function () {
-        expect(Gun.is.lex({ "#": "soul" })).to.eql({ soul: "soul" });
-        expect(Gun.is.lex({ ".": "field" })).to.eql({ field: "field" });
-        expect(Gun.is.lex({ "=": "value" })).to.eql({ value: "value" });
-        expect(Gun.is.lex({ ">": "state" })).to.eql({ state: "state" });
-        expect(Gun.is.lex({ "#": { "=": "soul" } })).to.eql({
+        expect(Zen.is.lex({ "#": "soul" })).to.eql({ soul: "soul" });
+        expect(Zen.is.lex({ ".": "field" })).to.eql({ field: "field" });
+        expect(Zen.is.lex({ "=": "value" })).to.eql({ value: "value" });
+        expect(Zen.is.lex({ ">": "state" })).to.eql({ state: "state" });
+        expect(Zen.is.lex({ "#": { "=": "soul" } })).to.eql({
           soul: { "=": "soul" },
         });
-        expect(Gun.is.lex({ "#": { "=": "soul" }, ".": [] })).to.be(false);
-        expect(Gun.is.lex({ "#": { "=": "soul" }, asdf: "oye" })).to.be(false);
-        expect(Gun.is.lex()).to.be(false);
-        expect(Gun.is.lex("")).to.be(false);
+        expect(Zen.is.lex({ "#": { "=": "soul" }, ".": [] })).to.be(false);
+        expect(Zen.is.lex({ "#": { "=": "soul" }, asdf: "oye" })).to.be(false);
+        expect(Zen.is.lex()).to.be(false);
+        expect(Zen.is.lex("")).to.be(false);
       });
       it.skip("is lex ify", function () {
         expect(
-          Gun.is.lex.ify({
+          Zen.is.lex.ify({
             "#": "soul",
             ".": "field",
             soul: "foo",
@@ -794,10 +789,10 @@ describe("ZEN", function () {
     return;
 
     var test,
-      gun = Gun();
+      zen = Zen();
 
     it("null", function (done) {
-      Gun.ify(null, function (err, ctx) {
+      Zen.ify(null, function (err, ctx) {
         expect(err).to.be.ok();
         done();
       });
@@ -805,7 +800,7 @@ describe("ZEN", function () {
 
     it("basic", function (done) {
       var data = { a: false, b: true, c: 0, d: 1, e: "", f: "g", h: null };
-      Gun.ify(
+      Zen.ify(
         data,
         function (err, ctx) {
           expect(err).to.not.be.ok();
@@ -829,7 +824,7 @@ describe("ZEN", function () {
         f: "g",
         h: null,
       };
-      Gun.ify(
+      Zen.ify(
         data,
         function (err, ctx) {
           expect(err).to.not.be.ok();
@@ -837,7 +832,7 @@ describe("ZEN", function () {
 
           expect(ctx.root).to.eql(data);
           expect(ctx.root === data).to.not.be.ok();
-          expect(Gun.node.soul(ctx.root) === Gun.node.soul(data));
+          expect(Zen.node.soul(ctx.root) === Zen.node.soul(data));
           done();
         },
         { pure: true },
@@ -849,7 +844,7 @@ describe("ZEN", function () {
         before: { path: "kill" },
         one: { two: { lol: "troll", three: [9, 8, 7, 6, 5] } },
       };
-      Gun.ify(data, function (err, ctx) {
+      Zen.ify(data, function (err, ctx) {
         expect(err).to.be.ok();
         expect((err.err || err).indexOf("one.two.three")).to.not.be(-1);
         done();
@@ -858,7 +853,7 @@ describe("ZEN", function () {
 
     it("undefined", function (done) {
       var data = { z: undefined, x: "bye" };
-      Gun.ify(data, function (err, ctx) {
+      Zen.ify(data, function (err, ctx) {
         expect(err).to.be.ok();
         done();
       });
@@ -866,7 +861,7 @@ describe("ZEN", function () {
 
     it("NaN", function (done) {
       var data = { a: NaN, b: 2 };
-      Gun.ify(data, function (err, ctx) {
+      Zen.ify(data, function (err, ctx) {
         expect(err).to.be.ok();
         done();
       });
@@ -875,7 +870,7 @@ describe("ZEN", function () {
     it("Infinity", function (done) {
       // SAD DAY PANDA BEAR :( :( :(... Mark wants Infinity. JSON won't allow.
       var data = { a: 1, b: Infinity };
-      Gun.ify(data, function (err, ctx) {
+      Zen.ify(data, function (err, ctx) {
         expect(err).to.be.ok();
         done();
       });
@@ -883,7 +878,7 @@ describe("ZEN", function () {
 
     it("function", function (done) {
       var data = { c: function () {}, d: "hi" };
-      Gun.ify(data, function (err, ctx) {
+      Zen.ify(data, function (err, ctx) {
         expect(err).to.be.ok();
         done();
       });
@@ -891,7 +886,7 @@ describe("ZEN", function () {
 
     it("extraneous", function (done) {
       var data = { _: { "#": "shhh", meta: { yay: 1 } }, sneak: true };
-      Gun.ify(data, function (err, ctx) {
+      Zen.ify(data, function (err, ctx) {
         expect(err).to.not.be.ok(); // extraneous metadata needs to be stored, but it can't be used for data.
         done();
       });
@@ -903,13 +898,13 @@ describe("ZEN", function () {
           1: { where: { lat: Math.random(), lng: Math.random(), i: 1 } },
         },
       };
-      Gun.ify(data, function (err, ctx) {
+      Zen.ify(data, function (err, ctx) {
         var soul, node;
-        expect((soul = Gun.val.link.is(ctx.root.users))).to.be.ok();
+        expect((soul = Zen.val.link.is(ctx.root.users))).to.be.ok();
         node = ctx.graph[soul];
-        expect((soul = Gun.val.link.is(node[1]))).to.be.ok();
+        expect((soul = Zen.val.link.is(node[1]))).to.be.ok();
         node = ctx.graph[soul];
-        expect((soul = Gun.val.link.is(node.where))).to.be.ok();
+        expect((soul = Zen.val.link.is(node.where))).to.be.ok();
         node = ctx.graph[soul];
         expect(node.lat).to.be.ok();
         expect(node.lng).to.be.ok();
@@ -918,32 +913,32 @@ describe("ZEN", function () {
       });
     });
 
-    return; // TODO! Fix GUN to handle this!
+    return; // TODO! Fix ZEN to handle this!
     data = {};
     data.sneak = false;
     data.both = { inside: "meta data" };
     data._ = { "#": "shhh", data: { yay: 1 }, spin: data.both };
-    test = Gun.ify(data);
+    test = Zen.ify(data);
     expect(test.err.meta).to.be.ok(); // TODO: Fail: this passes, somehow? Fix ify code!
   });
 
   describe("Schedule", function () {
     return;
     it("one", function (done) {
-      Gun.schedule(Gun.time.is(), function () {
+      Zen.schedule(Zen.time.is(), function () {
         expect(true).to.be(true);
         done(); //setTimeout(function(){ done() },1);
       });
     });
 
     it("many", function (done) {
-      Gun.schedule(Gun.time.is() + 50, function () {
+      Zen.schedule(Zen.time.is() + 50, function () {
         done.first = true;
       });
-      Gun.schedule(Gun.time.is() + 100, function () {
+      Zen.schedule(Zen.time.is() + 100, function () {
         done.second = true;
       });
-      Gun.schedule(Gun.time.is() + 200, function () {
+      Zen.schedule(Zen.time.is() + 200, function () {
         done.third = true;
         expect(done.first).to.be(true);
         expect(done.second).to.be(true);
@@ -955,7 +950,7 @@ describe("ZEN", function () {
 
   describe("Union", function () {
     return;
-    var gun = Gun();
+    var zen = Zen();
 
     it("fail", function () {
       var prime = {
@@ -970,8 +965,8 @@ describe("ZEN", function () {
         },
       };
 
-      expect(gun.__.graph["asdf"]).to.not.be.ok();
-      var ctx = Gun.HAM.graph(gun, prime);
+      expect(zen.__.graph["asdf"]).to.not.be.ok();
+      var ctx = Zen.HAM.graph(zen, prime);
       expect(ctx).to.not.be.ok();
     });
     return;
@@ -982,16 +977,16 @@ describe("ZEN", function () {
           _: {
             "#": "asdf",
             ">": {
-              a: Gun.time.is(),
+              a: Zen.time.is(),
             },
           },
           a: 0,
         },
       };
 
-      expect(gun.__.graph["asdf"]).to.not.be.ok();
-      var ctx = Gun.union(gun, prime, function () {
-        expect(gun.__.graph["asdf"].a).to.be(0);
+      expect(zen.__.graph["asdf"]).to.not.be.ok();
+      var ctx = Zen.union(zen, prime, function () {
+        expect(zen.__.graph["asdf"].a).to.be(0);
         done();
       });
     });
@@ -1002,18 +997,18 @@ describe("ZEN", function () {
           _: {
             "#": "asdf",
             ">": {
-              b: Gun.time.is(),
+              b: Zen.time.is(),
             },
           },
           b: "c",
         },
       };
 
-      expect(gun.__.graph["asdf"].a).to.be(0);
-      expect(gun.__.graph["asdf"].b).to.not.be.ok();
-      var ctx = Gun.union(gun, prime, function () {
-        expect(gun.__.graph["asdf"].a).to.be(0);
-        expect(gun.__.graph["asdf"].b).to.be("c");
+      expect(zen.__.graph["asdf"].a).to.be(0);
+      expect(zen.__.graph["asdf"].b).to.not.be.ok();
+      var ctx = Zen.union(zen, prime, function () {
+        expect(zen.__.graph["asdf"].a).to.be(0);
+        expect(zen.__.graph["asdf"].b).to.be("c");
         done();
       });
     });
@@ -1024,16 +1019,16 @@ describe("ZEN", function () {
           _: {
             "#": "asdf",
             ">": {
-              b: Gun.time.is(),
+              b: Zen.time.is(),
             },
           },
           b: "d",
         },
       };
 
-      expect(gun.__.graph["asdf"].b).to.be("c");
-      var ctx = Gun.union(gun, prime, function () {
-        expect(gun.__.graph["asdf"].b).to.be("d");
+      expect(zen.__.graph["asdf"].b).to.be("c");
+      var ctx = Zen.union(zen, prime, function () {
+        expect(zen.__.graph["asdf"].b).to.be("d");
         done();
       });
     });
@@ -1050,9 +1045,9 @@ describe("ZEN", function () {
           x: "hi",
         },
       };
-      expect(gun.__.graph["asdf"].x).to.not.be.ok();
-      var ctx = Gun.union(gun, prime, function () {
-        expect(gun.__.graph["asdf"].x).to.be("hi");
+      expect(zen.__.graph["asdf"].x).to.not.be.ok();
+      var ctx = Zen.union(zen, prime, function () {
+        expect(zen.__.graph["asdf"].x).to.be("hi");
         done();
       });
     });
@@ -1063,16 +1058,16 @@ describe("ZEN", function () {
           _: {
             "#": "asdf",
             ">": {
-              x: Gun.time.is() - 60 * 1000, // above lower boundary, below now or upper boundary.
+              x: Zen.time.is() - 60 * 1000, // above lower boundary, below now or upper boundary.
             },
           },
           x: "hello",
         },
       };
 
-      expect(gun.__.graph["asdf"].x).to.be("hi");
-      var ctx = Gun.union(gun, prime, function () {
-        expect(gun.__.graph["asdf"].x).to.be("hello");
+      expect(zen.__.graph["asdf"].x).to.be("hi");
+      var ctx = Zen.union(zen, prime, function () {
+        expect(zen.__.graph["asdf"].x).to.be("hello");
         done();
       });
     });
@@ -1083,18 +1078,18 @@ describe("ZEN", function () {
           _: {
             "#": "asdf",
             ">": {
-              x: Gun.time.is() + 200, // above now or upper boundary, aka future.
+              x: Zen.time.is() + 200, // above now or upper boundary, aka future.
             },
           },
           x: "how are you?",
         },
       };
 
-      expect(gun.__.graph["asdf"].x).to.be("hello");
-      var now = Gun.time.is();
-      var ctx = Gun.union(gun, prime, function () {
-        expect(Gun.time.is() - now).to.be.above(100);
-        expect(gun.__.graph["asdf"].x).to.be("how are you?");
+      expect(zen.__.graph["asdf"].x).to.be("hello");
+      var now = Zen.time.is();
+      var ctx = Zen.union(zen, prime, function () {
+        expect(Zen.time.is() - now).to.be.above(100);
+        expect(zen.__.graph["asdf"].x).to.be("how are you?");
         done();
       });
     });
@@ -1105,17 +1100,17 @@ describe("ZEN", function () {
           _: {
             "#": "asdf",
             ">": {
-              y: Gun.time.is() + 200, // above now or upper boundary, aka future.
+              y: Zen.time.is() + 200, // above now or upper boundary, aka future.
             },
           },
           y: "goodbye",
         },
       };
-      expect(gun.__.graph["asdf"].y).to.not.be.ok();
-      var now = Gun.time.is();
-      var ctx = Gun.union(gun, prime, function () {
-        expect(Gun.time.is() - now).to.be.above(100);
-        expect(gun.__.graph["asdf"].y).to.be("goodbye");
+      expect(zen.__.graph["asdf"].y).to.not.be.ok();
+      var now = Zen.time.is();
+      var ctx = Zen.union(zen, prime, function () {
+        expect(Zen.time.is() - now).to.be.above(100);
+        expect(zen.__.graph["asdf"].y).to.be("goodbye");
         done();
       });
     });
@@ -1126,8 +1121,8 @@ describe("ZEN", function () {
           _: {
             "#": "asdf",
             ">": {
-              y: Gun.time.is() + 2, // above now or upper boundary, aka future.
-              z: Gun.time.is() + 200, // above now or upper boundary, aka future.
+              y: Zen.time.is() + 2, // above now or upper boundary, aka future.
+              z: Zen.time.is() + 200, // above now or upper boundary, aka future.
             },
           },
           y: "bye",
@@ -1135,13 +1130,13 @@ describe("ZEN", function () {
         },
       };
 
-      expect(gun.__.graph["asdf"].y).to.be("goodbye");
-      expect(gun.__.graph["asdf"].z).to.not.be.ok();
-      var now = Gun.time.is();
-      var ctx = Gun.union(gun, prime, function () {
-        expect(Gun.time.is() - now).to.be.above(100);
-        expect(gun.__.graph["asdf"].y).to.be("bye");
-        expect(gun.__.graph["asdf"].z).to.be("who");
+      expect(zen.__.graph["asdf"].y).to.be("goodbye");
+      expect(zen.__.graph["asdf"].z).to.not.be.ok();
+      var now = Zen.time.is();
+      var ctx = Zen.union(zen, prime, function () {
+        expect(Zen.time.is() - now).to.be.above(100);
+        expect(zen.__.graph["asdf"].y).to.be("bye");
+        expect(zen.__.graph["asdf"].z).to.be("who");
         done(); //setTimeout(function(){ done() },1);
       });
     });
@@ -1152,10 +1147,10 @@ describe("ZEN", function () {
           _: {
             "#": "asdf",
             ">": {
-              w: Gun.time.is() + 2, // above now or upper boundary, aka future.
-              x: Gun.time.is() - 60 * 1000, // above now or upper boundary, aka future.
-              y: Gun.time.is() + 200, // above now or upper boundary, aka future.
-              z: Gun.time.is() + 50, // above now or upper boundary, aka future.
+              w: Zen.time.is() + 2, // above now or upper boundary, aka future.
+              x: Zen.time.is() - 60 * 1000, // above now or upper boundary, aka future.
+              y: Zen.time.is() + 200, // above now or upper boundary, aka future.
+              z: Zen.time.is() + 50, // above now or upper boundary, aka future.
             },
           },
           w: true,
@@ -1165,24 +1160,24 @@ describe("ZEN", function () {
         },
       };
 
-      expect(gun.__.graph["asdf"].w).to.not.be.ok();
-      expect(gun.__.graph["asdf"].x).to.be("how are you?");
-      expect(gun.__.graph["asdf"].y).to.be("bye");
-      expect(gun.__.graph["asdf"].z).to.be("who");
-      var now = Gun.time.is();
-      var ctx = Gun.union(gun, prime, function () {
-        expect(Gun.time.is() - now).to.be.above(100);
-        expect(gun.__.graph["asdf"].w).to.be(true);
-        expect(gun.__.graph["asdf"].x).to.be("how are you?");
-        expect(gun.__.graph["asdf"].y).to.be("farewell");
-        expect(gun.__.graph["asdf"].z).to.be("doctor who");
+      expect(zen.__.graph["asdf"].w).to.not.be.ok();
+      expect(zen.__.graph["asdf"].x).to.be("how are you?");
+      expect(zen.__.graph["asdf"].y).to.be("bye");
+      expect(zen.__.graph["asdf"].z).to.be("who");
+      var now = Zen.time.is();
+      var ctx = Zen.union(zen, prime, function () {
+        expect(Zen.time.is() - now).to.be.above(100);
+        expect(zen.__.graph["asdf"].w).to.be(true);
+        expect(zen.__.graph["asdf"].x).to.be("how are you?");
+        expect(zen.__.graph["asdf"].y).to.be("farewell");
+        expect(zen.__.graph["asdf"].z).to.be("doctor who");
         done(); //setTimeout(function(){ done() },1);
       });
     });
 
     it("two nodes", function (done) {
       // chat app problem where disk dropped the last data, turns out it was a union problem!
-      var state = Gun.time.is();
+      var state = Zen.time.is();
       var prime = {
         sadf: {
           _: {
@@ -1204,18 +1199,18 @@ describe("ZEN", function () {
         },
       };
 
-      expect(gun.__.graph["sadf"]).to.not.be.ok();
-      expect(gun.__.graph["fdsa"]).to.not.be.ok();
-      var ctx = Gun.union(gun, prime, function () {
-        expect(gun.__.graph["sadf"][1]).to.be.ok();
-        expect(gun.__.graph["fdsa"].msg).to.be("Let's chat!");
+      expect(zen.__.graph["sadf"]).to.not.be.ok();
+      expect(zen.__.graph["fdsa"]).to.not.be.ok();
+      var ctx = Zen.union(zen, prime, function () {
+        expect(zen.__.graph["sadf"][1]).to.be.ok();
+        expect(zen.__.graph["fdsa"].msg).to.be("Let's chat!");
         done();
       });
     });
 
     it("append third node", function (done) {
       // chat app problem where disk dropped the last data, turns out it was a union problem!
-      var state = Gun.time.is();
+      var state = Zen.time.is();
       var prime = {
         sadf: {
           _: {
@@ -1237,19 +1232,19 @@ describe("ZEN", function () {
         },
       };
 
-      expect(gun.__.graph["sadf"]).to.be.ok();
-      expect(gun.__.graph["fdsa"]).to.be.ok();
-      var ctx = Gun.union(gun, prime, function () {
-        expect(gun.__.graph["sadf"][1]).to.be.ok();
-        expect(gun.__.graph["sadf"][2]).to.be.ok();
-        expect(gun.__.graph["fads"].msg).to.be("hi");
+      expect(zen.__.graph["sadf"]).to.be.ok();
+      expect(zen.__.graph["fdsa"]).to.be.ok();
+      var ctx = Zen.union(zen, prime, function () {
+        expect(zen.__.graph["sadf"][1]).to.be.ok();
+        expect(zen.__.graph["sadf"][2]).to.be.ok();
+        expect(zen.__.graph["fads"].msg).to.be("hi");
         done();
       });
     });
 
     it("ify null", function () {
-      var node = Gun.union.ify(null, "pseudo");
-      expect(Gun.node.soul(node)).to.be("pseudo");
+      var node = Zen.union.ify(null, "pseudo");
+      expect(Zen.node.soul(node)).to.be("pseudo");
     });
 
     it("ify node", function () {
@@ -1258,8 +1253,8 @@ describe("ZEN", function () {
           _: {
             "#": "asdf",
             ">": {
-              x: Gun.time.is(),
-              y: Gun.time.is(),
+              x: Zen.time.is(),
+              y: Zen.time.is(),
             },
           },
           x: 1,
@@ -1270,14 +1265,14 @@ describe("ZEN", function () {
             "#": "soul",
             "~": 1,
             ">": {
-              asdf: Gun.time.is(),
+              asdf: Zen.time.is(),
             },
           },
           asdf: { "#": "asdf" },
         },
       };
-      var node = Gun.union.ify(graph, "soul");
-      expect(Gun.node.soul(node)).to.be("soul");
+      var node = Zen.union.ify(graph, "soul");
+      expect(Zen.node.soul(node)).to.be("soul");
       expect(node.x).to.be(1);
       expect(node.y).to.be(2);
     });
@@ -1288,8 +1283,8 @@ describe("ZEN", function () {
           _: {
             "#": "asdf",
             ">": {
-              a: Gun.time.is() - 2,
-              z: Gun.time.is() - 2,
+              a: Zen.time.is() - 2,
+              z: Zen.time.is() - 2,
             },
           },
           a: 1,
@@ -1299,8 +1294,8 @@ describe("ZEN", function () {
           _: {
             "#": "fdsa",
             ">": {
-              b: Gun.time.is() - 1,
-              z: Gun.time.is() - 1,
+              b: Zen.time.is() - 1,
+              z: Zen.time.is() - 1,
             },
           },
           b: 2,
@@ -1310,8 +1305,8 @@ describe("ZEN", function () {
           _: {
             "#": "sadf",
             ">": {
-              c: Gun.time.is(),
-              z: Gun.time.is() - 100,
+              c: Zen.time.is(),
+              z: Zen.time.is() - 100,
             },
           },
           c: 3,
@@ -1322,9 +1317,9 @@ describe("ZEN", function () {
             "#": "soul",
             "~": 1,
             ">": {
-              asdf: Gun.time.is(),
-              fdsa: Gun.time.is(),
-              sadf: Gun.time.is(),
+              asdf: Zen.time.is(),
+              fdsa: Zen.time.is(),
+              sadf: Zen.time.is(),
             },
           },
           asdf: { "#": "asdf" },
@@ -1332,8 +1327,8 @@ describe("ZEN", function () {
           sadf: { "#": "sadf" },
         },
       };
-      var node = Gun.union.ify(graph, "soul");
-      expect(Gun.node.soul(node)).to.be("soul");
+      var node = Zen.union.ify(graph, "soul");
+      expect(Zen.node.soul(node)).to.be("soul");
       expect(node.a).to.be(1);
       expect(node.b).to.be(2);
       expect(node.c).to.be(3);
@@ -1352,28 +1347,28 @@ describe("ZEN", function () {
         },
       },
     };
-    if (((Gun.globalThis || {}).location || {}).search) {
+    if (((Zen.globalThis || {}).location || {}).search) {
       /*console.log("LOCALHOST PEER MUST BE ON!");
-			var peer = {url: 'http://localhost:8765/gun'};
-			Gun.on('opt', function(root){
+			var peer = {url: 'http://localhost:8765/zen'};
+			Zen.on('opt', function(root){
 				if(root.opt.test_no_peer){ return this.to.next(root) }
 				root.opt.peers = root.opt.peers || {};
-				root.opt.peers['http://localhost:8765/gun'] = peer;
+				root.opt.peers['http://localhost:8765/zen'] = peer;
 				this.to.next(root);
 			});*/
     }
-    var goff = Gun();
-    Gun.statedisk = function (o, s, cb) {
+    var goff = Zen();
+    Zen.statedisk = function (o, s, cb) {
       goff.get(s).put(o, cb, {
         turn: function (fn) {
           fn();
         },
       });
     };
-    var gun = Gun();
+    var zen = Zen();
 
     var nopasstun = function (done, g) {
-      g = (g || gun)._.root;
+      g = (g || zen)._.root;
       var start = +new Date();
       (function wait() {
         if ((g.stun || g.pass) && +new Date() - start < 250) {
@@ -1384,13 +1379,13 @@ describe("ZEN", function () {
       })();
     };
 
-    it.skip("gun chain separation", function (done) {
+    it.skip("zen chain separation", function (done) {
       // TODO: UNDO!
-      var gun = Gun();
+      var zen = Zen();
 
-      var c1 = gun.put({ hello: "world" });
+      var c1 = zen.put({ hello: "world" });
 
-      var c2 = gun.put({ hi: "earth" });
+      var c2 = zen.put({ hi: "earth" });
 
       c1.on(function (val) {
         expect(val.hi).to.not.be.ok();
@@ -1410,9 +1405,9 @@ describe("ZEN", function () {
       // TODO: UNDO!
 
       it("kitty", function (done) {
-        var g1 = gun.put({ hey: "kitty" }).key("timeywimey/kitty");
+        var g1 = zen.put({ hey: "kitty" }).key("timeywimey/kitty");
 
-        var g2 = gun.get("timeywimey/kitty").on(function (val) {
+        var g2 = zen.get("timeywimey/kitty").on(function (val) {
           delete val._;
           //console.log("kitty?", val);
           expect(val.hey).to.be("kitty");
@@ -1428,11 +1423,11 @@ describe("ZEN", function () {
       });
 
       it("kitty puppy", function (done) {
-        var g3 = gun.put({ hey: "kitty" }).key("timeywimey/kitty/puppy");
+        var g3 = zen.put({ hey: "kitty" }).key("timeywimey/kitty/puppy");
 
-        var g4 = gun.put({ hi: "puppy" }).key("timeywimey/kitty/puppy");
+        var g4 = zen.put({ hi: "puppy" }).key("timeywimey/kitty/puppy");
 
-        var g5 = gun.get("timeywimey/kitty/puppy").on(function (val) {
+        var g5 = zen.get("timeywimey/kitty/puppy").on(function (val) {
           //delete val._;
           //console.log("puppy?", val);
           expect(val.hey).to.be("kitty");
@@ -1446,7 +1441,7 @@ describe("ZEN", function () {
       });
 
       it("hello", function (done) {
-        gun.get("timeywimey/hello").on(function (val) {
+        zen.get("timeywimey/hello").on(function (val) {
           //delete val._;
           //console.log("hello?", val);
           expect(val.hello).to.be("world");
@@ -1457,11 +1452,11 @@ describe("ZEN", function () {
           done.c = 1;
         });
 
-        gun.put({ hello: "world" }).key("timeywimey/hello");
+        zen.put({ hello: "world" }).key("timeywimey/hello");
       });
 
       it("hello foo", function (done) {
-        gun.get("timeywimey/hello/foo").on(function (val) {
+        zen.get("timeywimey/hello/foo").on(function (val) {
           //delete val._;
           expect(val.hello).to.be("world");
           if (val.foo) {
@@ -1474,17 +1469,17 @@ describe("ZEN", function () {
           }
         });
 
-        gun.put({ hello: "world" }).key("timeywimey/hello/foo");
+        zen.put({ hello: "world" }).key("timeywimey/hello/foo");
 
-        gun.put({ foo: "bar" }).key("timeywimey/hello/foo");
+        zen.put({ foo: "bar" }).key("timeywimey/hello/foo");
       });
 
       it("all", function (done) {
-        gun.put({ hey: "kitty" }).key("timeywimey/all");
+        zen.put({ hey: "kitty" }).key("timeywimey/all");
 
-        gun.put({ hi: "puppy" }).key("timeywimey/all");
+        zen.put({ hi: "puppy" }).key("timeywimey/all");
 
-        gun.get("timeywimey/all").on(function (val) {
+        zen.get("timeywimey/all").on(function (val) {
           // console.log('all', done.c, val);
           expect(val.hey).to.be("kitty");
           expect(val.hi).to.be("puppy");
@@ -1502,15 +1497,15 @@ describe("ZEN", function () {
           }
         });
 
-        gun.put({ hello: "world" }).key("timeywimey/all");
+        zen.put({ hello: "world" }).key("timeywimey/all");
 
-        gun.put({ foo: "bar" }).key("timeywimey/all");
+        zen.put({ foo: "bar" }).key("timeywimey/all");
       });
     });
 
     describe("predictable souls", function () {
       it("public", function (done) {
-        gun
+        zen
           .get("z")
           .get("y")
           .get("x")
@@ -1519,29 +1514,29 @@ describe("ZEN", function () {
               return;
             }
             done.c = 1;
-            var g = gun._.graph;
+            var g = zen._.graph;
             expect(g["z"]).to.be.ok();
             expect(g["z/y"]).to.be.ok();
             expect(g["z/y/x"]).to.be.ok();
             expect(g["z/y/x/c"]).to.be.ok();
             expect(g["z/y/x/c/b"]).to.be.ok();
-            nopasstun(done, gun);
+            nopasstun(done, zen);
           });
       });
       it("no not found on incremental write", function (done) {
-        gun
+        zen
           .get("nnfoiw")
           .get("y")
           .put({ a: 1 }, function (ack) {
             if (ack.err) {
               return;
             }
-            nopasstun(done, gun);
+            nopasstun(done, zen);
           });
       });
       it("public mix", function (done) {
-        var ref = gun.get("zasdf").put({ a: 9 });
-        var at = gun.get("zfdsa").get("y").get("x").get("c").put(ref);
+        var ref = zen.get("zasdf").put({ a: 9 });
+        var at = zen.get("zfdsa").get("y").get("x").get("c").put(ref);
         at.get("foo")
           .get("bar")
           .put("yay", function (ack) {
@@ -1563,16 +1558,16 @@ describe("ZEN", function () {
             return;
           }
           done.c = 1;
-          var g = gun._.graph;
+          var g = zen._.graph;
           expect(Object.keys(g["zasdf"] || "").sort()).to.be.eql(
             ["_", "a", "foo"].sort(),
           );
           expect(Object.keys(g["zasdf/foo"] || "").sort()).to.be.eql(
             ["_", "bar", "ah"].sort(),
           );
-          nopasstun(done, gun);
+          nopasstun(done, zen);
         }
-        //setTimeout(function(){ console.log('???', gun._.stun); }, 1700);
+        //setTimeout(function(){ console.log('???', zen._.stun); }, 1700);
       });
     });
 
@@ -1587,7 +1582,7 @@ describe("ZEN", function () {
 					 - Performant read lock on write contexts.
 					 - Proxying event across maps.
 				*/
-        Gun.statedisk(
+        Zen.statedisk(
           {
             alice: { age: 26, name: "Alice", pet: { a: 1, name: "Fluffy" } },
             bob: { age: 29, name: "Bob!", pet: { b: 2, name: "Frisky" } },
@@ -1596,7 +1591,7 @@ describe("ZEN", function () {
           function () {
             var check = {},
               count = {};
-            gun
+            zen
               .get("u/m")
               .map()
               .on(function (v, f) {
@@ -1609,16 +1604,16 @@ describe("ZEN", function () {
                     expect(check.alice.age).to.be(26);
                     expect(check.alice.name).to.be("Alice");
                     expect(
-                      "string" == typeof Gun.valid(check.alice.pet),
+                      "string" == typeof Zen.valid(check.alice.pet),
                     ).to.be.ok();
                     //expect(count.alice).to.be(1);
                     expect(check.bob.age).to.be(29);
                     expect(check.bob.name).to.be("Bob!");
                     expect(
-                      "string" == typeof Gun.valid(check.bob.pet),
+                      "string" == typeof Zen.valid(check.bob.pet),
                     ).to.be.ok();
                     //expect(count.bob).to.be(1);
-                    nopasstun(done, gun);
+                    nopasstun(done, zen);
                   }, 10);
                 }
               });
@@ -1628,7 +1623,7 @@ describe("ZEN", function () {
       });
 
       it("uncached synchronous map get on", function (done) {
-        Gun.statedisk(
+        Zen.statedisk(
           {
             alice: {
               age: 26,
@@ -1645,7 +1640,7 @@ describe("ZEN", function () {
           function () {
             var check = {},
               count = {};
-            gun
+            zen
               .get("u/m/p")
               .map()
               .get("name")
@@ -1660,7 +1655,7 @@ describe("ZEN", function () {
                     expect(check.bob).to.be("name");
                     //expect(count.alice).to.be(1);
                     //expect(count.bob).to.be(1);
-                    nopasstun(done, gun);
+                    nopasstun(done, zen);
                   }, 10);
                 }
               });
@@ -1670,7 +1665,7 @@ describe("ZEN", function () {
       });
 
       it("uncached synchronous map get on node", function (done) {
-        Gun.statedisk(
+        Zen.statedisk(
           {
             alice: {
               age: 26,
@@ -1687,7 +1682,7 @@ describe("ZEN", function () {
           function () {
             var check = {},
               count = {};
-            gun
+            zen
               .get("u/m/p/n")
               .map()
               .get("pet")
@@ -1707,7 +1702,7 @@ describe("ZEN", function () {
                       return;
                     }
                     done.c = 1;
-                    nopasstun(done, gun);
+                    nopasstun(done, zen);
                   }, 10);
                 }
               });
@@ -1717,8 +1712,8 @@ describe("ZEN", function () {
       });
 
       it("uncached synchronous map get on node get", function (done) {
-        var gun = Gun();
-        Gun.statedisk(
+        var zen = Zen();
+        Zen.statedisk(
           {
             alice: {
               age: 26,
@@ -1736,7 +1731,7 @@ describe("ZEN", function () {
             var check = {},
               count = {};
             //console.debug.i=1;console.log('-------------------');
-            gun
+            zen
               .get("u/m/p/n/p")
               .map()
               .get("pet")
@@ -1750,19 +1745,19 @@ describe("ZEN", function () {
                   done.to = setTimeout(function () {
                     expect(check.Fluffy).to.be("name");
                     expect(check.Frisky).to.be("name");
-                    //console.log("????", gun._.graph);
-                    //Gun.obj.map(gun._.graph, function(n,s){
-                    Object.keys(gun._.graph).forEach(function (s, n) {
-                      n = gun._.graph[s];
+                    //console.log("????", zen._.graph);
+                    //Zen.obj.map(zen._.graph, function(n,s){
+                    Object.keys(zen._.graph).forEach(function (s, n) {
+                      n = zen._.graph[s];
                       if ("u/m/p/n/p" === s) {
                         return;
                       }
-                      var a = Object.keys(n); //Gun.obj.map(n, function(v,f,t){t(v)});
+                      var a = Object.keys(n); //Zen.obj.map(n, function(v,f,t){t(v)});
                       expect(a.length).to.be(2); // make sure that ONLY the selected properties were loaded, not the whole node.
                     });
                     //expect(count.Fluffy).to.be(1);
                     //expect(count.Frisky).to.be(1);
-                    nopasstun(done, gun);
+                    nopasstun(done, zen);
                   }, 10);
                 }
               });
@@ -1772,7 +1767,7 @@ describe("ZEN", function () {
       });
 
       it("uncached synchronous map on mutate", function (done) {
-        Gun.statedisk(
+        Zen.statedisk(
           {
             alice: {
               age: 26,
@@ -1789,7 +1784,7 @@ describe("ZEN", function () {
           function () {
             var check = {},
               count = {};
-            gun
+            zen
               .get("u/m/mutate")
               .map()
               .get("name")
@@ -1810,12 +1805,12 @@ describe("ZEN", function () {
                       return;
                     }
                     done.c = 1;
-                    nopasstun(done, gun);
+                    nopasstun(done, zen);
                   }, 10);
                 }
               });
             setTimeout(function () {
-              gun.get("u/m/mutate").get("alice").put(7);
+              zen.get("u/m/mutate").get("alice").put(7);
             }, 300);
           },
           1000,
@@ -1823,7 +1818,7 @@ describe("ZEN", function () {
       });
 
       it("uncached synchronous map on mutate node", function (done) {
-        Gun.statedisk(
+        Zen.statedisk(
           {
             alice: {
               _: { "#": "umaliceo" },
@@ -1841,7 +1836,7 @@ describe("ZEN", function () {
           function () {
             var check = {},
               count = {};
-            gun
+            zen
               .get("u/m/mutate/n")
               .map()
               .get("name")
@@ -1866,12 +1861,12 @@ describe("ZEN", function () {
                     expect(count.Bob).to.be(1);
                     expect(count["undefined"]).to.be(1);
                     expect(count["Alice Zzxyz"]).to.be(1);
-                    nopasstun(done, gun);
+                    nopasstun(done, zen);
                   }, 200);
                 }
               });
             setTimeout(function () {
-              gun
+              zen
                 .get("u/m/mutate/n")
                 .get("alice")
                 .put({
@@ -1879,7 +1874,7 @@ describe("ZEN", function () {
                   name: "Alice Zzxyz",
                 });
               setTimeout(function () {
-                gun.get("umaliceo").put({
+                zen.get("umaliceo").put({
                   name: "Alice Aabca",
                 });
                 done.last = true;
@@ -1891,7 +1886,7 @@ describe("ZEN", function () {
       });
 
       it("uncached synchronous map on mutate node uncached", function (done) {
-        Gun.statedisk(
+        Zen.statedisk(
           {
             alice: {
               _: { "#": "umaliceo1" },
@@ -1909,7 +1904,7 @@ describe("ZEN", function () {
           function () {
             var check = {},
               count = {};
-            gun
+            zen
               .get("u/m/mutate/n/u")
               .map()
               .on(function (v, f) {
@@ -1928,17 +1923,17 @@ describe("ZEN", function () {
                       return;
                     }
                     done.c = 1;
-                    nopasstun(done, gun);
+                    nopasstun(done, zen);
                   }, 200);
                 }
               });
             setTimeout(function () {
-              Gun.statedisk(
+              Zen.statedisk(
                 { name: "Alice Zzxyz" },
                 "u/m/m/n/u/soul",
                 function () {
                   //console.debug.i=1;console.log("---------------");
-                  gun.get("u/m/mutate/n/u").put({
+                  zen.get("u/m/mutate/n/u").put({
                     alice: { "#": "u/m/m/n/u/soul" },
                   });
                   /*
@@ -1949,7 +1944,7 @@ describe("ZEN", function () {
 						}
 					*/
                   setTimeout(function () {
-                    gun.get("umaliceo1").put({
+                    zen.get("umaliceo1").put({
                       name: "Alice Aabca",
                     });
                     done.last = true;
@@ -1964,7 +1959,7 @@ describe("ZEN", function () {
       });
 
       it("uncached synchronous map on get mutate node uncached", function (done) {
-        Gun.statedisk(
+        Zen.statedisk(
           {
             alice: {
               _: { "#": "umaliceo2" },
@@ -1982,7 +1977,7 @@ describe("ZEN", function () {
           function () {
             var check = {},
               count = {};
-            gun
+            zen
               .get("u/m/p/mutate/n/u")
               .map()
               .get("name")
@@ -1993,27 +1988,27 @@ describe("ZEN", function () {
                 if (check.Alice && check.Bob && check["Alice Zzxyz"]) {
                   clearTimeout(done.to);
                   done.to = setTimeout(function () {
-                    var a = Object.keys(gun._.graph["u/m/p/m/n/u/soul"]); //Gun.obj.map(gun._.graph['u/m/p/m/n/u/soul'], function(v,f,t){t(v)});
+                    var a = Object.keys(zen._.graph["u/m/p/m/n/u/soul"]); //Zen.obj.map(zen._.graph['u/m/p/m/n/u/soul'], function(v,f,t){t(v)});
                     expect(a.length).to.be(2);
                     expect(done.last).to.be.ok();
                     expect(check["Alice Aabca"]).to.not.be.ok();
                     //expect(count.Alice).to.be(1);
                     //expect(count.Bob).to.be(1);
                     //expect(count['Alice Zzxyz']).to.be(1);
-                    nopasstun(done, gun);
+                    nopasstun(done, zen);
                   }, 200);
                 }
               });
             setTimeout(function () {
-              Gun.statedisk(
+              Zen.statedisk(
                 { name: "Alice Zzxyz", age: 34 },
                 "u/m/p/m/n/u/soul",
                 function () {
-                  gun.get("u/m/p/mutate/n/u").put({
+                  zen.get("u/m/p/mutate/n/u").put({
                     alice: { "#": "u/m/p/m/n/u/soul" },
                   });
                   setTimeout(function () {
-                    gun.get("umaliceo2").put({
+                    zen.get("umaliceo2").put({
                       name: "Alice Aabca",
                     });
                     done.last = true;
@@ -2028,7 +2023,7 @@ describe("ZEN", function () {
       });
 
       it("uncached synchronous map on get node mutate node uncached", function (done) {
-        Gun.statedisk(
+        Zen.statedisk(
           {
             alice: {
               _: { "#": "umaliceo3" },
@@ -2046,7 +2041,7 @@ describe("ZEN", function () {
           function () {
             var check = {},
               count = {};
-            gun
+            zen
               .get("u/m/p/n/mutate/n/u")
               .map()
               .get("pet")
@@ -2062,12 +2057,12 @@ describe("ZEN", function () {
                     expect(count.Fluffy).to.be(1);
                     expect(count.Frisky).to.be(1);
                     expect(count.Fuzzball).to.be(1);
-                    nopasstun(done, gun);
+                    nopasstun(done, zen);
                   }, 200);
                 }
               });
             setTimeout(function () {
-              Gun.statedisk(
+              Zen.statedisk(
                 {
                   name: "Alice Zzxyz",
                   age: 34,
@@ -2075,11 +2070,11 @@ describe("ZEN", function () {
                 },
                 "alice/fuzz/soul",
                 function () {
-                  gun.get("u/m/p/n/mutate/n/u").put({
+                  zen.get("u/m/p/n/mutate/n/u").put({
                     alice: { "#": "alice/fuzz/soul" },
                   });
                   setTimeout(function () {
-                    gun.get("sflufso").put({
+                    zen.get("sflufso").put({
                       name: "Fluffs",
                     });
                     done.last = true;
@@ -2094,7 +2089,7 @@ describe("ZEN", function () {
       });
 
       it("unlink deeply nested", function (done) {
-        Gun.statedisk(
+        Zen.statedisk(
           {
             a: {
               _: { "#": "audn" },
@@ -2111,7 +2106,7 @@ describe("ZEN", function () {
           function () {
             var check = {},
               count = {};
-            gun
+            zen
               .get("udn")
               .get("a")
               .get("b")
@@ -2135,12 +2130,12 @@ describe("ZEN", function () {
                       return;
                     }
                     done.c = 1;
-                    nopasstun(done, gun);
+                    nopasstun(done, zen);
                   }, 200);
                 }
               });
             setTimeout(function () {
-              Gun.statedisk(
+              Zen.statedisk(
                 {
                   name: "Alice2",
                   age: 34,
@@ -2153,12 +2148,12 @@ describe("ZEN", function () {
                 "2audn",
                 function () {
                   //console.only.i=1;console.log('=============================');
-                  gun.get("udn").put({
+                  zen.get("udn").put({
                     a: { "#": "2audn" },
                   });
                   setTimeout(function () {
                     //console.log("- - - - - - - - - - - -");
-                    gun.get("cudn").put({ id: "firsta", foo: "bar" });
+                    zen.get("cudn").put({ id: "firsta", foo: "bar" });
                     done.last = 1;
                   }, 50);
                 },
@@ -2169,10 +2164,10 @@ describe("ZEN", function () {
       });
 
       it("get before put in memory", function (done) {
-        var gun = Gun();
+        var zen = Zen();
         var check = {};
         var count = {};
-        gun
+        zen
           .get("g/n/m/f/l/n/r")
           .map()
           .on(function (v, f) {
@@ -2191,11 +2186,11 @@ describe("ZEN", function () {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 50);
             }
           });
-        gun.put({
+        zen.put({
           _: { "#": "g/n/m/f/l/n/r" },
           alice: {
             _: { "#": "GALICE1" },
@@ -2205,7 +2200,7 @@ describe("ZEN", function () {
               name: "carl",
               age: 25,
               work: {
-                name: "GUN INC",
+                name: "ZEN INC",
               },
             },
             bout: { huh: 1 },
@@ -2223,13 +2218,13 @@ describe("ZEN", function () {
           },
         });
         setTimeout(function () {
-          gun.get("GALICE1").put({ PhD: true });
+          zen.get("GALICE1").put({ PhD: true });
         }, 300);
       });
 
       it("in memory get after", function (done) {
-        var gun = Gun();
-        gun.put({
+        var zen = Zen();
+        zen.put({
           _: { "#": "g/n/m/f/l/n" },
           alice: {
             _: { "#": "GALICE2" },
@@ -2239,7 +2234,7 @@ describe("ZEN", function () {
               name: "carl",
               age: 25,
               work: {
-                name: "GUN INC",
+                name: "ZEN INC",
               },
             },
             bout: { huh: 1 },
@@ -2257,8 +2252,8 @@ describe("ZEN", function () {
           },
         });
         var check = {};
-        //gun.get('g/n/m/f/l/n').get('bob.spouse.work').on(function(v,f){ console.log("!!!!!!!!!", f, v);});return;
-        gun
+        //zen.get('g/n/m/f/l/n').get('bob.spouse.work').on(function(v,f){ console.log("!!!!!!!!!", f, v);});return;
+        zen
           .get("g/n/m/f/l/n")
           .map()
           .on(function (v, f) {
@@ -2277,25 +2272,25 @@ describe("ZEN", function () {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
         setTimeout(function () {
-          gun.get("GALICE2").put({ PhD: true });
+          zen.get("GALICE2").put({ PhD: true });
         }, 300);
       });
 
       it("in memory get before map get", function (done) {
-        var gun = Gun();
+        var zen = Zen();
         var check = {};
-        gun
+        zen
           .get("g/n/m/f/l/n/b/p")
           .map()
           .get("name")
           .on(function (v, f) {
             check[v] = f;
-            //console.log("****************", f,v, gun);
+            //console.log("****************", f,v, zen);
             if (check.alice && check.bob && check.Alice) {
               clearTimeout(done.to);
               done.to = setTimeout(function () {
@@ -2306,11 +2301,11 @@ describe("ZEN", function () {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
-        gun.put({
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/p" },
           alice: {
             _: { "#": "GALICE3" },
@@ -2320,7 +2315,7 @@ describe("ZEN", function () {
               name: "carl",
               age: 25,
               work: {
-                name: "GUN INC",
+                name: "ZEN INC",
               },
             },
             bout: { huh: 1 },
@@ -2339,13 +2334,13 @@ describe("ZEN", function () {
         });
         setTimeout(function () {
           //console.debug.i=1;console.log("-------------");
-          gun.get("GALICE3").put({ name: "Alice" });
+          zen.get("GALICE3").put({ name: "Alice" });
         }, 300);
       });
 
       it("in memory get after map get", function (done) {
-        var gun = Gun();
-        gun.put({
+        var zen = Zen();
+        zen.put({
           _: { "#": "g/n/m/f/l/n/m/p" },
           alice: {
             _: { "#": "GALICE4" },
@@ -2355,7 +2350,7 @@ describe("ZEN", function () {
               name: "carl",
               age: 25,
               work: {
-                name: "GUN INC",
+                name: "ZEN INC",
               },
             },
             bout: { huh: 1 },
@@ -2373,7 +2368,7 @@ describe("ZEN", function () {
           },
         });
         var check = {};
-        gun
+        zen
           .get("g/n/m/f/l/n/m/p")
           .map()
           .get("name")
@@ -2393,19 +2388,19 @@ describe("ZEN", function () {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
         setTimeout(function () {
-          gun.get("GALICE4").put({ name: "Alice" });
+          zen.get("GALICE4").put({ name: "Alice" });
         }, 300);
       });
 
       it("in memory get before map get get", function (done) {
-        var gun = Gun();
+        var zen = Zen();
         var check = {};
-        gun
+        zen
           .get("g/n/m/f/l/n/b/p/p/p")
           .map()
           .get("spouse")
@@ -2413,21 +2408,21 @@ describe("ZEN", function () {
           .on(function (v, f) {
             check[v.name] = f;
             //console.log("*******", f, v);
-            if (check["GUN INC"] && check["ACME INC"] && check["ACME INC."]) {
+            if (check["ZEN INC"] && check["ACME INC"] && check["ACME INC."]) {
               clearTimeout(done.to);
               done.to = setTimeout(function () {
-                expect(check["GUN INC"]).to.be("work");
+                expect(check["ZEN INC"]).to.be("work");
                 expect(check["ACME INC"]).to.be("work");
                 expect(check["ACME INC."]).to.be("work");
                 if (done.c) {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
-        gun.put({
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/p/p/p" },
           alice: {
             name: "alice",
@@ -2436,7 +2431,7 @@ describe("ZEN", function () {
               name: "carl",
               age: 25,
               work: {
-                name: "GUN INC",
+                name: "ZEN INC",
               },
             },
             bout: { huh: 1 },
@@ -2453,13 +2448,13 @@ describe("ZEN", function () {
         });
         setTimeout(function () {
           //console.debug.i=1;console.log("----------------");
-          gun.get("CCINEMA1").put({ name: "ACME INC." });
+          zen.get("CCINEMA1").put({ name: "ACME INC." });
         }, 300);
       });
 
       it("in memory get after map get get", function (done) {
-        var gun = Gun();
-        gun.put({
+        var zen = Zen();
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/p/p/p/a" },
           alice: {
             name: "alice",
@@ -2468,7 +2463,7 @@ describe("ZEN", function () {
               name: "carl",
               age: 25,
               work: {
-                name: "GUN INC",
+                name: "ZEN INC",
               },
             },
             bout: { huh: 1 },
@@ -2484,32 +2479,32 @@ describe("ZEN", function () {
           },
         });
         var check = {};
-        gun
+        zen
           .get("g/n/m/f/l/n/b/p/p/p/a")
           .map()
           .get("spouse")
           .get("work")
           .on(function (v, f) {
             check[v.name] = f;
-            if (check["GUN INC"] && check["ACME INC"] && check["ACME INC."]) {
+            if (check["ZEN INC"] && check["ACME INC"] && check["ACME INC."]) {
               clearTimeout(done.to);
               done.to = setTimeout(function () {
-                expect(check["GUN INC"]).to.be("work");
+                expect(check["ZEN INC"]).to.be("work");
                 expect(check["ACME INC"]).to.be("work");
                 expect(check["ACME INC."]).to.be("work");
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
         setTimeout(function () {
-          gun.get("CCINEMA2").put({ name: "ACME INC." });
+          zen.get("CCINEMA2").put({ name: "ACME INC." });
         }, 300);
       });
 
       it("in memory get before map map", function (done) {
-        var gun = Gun();
+        var zen = Zen();
         var check = {};
-        gun
+        zen
           .get("g/n/m/f/l/n/b/a/m/m")
           .map()
           .map()
@@ -2519,7 +2514,7 @@ describe("ZEN", function () {
             if (
               check.alice &&
               check.bob &&
-              check.GUN &&
+              check.ZEN &&
               check.ACME &&
               check.ACME.corp
             ) {
@@ -2528,26 +2523,26 @@ describe("ZEN", function () {
                 expect(check.alice.name).to.be("alice");
                 expect(check.alice.age).to.be(24);
                 expect(
-                  "string" == typeof Gun.valid(check.alice.spouse),
+                  "string" == typeof Zen.valid(check.alice.spouse),
                 ).to.be.ok();
                 expect(check.bob.name).to.be("bob");
                 expect(check.bob.age).to.be(26);
                 expect(
-                  "string" == typeof Gun.valid(check.bob.spouse),
+                  "string" == typeof Zen.valid(check.bob.spouse),
                 ).to.be.ok();
-                expect(check.GUN.name).to.be("GUN");
+                expect(check.ZEN.name).to.be("ZEN");
                 expect(check.ACME.name).to.be("ACME");
                 expect(check.ACME.corp).to.be("C");
                 if (done.c) {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
         //console.debug.i=1;console.log("------------------------");
-        gun.put({
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/a/m/m" },
           users: {
             alice: {
@@ -2569,21 +2564,21 @@ describe("ZEN", function () {
             },
           },
           companies: {
-            GUN: {
-              name: "GUN",
+            ZEN: {
+              name: "ZEN",
             },
             ACME: { _: { "#": "CCINEMA3" }, name: "ACME" },
           },
         });
         setTimeout(function () {
           //console.debug.i=1;console.log("-------------");
-          gun.get("CCINEMA3").put({ corp: "C" });
+          zen.get("CCINEMA3").put({ corp: "C" });
         }, 300);
       });
 
       it("in memory get after map map", function (done) {
-        var gun = Gun();
-        gun.put({
+        var zen = Zen();
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/m/m" },
           users: {
             alice: {
@@ -2605,14 +2600,14 @@ describe("ZEN", function () {
             },
           },
           companies: {
-            GUN: {
-              name: "GUN",
+            ZEN: {
+              name: "ZEN",
             },
             ACME: { _: { "#": "CCINEMA4" }, name: "ACME" },
           },
         });
         var check = {};
-        gun
+        zen
           .get("g/n/m/f/l/n/b/m/m")
           .map()
           .map()
@@ -2625,7 +2620,7 @@ describe("ZEN", function () {
             if (
               check.alice &&
               check.bob &&
-              check.GUN &&
+              check.ZEN &&
               check.ACME &&
               check.ACME.corp
             ) {
@@ -2634,33 +2629,33 @@ describe("ZEN", function () {
                 expect(check.alice.name).to.be("alice");
                 expect(check.alice.age).to.be(24);
                 expect(
-                  "string" == typeof Gun.valid(check.alice.spouse),
+                  "string" == typeof Zen.valid(check.alice.spouse),
                 ).to.be.ok();
                 expect(check.bob.name).to.be("bob");
                 expect(check.bob.age).to.be(26);
                 expect(
-                  "string" == typeof Gun.valid(check.bob.spouse),
+                  "string" == typeof Zen.valid(check.bob.spouse),
                 ).to.be.ok();
-                expect(check.GUN.name).to.be("GUN");
+                expect(check.ZEN.name).to.be("ZEN");
                 expect(check.ACME.name).to.be("ACME");
                 expect(check.ACME.corp).to.be("C");
                 if (done.c) {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
         setTimeout(function () {
-          gun.get("CCINEMA4").put({ corp: "C" });
+          zen.get("CCINEMA4").put({ corp: "C" });
         }, 300);
       });
 
       it("in memory get before map map get", function (done) {
-        var gun = Gun();
+        var zen = Zen();
         var check = {};
-        gun
+        zen
           .get("g/n/m/f/l/n/b/m/m/p")
           .map()
           .map()
@@ -2671,7 +2666,7 @@ describe("ZEN", function () {
             if (
               check.alice &&
               check.bob &&
-              check.GUN &&
+              check.ZEN &&
               check.ACME &&
               check.ACMEINC
             ) {
@@ -2679,18 +2674,18 @@ describe("ZEN", function () {
               done.to = setTimeout(function () {
                 expect(check.alice).to.be("name");
                 expect(check.bob).to.be("name");
-                expect(check.GUN).to.be("name");
+                expect(check.ZEN).to.be("name");
                 expect(check.ACME).to.be("name");
                 expect(check.ACMEINC).to.be("name");
                 if (done.c) {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
-        gun.put({
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/m/m/p" },
           users: {
             alice: {
@@ -2712,21 +2707,21 @@ describe("ZEN", function () {
             },
           },
           companies: {
-            GUN: {
-              name: "GUN",
+            ZEN: {
+              name: "ZEN",
             },
             ACME: { _: { "#": "CCINEMA5" }, name: "ACME" },
           },
         });
         setTimeout(function () {
-          gun.get("CCINEMA5").put({ name: "ACMEINC" });
+          zen.get("CCINEMA5").put({ name: "ACMEINC" });
         }, 300);
       });
 
       it("in memory get after map map get", function (done) {
-        var gun = Gun();
+        var zen = Zen();
         var check = {};
-        gun.put({
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/a/m/m/p" },
           users: {
             alice: {
@@ -2748,13 +2743,13 @@ describe("ZEN", function () {
             },
           },
           companies: {
-            GUN: {
-              name: "GUN",
+            ZEN: {
+              name: "ZEN",
             },
             ACME: { _: { "#": "CCINEMA6" }, name: "ACME" },
           },
         });
-        gun
+        zen
           .get("g/n/m/f/l/n/b/a/m/m/p")
           .map()
           .map()
@@ -2765,7 +2760,7 @@ describe("ZEN", function () {
             if (
               check.alice &&
               check.bob &&
-              check.GUN &&
+              check.ZEN &&
               check.ACME &&
               check.ACMEINC
             ) {
@@ -2773,22 +2768,22 @@ describe("ZEN", function () {
               done.to = setTimeout(function () {
                 expect(check.alice).to.be("name");
                 expect(check.bob).to.be("name");
-                expect(check.GUN).to.be("name");
+                expect(check.ZEN).to.be("name");
                 expect(check.ACME).to.be("name");
                 expect(check.ACMEINC).to.be("name");
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
         setTimeout(function () {
-          gun.get("CCINEMA6").put({ name: "ACMEINC" });
+          zen.get("CCINEMA6").put({ name: "ACMEINC" });
         }, 300);
       });
 
       it("in memory get before map map get get", function (done) {
-        var gun = Gun();
+        var zen = Zen();
         var check = {};
-        gun
+        zen
           .get("g/n/m/f/l/n/b/m/m/p/p")
           .map()
           .map()
@@ -2808,11 +2803,11 @@ describe("ZEN", function () {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
-        gun.put({
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/m/m/p/p" },
           users: {
             alice: {
@@ -2838,8 +2833,8 @@ describe("ZEN", function () {
             },
           },
           companies: {
-            GUN: {
-              name: "GUN",
+            ZEN: {
+              name: "ZEN",
               address: {
                 state: "CA",
               },
@@ -2853,13 +2848,13 @@ describe("ZEN", function () {
           },
         });
         setTimeout(function () {
-          gun.get("QUANGO").put({ state: "QR" });
+          zen.get("QUANGO").put({ state: "QR" });
         }, 300);
       });
 
       it("in memory get after map map get get", function (done) {
-        var gun = Gun();
-        gun.put({
+        var zen = Zen();
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/a/m/m/p/p" },
           users: {
             alice: {
@@ -2885,8 +2880,8 @@ describe("ZEN", function () {
             },
           },
           companies: {
-            GUN: {
-              name: "GUN",
+            ZEN: {
+              name: "ZEN",
               address: {
                 state: "CA",
               },
@@ -2900,7 +2895,7 @@ describe("ZEN", function () {
           },
         });
         var check = {};
-        gun
+        zen
           .get("g/n/m/f/l/n/b/a/m/m/p/p")
           .map()
           .map()
@@ -2916,19 +2911,19 @@ describe("ZEN", function () {
                 expect(check.CA).to.be("state");
                 expect(check.TX).to.be("state");
                 expect(check.MA).to.be("state");
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
         setTimeout(function () {
-          gun.get("QUANGO1").put({ state: "QR" });
+          zen.get("QUANGO1").put({ state: "QR" });
         }, 300);
       });
 
       it("in memory get before map map get get get", function (done) {
-        var gun = Gun();
+        var zen = Zen();
         var check = {};
-        gun
+        zen
           .get("g/n/m/f/l/n/b/m/m/p/p/p")
           .map()
           .map()
@@ -2949,11 +2944,11 @@ describe("ZEN", function () {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
-        gun.put({
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/m/m/p/p/p" },
           users: {
             alice: {
@@ -2992,8 +2987,8 @@ describe("ZEN", function () {
             },
           },
           companies: {
-            GUN: {
-              name: "GUN",
+            ZEN: {
+              name: "ZEN",
               address: {
                 state: {
                   code: "CA",
@@ -3017,14 +3012,14 @@ describe("ZEN", function () {
           },
         });
         setTimeout(function () {
-          gun.get("HIPPOM").put({ code: "QR" });
+          zen.get("HIPPOM").put({ code: "QR" });
         }, 300);
       });
 
       it("in memory get before after map map get get get", function (done) {
-        var gun = Gun();
+        var zen = Zen();
         var check = {};
-        gun.put({
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/a/m/m/p/p/p" },
           users: {
             alice: {
@@ -3063,8 +3058,8 @@ describe("ZEN", function () {
             },
           },
           companies: {
-            GUN: {
-              name: "GUN",
+            ZEN: {
+              name: "ZEN",
               address: {
                 state: {
                   code: "CA",
@@ -3087,7 +3082,7 @@ describe("ZEN", function () {
             },
           },
         });
-        gun
+        zen
           .get("g/n/m/f/l/n/b/a/m/m/p/p/p")
           .map()
           .map()
@@ -3105,19 +3100,19 @@ describe("ZEN", function () {
                 expect(check.CA).to.be("code");
                 expect(check.TX).to.be("code");
                 expect(check.MA).to.be("code");
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
         setTimeout(function () {
-          gun.get("HIPPOM1").put({ code: "QR" });
+          zen.get("HIPPOM1").put({ code: "QR" });
         }, 300);
       });
 
       it("in memory get before map map get get node", function (done) {
-        var gun = Gun();
+        var zen = Zen();
         var check = {};
-        gun
+        zen
           .get("g/n/m/f/l/n/b/m/m/p/p/n")
           .map()
           .map()
@@ -3138,11 +3133,11 @@ describe("ZEN", function () {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
-        gun.put({
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/m/m/p/p/n" },
           users: {
             alice: {
@@ -3181,8 +3176,8 @@ describe("ZEN", function () {
             },
           },
           companies: {
-            GUN: {
-              name: "GUN",
+            ZEN: {
+              name: "ZEN",
               address: {
                 state: {
                   code: "CA",
@@ -3206,14 +3201,14 @@ describe("ZEN", function () {
           },
         });
         setTimeout(function () {
-          gun.get("HIPPOM3").put({ code: "QR" });
+          zen.get("HIPPOM3").put({ code: "QR" });
         }, 300);
       });
 
       it("in memory get before after map map get get node", function (done) {
-        var gun = Gun();
+        var zen = Zen();
         var check = {};
-        gun.put({
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/a/m/m/p/p/n" },
           users: {
             alice: {
@@ -3252,8 +3247,8 @@ describe("ZEN", function () {
             },
           },
           companies: {
-            GUN: {
-              name: "GUN",
+            ZEN: {
+              name: "ZEN",
               address: {
                 state: {
                   code: "CA",
@@ -3276,7 +3271,7 @@ describe("ZEN", function () {
             },
           },
         });
-        gun
+        zen
           .get("g/n/m/f/l/n/b/a/m/m/p/p/n")
           .map()
           .map()
@@ -3293,19 +3288,19 @@ describe("ZEN", function () {
                 expect(check.CA).to.be("state");
                 expect(check.TX).to.be("state");
                 expect(check.MA).to.be("state");
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
         setTimeout(function () {
-          gun.get("HIPPOM4").put({ code: "QR" });
+          zen.get("HIPPOM4").put({ code: "QR" });
         }, 300);
       });
 
       it("in memory get after map map get get get map", function (done) {
-        var gun = Gun();
+        var zen = Zen();
         var check = {};
-        gun.put({
+        zen.put({
           _: { "#": "g/n/m/f/l/n/b/a/m/m/p/p/p/n" },
           users: {
             alice: {
@@ -3345,8 +3340,8 @@ describe("ZEN", function () {
             },
           },
           companies: {
-            GUN: {
-              name: "GUN",
+            ZEN: {
+              name: "ZEN",
               address: {
                 state: {
                   code: "CA",
@@ -3372,7 +3367,7 @@ describe("ZEN", function () {
             },
           },
         });
-        gun
+        zen
           .get("g/n/m/f/l/n/b/a/m/m/p/p/p/n")
           .map()
           .map()
@@ -3405,19 +3400,19 @@ describe("ZEN", function () {
                 expect(check.CA2).to.be("Second");
                 expect(check.NY2).to.be("Second");
                 expect(check.NY3).to.be("Third");
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 10);
             }
           });
         setTimeout(function () {
-          gun.get("NYCOUNT").put({ NY3: "Third" });
+          zen.get("NYCOUNT").put({ NY3: "Third" });
         }, 300);
       });
     });
 
     it("once put once", function (done) {
-      gun.get("opo").get("a").put("yay!");
-      var ref = gun.get("opo").get("a");
+      zen.get("opo").get("a").put("yay!");
+      var ref = zen.get("opo").get("a");
       setTimeout(function () {
         ref.once(function (data) {
           //console.log("************", data);
@@ -3425,7 +3420,7 @@ describe("ZEN", function () {
 
           setTimeout(function () {
             console.only(3, ".put z");
-            gun.get("opo").get("a").put("z");
+            zen.get("opo").get("a").put("z");
 
             setTimeout(function () {
               ref.once(function (data) {
@@ -3451,11 +3446,11 @@ describe("ZEN", function () {
 			teams.red.bob = bob;
 			teams.red.carl = carl;
 			console.only.i=1;console.log("===============");
-			Gun.statedisk(teams, 'gerema', function(ack){
+			Zen.statedisk(teams, 'gerema', function(ack){
 				console.log("VVVVVVVVVVVVVVVVVVV", ack);
 				setTimeout(function(){
 
-				gun.get('gerema').map().map().get('spouse').on(function(data){
+				zen.get('gerema').map().map().get('spouse').on(function(data){
 					console.only(2,'hi', data);
 					console.only(1,'hi', data);
 						console.log("*****************", data);return;
@@ -3469,10 +3464,10 @@ describe("ZEN", function () {
       var user = { bob: bob };
       bob.pet = cat;
       cat.slave = bob;
-      Gun.statedisk(user, "nodecircle", function () {
-        //console.only.i=1;console.log("=============", gun);
-        //gun.get('nodecircle').get('bob').once(function(data){
-        gun
+      Zen.statedisk(user, "nodecircle", function () {
+        //console.only.i=1;console.log("=============", zen);
+        //zen.get('nodecircle').get('bob').once(function(data){
+        zen
           .get("nodecircle")
           .get("bob")
           .get("pet")
@@ -3483,7 +3478,7 @@ describe("ZEN", function () {
             done.to = setTimeout(function () {
               expect(data.age).to.be(29);
               expect(data.name).to.be("Bob!");
-              expect("string" == typeof Gun.valid(data.pet)).to.ok();
+              expect("string" == typeof Zen.valid(data.pet)).to.ok();
               nopasstun(done);
             }, 300);
           });
@@ -3492,10 +3487,10 @@ describe("ZEN", function () {
 
     it("recursive put", function (done) {
       //localStorage.clear();
-      var gun = Gun();
+      var zen = Zen();
 
-      var parent = gun.get("parent");
-      var child = gun.get("child");
+      var parent = zen.get("parent");
+      var child = zen.get("child");
 
       child.put({
         way: "down",
@@ -3518,14 +3513,14 @@ describe("ZEN", function () {
           return;
         }
         done.c = 1;
-        nopasstun(done, gun); // TODO: Add more meaningful checks!
+        nopasstun(done, zen); // TODO: Add more meaningful checks!
       });
     });
 
     it("empty val followed", function (done) {
-      var gun = Gun();
+      var zen = Zen();
 
-      gun
+      zen
         .get("val/follow")
         .once(function (data) {
           //console.log("val", data);
@@ -3536,16 +3531,16 @@ describe("ZEN", function () {
             return;
           }
           done.c = 1;
-          nopasstun(done, gun);
+          nopasstun(done, zen);
         });
     });
 
     it("map val get put", function (done) {
-      var gun = Gun().get("chat/asdf");
+      var zen = Zen().get("chat/asdf");
 
       var check = {},
         count = {};
-      gun.map().once(function (v, f) {
+      zen.map().once(function (v, f) {
         check[f] = v;
         count[f] = (count[f] || 0) + 1;
         //console.log("**************", f, v);
@@ -3556,25 +3551,25 @@ describe("ZEN", function () {
             expect(check["2-2"].what).to.be("you.");
             expect(count["1-1"]).to.be(1);
             expect(count["2-2"]).to.be(1);
-            nopasstun(done, gun);
+            nopasstun(done, zen);
           }, 50);
         }
       });
       setTimeout(function () {
-        gun.get("1-1").put({ what: "hi" });
+        zen.get("1-1").put({ what: "hi" });
         setTimeout(function () {
-          gun.get("2-2").put({ what: "you." });
+          zen.get("2-2").put({ what: "you." });
         }, 40);
       }, 40);
     });
 
     it("get list set map simple", function (done) {
-      var gun = Gun();
+      var zen = Zen();
 
-      var list = gun.get("list-s");
+      var list = zen.get("list-s");
 
       list.set(
-        gun
+        zen
           .get("alice-s")
           .put({ name: "Alice", group: "awesome", married: true }),
       );
@@ -3588,28 +3583,28 @@ describe("ZEN", function () {
         expect(data.married).to.be(true);
         expect(data.name).to.be("Alice");
         done.c = 1;
-        nopasstun(done, gun);
+        nopasstun(done, zen);
       });
     });
 
     it("get list set map val", function (done) {
-      var gun = Gun();
+      var zen = Zen();
 
-      var list = gun.get("list");
+      var list = zen.get("list");
 
       list.set(
-        gun
+        zen
           .get("alice")
           .put({ name: "Alice", group: "awesome", married: true }),
       );
       list.set(
-        gun.get("bob").put({ name: "Bob", group: "cool", married: true }),
+        zen.get("bob").put({ name: "Bob", group: "cool", married: true }),
       );
       list.set(
-        gun.get("carl").put({ name: "Carl", group: "cool", married: false }),
+        zen.get("carl").put({ name: "Carl", group: "cool", married: false }),
       );
       list.set(
-        gun.get("dave").put({ name: "Dave", group: "awesome", married: true }),
+        zen.get("dave").put({ name: "Dave", group: "awesome", married: true }),
       );
 
       var check = {},
@@ -3636,7 +3631,7 @@ describe("ZEN", function () {
             expect(check.dave.name).to.be("Dave");
             expect(check.dave.group).to.be("awesome");
             expect(check.dave.married).to.be(true);
-            nopasstun(done, gun);
+            nopasstun(done, zen);
           }, 50);
         }
       });
@@ -3658,8 +3653,8 @@ describe("ZEN", function () {
 				next // any
 				cache or map of many ones // only a one can have a cache, only a map can have many, and they must be ones. However any chain might have neither. By default a chain is a many, unless it is designated as a one.
 
-				gun.get('alice').also('bob').path('name').on(cb);
-				gun.get('users').map().path('friends').map().on(cb);
+				zen.get('alice').also('bob').path('name').on(cb);
+				zen.get('users').map().path('friends').map().on(cb);
 
 				friends is a map, it has an echo
 				{name: "alice", friends: []}
@@ -3678,13 +3673,13 @@ describe("ZEN", function () {
     });
 
     it("get get get set root get put", function (done) {
-      var gun = Gun().get("app");
+      var zen = Zen().get("app");
       //console.only.i=1;console.log('---------------');
-      gun
+      zen
         .get("alias")
         .get("mark")
         .set(
-          gun.back(-1).get("pub").put({
+          zen.back(-1).get("pub").put({
             alias: "mark",
             auth: "encrypt", // oops
             born: 1,
@@ -3694,18 +3689,18 @@ describe("ZEN", function () {
         );
       setTimeout(function () {
         //console.debug.i=1;console.log('---------------');
-        gun.get(function (at) {
+        zen.get(function (at) {
           //console.log("*", at.put);//return;
           done.app = done.app || at.put.alias;
         });
-        gun
+        zen
           .back(-1)
           .get("pub")
           .get(function (at) {
             //console.log("**", at.put.auth);
             done.pub = done.pub || at.put.auth;
           });
-        gun
+        zen
           .get("alias")
           .get(function (at) {
             //console.log("***", at);
@@ -3719,7 +3714,7 @@ describe("ZEN", function () {
             done.to = setTimeout(function () {
               done.mark = done.mark || data.pub;
               //console.log('???', done.app, done.pub, done.alias);
-              expect(Gun.valid(done.mark)).to.be("pub");
+              expect(Zen.valid(done.mark)).to.be("pub");
               expect(done.app).to.be.ok();
               expect(done.pub).to.be.ok();
               expect(done.alias).to.be.ok();
@@ -3727,7 +3722,7 @@ describe("ZEN", function () {
                 return;
               }
               done.c = 1;
-              nopasstun(done, gun);
+              nopasstun(done, zen);
             }, 100);
           });
       }, 100);
@@ -3735,18 +3730,18 @@ describe("ZEN", function () {
 
     it("get put get get put reload get get then get", function (done) {
       this.timeout(9000);
-      var gun = Gun();
+      var zen = Zen();
 
-      gun.get("stef").put({ name: "Stef" });
+      zen.get("stef").put({ name: "Stef" });
       var address = {
         country: "Netherlands",
         zip: "999999",
       };
-      gun.get("stef").get("address").put(address);
+      zen.get("stef").get("address").put(address);
 
       // reload
       setTimeout(function () {
-        var gun2 = Gun();
+        var gun2 = Zen();
         //console.log(load('fs').readFileSync('./radata/!').toString());
         gun2
           .get("stef")
@@ -3785,7 +3780,7 @@ describe("ZEN", function () {
     });
 
     it("get get get any parallel", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           bob: {
             age: 29,
@@ -3794,7 +3789,7 @@ describe("ZEN", function () {
         },
         "parallel",
         function () {
-          gun
+          zen
             .get("parallel")
             .get("bob")
             .get("age")
@@ -3808,7 +3803,7 @@ describe("ZEN", function () {
               done.age = true;
             });
           //console.log("-----------------------");
-          gun
+          zen
             .get("parallel")
             .get("bob")
             .get("name")
@@ -3825,20 +3820,20 @@ describe("ZEN", function () {
                 return;
               }
               done.c = 1;
-              nopasstun(done, gun);
+              nopasstun(done, zen);
             });
         },
       );
     });
 
     it("get get get any later", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           bob: { _: { "#": "ddfsa" }, age: 29, name: "Bob!" },
         },
         "parallel/later",
         function () {
-          gun
+          zen
             .get("parallel/later")
             .get("bob")
             .get("age")
@@ -3852,7 +3847,7 @@ describe("ZEN", function () {
               done.age = true;
             });
           setTimeout(function () {
-            gun
+            zen
               .get("parallel/later")
               .get("bob")
               .get("name")
@@ -3869,7 +3864,7 @@ describe("ZEN", function () {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               });
           }, 400);
         },
@@ -3877,7 +3872,7 @@ describe("ZEN", function () {
     });
 
     it("get get get any not", function (done) {
-      gun
+      zen
         .get("parallel/not")
         .get("bob")
         .get("age")
@@ -3890,7 +3885,7 @@ describe("ZEN", function () {
           expect(field).to.be("age");
           done.age = true;
         });
-      gun
+      zen
         .get("parallel/not")
         .get("bob")
         .get("name")
@@ -3907,12 +3902,12 @@ describe("ZEN", function () {
             return;
           }
           done.c = 1;
-          nopasstun(done, gun);
+          nopasstun(done, zen);
         });
     });
 
     it("get get get any not later", function (done) {
-      gun
+      zen
         .get("parallel/not/later")
         .get("bob")
         .get("age")
@@ -3927,7 +3922,7 @@ describe("ZEN", function () {
         });
       setTimeout(function () {
         //console.debug.i=1;console.log('---------------');
-        gun
+        zen
           .get("parallel/not/later")
           .get("bob")
           .get("name")
@@ -3944,20 +3939,20 @@ describe("ZEN", function () {
               return;
             }
             done.c = 1;
-            nopasstun(done, gun);
+            nopasstun(done, zen);
           });
       }, 400);
     });
 
     it("get any any", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           hello: "world",
           goodbye: "mars",
         },
         "full",
         function () {
-          gun.get("full").get(function (at, ev) {
+          zen.get("full").get(function (at, ev) {
             var err = at.err,
               data = at.$._.put || at.put,
               field = at.get;
@@ -3965,7 +3960,7 @@ describe("ZEN", function () {
             expect(data.hello).to.be("world");
             expect(data.goodbye).to.be("mars");
           });
-          gun.get("full").get(function (at, ev) {
+          zen.get("full").get(function (at, ev) {
             var err = at.err,
               data = at.$._.put || at.put,
               field = at.get;
@@ -3976,21 +3971,21 @@ describe("ZEN", function () {
               return;
             }
             done.c = 1;
-            nopasstun(done, gun);
+            nopasstun(done, zen);
           });
         },
       );
     });
 
     it("get any any later", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           hello: "world",
           goodbye: "mars",
         },
         "full/later",
         function () {
-          gun.get("full/later").get(function (at, ev) {
+          zen.get("full/later").get(function (at, ev) {
             var err = at.err,
               data = at.$._.put || at.put,
               field = at.get;
@@ -3999,7 +3994,7 @@ describe("ZEN", function () {
             expect(data.goodbye).to.be("mars");
           });
           setTimeout(function () {
-            gun.get("full/later").get(function (at, ev) {
+            zen.get("full/later").get(function (at, ev) {
               var err = at.err,
                 data = at.$._.put || at.put,
                 field = at.get;
@@ -4010,7 +4005,7 @@ describe("ZEN", function () {
                 return;
               }
               done.c = 1;
-              nopasstun(done, gun);
+              nopasstun(done, zen);
             });
           }, 400);
         },
@@ -4018,9 +4013,9 @@ describe("ZEN", function () {
     });
 
     it("multiple times map", function (done) {
-      var gun = Gun();
+      var zen = Zen();
 
-      gun.get("A").put({
+      zen.get("A").put({
         B: {
           C: {
             pub: "fdsa",
@@ -4037,8 +4032,8 @@ describe("ZEN", function () {
 
       var check = { on: {}, once: {} };
       setTimeout(function () {
-        //console.log('A=2, map=7, map.map=8, A.B=3, AB=5, A.B.C=4, ABC=6, AB.C=?', gun);
-        gun
+        //console.log('A=2, map=7, map.map=8, A.B=3, AB=5, A.B.C=4, ABC=6, AB.C=?', zen);
+        zen
           .get("A")
           .map()
           .map()
@@ -4049,7 +4044,7 @@ describe("ZEN", function () {
       }, 900);
 
       setTimeout(function () {
-        gun
+        zen
           .get("A")
           .map()
           .map()
@@ -4067,37 +4062,37 @@ describe("ZEN", function () {
                 return;
               }
               done.c = 1;
-              nopasstun(done, gun);
+              nopasstun(done, zen);
             }
           });
       }, 1200);
     });
 
     it("many maps with @rogowski!", function (done) {
-      var gun = Gun();
+      var zen = Zen();
       var data = {
         levelA2: { levelA3: { levelA4: { levelA5: "hello" } } },
         levelB2: { levelB3: { levelB4: { levelB5: "world" } } },
       };
 
-      Gun.statedisk(
+      Zen.statedisk(
         data,
         "level1",
         function () {
           var check = {},
             log = function () {} || console.log;
-          gun.get("level1").on(function (v, k) {
+          zen.get("level1").on(function (v, k) {
             log(1, k, v);
             check[k] = v;
           });
-          gun
+          zen
             .get("level1")
             .map()
             .on(function (v, k) {
               log("*", 2, k, v);
               check[k] = v;
             });
-          gun
+          zen
             .get("level1")
             .map()
             .map()
@@ -4105,7 +4100,7 @@ describe("ZEN", function () {
               log("*", 3, k, v);
               check[k] = v;
             });
-          gun
+          zen
             .get("level1")
             .map()
             .map()
@@ -4139,10 +4134,10 @@ describe("ZEN", function () {
                   });
                   expect(check.levelB4.levelB5).to.be("world");
 
-                  nopasstun(done, gun);
+                  nopasstun(done, zen);
                 }, 250);
             });
-          gun
+          zen
             .get("level1")
             .map()
             .map()
@@ -4158,20 +4153,20 @@ describe("ZEN", function () {
     });
 
     it("many maps with @rogowski last value map", function (done) {
-      var gun = Gun();
+      var zen = Zen();
       var data = {
         levelA2: { levelA3: { levelA4: { levelA5: "hello" } } },
         levelB2: { levelB3: { levelB4: { levelB5: "world" } } },
       };
 
-      Gun.statedisk(
+      Zen.statedisk(
         data,
         "level1p",
         function () {
           var check = {},
             log = function () {} || console.log;
           //console.log("======================");
-          gun
+          zen
             .get("level1p")
             .map()
             .map()
@@ -4185,7 +4180,7 @@ describe("ZEN", function () {
                 setTimeout(function () {
                   expect(check.levelA5).to.be("hello");
                   expect(check.levelB5).to.be("world");
-                  nopasstun(done, gun);
+                  nopasstun(done, zen);
                 }, 20);
             });
         },
@@ -4195,7 +4190,7 @@ describe("ZEN", function () {
 
     it("multiple map test with @rogowski!", function (done) {
       var check = {};
-      var gun1 = Gun();
+      var gun1 = Zen();
       gun1.get("mmA").put({
         B: {
           C: {
@@ -4221,7 +4216,7 @@ describe("ZEN", function () {
         });
 
       setTimeout(function () {
-        var gun2 = Gun();
+        var gun2 = Zen();
         gun2.get("2mmA").put({
           nest: {
             B: {
@@ -4270,21 +4265,21 @@ describe("ZEN", function () {
     });
 
     it("multiple times", function (done) {
-      var gun = Gun();
-      var app = gun.get("mult/times");
+      var zen = Zen();
+      var app = zen.get("mult/times");
 
       app
         .get("alias")
         .get("mark")
         .set(
-          gun.get("ASDF").put({
+          zen.get("ASDF").put({
             pub: "ASDF",
             alias: "mark",
             born: 1,
           }),
         );
 
-      gun.get("mult/times").get("alias").map().map().get("pub").on(foo);
+      zen.get("mult/times").get("alias").map().map().get("pub").on(foo);
       function foo(data) {
         done.one = done.one || data;
         if (!done.one || !done.two) {
@@ -4296,7 +4291,7 @@ describe("ZEN", function () {
           return;
         }
         done.c = 1;
-        nopasstun(done, gun);
+        nopasstun(done, zen);
       }
 
       setTimeout(function () {
@@ -4313,7 +4308,7 @@ describe("ZEN", function () {
     });
 
     it("multiple times partial", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           alias: {
             mark: {
@@ -4323,8 +4318,8 @@ describe("ZEN", function () {
         },
         "mult/times/part",
         function () {
-          var gun = Gun();
-          var app = gun.get("mult/times/part");
+          var zen = Zen();
+          var app = zen.get("mult/times/part");
 
           //console.debug.i=1;console.log("===================");
           // 			app.get('alias').get('mark').once(function(alias){
@@ -4358,7 +4353,7 @@ describe("ZEN", function () {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               });
           }, 400);
         },
@@ -4368,9 +4363,9 @@ describe("ZEN", function () {
 
     it("put on a put", function (done) {
       try {
-        var gun = Gun();
-        var foo = gun.get("put/on/put").get("a").get("b");
-        var bar = gun.get("put/on/put/ok").get("a").get("b");
+        var zen = Zen();
+        var foo = zen.get("put/on/put").get("a").get("b");
+        var bar = zen.get("put/on/put/ok").get("a").get("b");
 
         bar.put({ a: 1 });
         //console.log("vvvvvvvvv");
@@ -4382,7 +4377,7 @@ describe("ZEN", function () {
             }
             done.c = 1;
             //console.log("-------");
-            nopasstun(done, gun);
+            nopasstun(done, zen);
           }
         });
 
@@ -4397,10 +4392,10 @@ describe("ZEN", function () {
     });
 
     it("map with map function", function (done) {
-      var gun = Gun(),
+      var zen = Zen(),
         s = "map/mapfunc",
         u;
-      var app = gun.get(s);
+      var app = zen.get(s);
       var list = app.get("list");
 
       var check = {};
@@ -4419,7 +4414,7 @@ describe("ZEN", function () {
             }
             done.c = 1;
             setTimeout(function () {
-              nopasstun(done, gun);
+              nopasstun(done, zen);
             }, 99);
           }
         });
@@ -4431,27 +4426,27 @@ describe("ZEN", function () {
     });
 
     it("once map function once", function (done) {
-      var gun = Gun(),
+      var zen = Zen(),
         s = "o/mf/o",
         u;
-      var app = gun.get(s);
+      var app = zen.get(s);
       var list = app.get("list");
 
       var check = {};
-      gun
+      zen
         .get("useromo")
         .get("alice")
         .put({ name: "Alice", email: "alice@example.com" });
-      gun
+      zen
         .get("useromo")
         .get("bob")
         .put({ name: "Bob", email: "bob@example.com" });
-      gun
+      zen
         .get("useromo")
         .get("carl")
         .put({ name: "Carl", email: "carl@example.com" });
 
-      gun
+      zen
         .get("useromo")
         .once()
         .map((v) => {
@@ -4467,22 +4462,22 @@ describe("ZEN", function () {
             }
             done.c = 1;
             setTimeout(function () {
-              nopasstun(done, gun);
+              nopasstun(done, zen);
             }, 9);
           }
         });
     });
 
     it("val and then map", function (done) {
-      var gun = Gun(),
+      var zen = Zen(),
         s = "val/then/map",
         u;
-      var list = gun.get(s);
+      var list = zen.get(s);
 
-      list.set(gun.get("alice").put({ name: "alice", age: 27 }));
-      list.set(gun.get("bob").put({ name: "bob", age: 27 }));
-      list.set(gun.get("carl").put({ name: "carl", age: 29 }));
-      list.set(gun.get("dave").put({ name: "dave", age: 25 }));
+      list.set(zen.get("alice").put({ name: "alice", age: 27 }));
+      list.set(zen.get("bob").put({ name: "bob", age: 27 }));
+      list.set(zen.get("carl").put({ name: "carl", age: 29 }));
+      list.set(zen.get("dave").put({ name: "dave", age: 25 }));
 
       var check = {};
       list
@@ -4510,20 +4505,20 @@ describe("ZEN", function () {
               }
               done.c = 1;
               setTimeout(function () {
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 9);
             }
           }, 600);
         });
       setTimeout(function () {
-        list.set(gun.get("eve").put({ name: "eve", age: 30 }));
-        gun.get("bob").get("age").put(28);
+        list.set(zen.get("eve").put({ name: "eve", age: 30 }));
+        zen.get("bob").get("age").put(28);
         done.last = true;
       }, 300);
     });
 
     it("check null on map", function (done) {
-      var list = gun.get("myList");
+      var list = zen.get("myList");
       list.map(function (value, id) {
         if ("hello world" === value) {
           done.one = true;
@@ -4536,7 +4531,7 @@ describe("ZEN", function () {
             return;
           }
           done.c = 1;
-          nopasstun(done, gun);
+          nopasstun(done, zen);
         }
       });
       list.get("message").put("hello world"); // outputs "message: hello world"
@@ -4547,7 +4542,7 @@ describe("ZEN", function () {
       this.timeout(10000);
       // NOTICE: The behavior of this test changed from v0.2020.520 to version after.
       var stopped = false;
-      var optHook = Gun.on("opt", function (ctx) {
+      var optHook = Zen.on("opt", function (ctx) {
         ctx.on("out", function (msg) {
           this.to.next(msg);
           if (stopped) {
@@ -4575,13 +4570,13 @@ describe("ZEN", function () {
         });
       });
 
-      var b = Gun({ radisk: false, peers: [], localStorage: false });
+      var b = Zen({ radisk: false, peers: [], localStorage: false });
       var d = null;
 
       var bb = b.get("key");
       bb.put({ msg: "hello" });
 
-      d = Gun({ radisk: false, peers: [], localStorage: false });
+      d = Zen({ radisk: false, peers: [], localStorage: false });
       var db = d.get("key");
       db.map().on(function (val, field) {
         expect(val).to.be("hello");
@@ -4600,9 +4595,9 @@ describe("ZEN", function () {
     });
 
     it("val should now get called if no data is found", function (done) {
-      var gun = Gun();
+      var zen = Zen();
 
-      gun
+      zen
         .get("nv/foo")
         .get("bar")
         .get("baz")
@@ -4612,13 +4607,13 @@ describe("ZEN", function () {
           done.fbb = true;
         });
 
-      gun.get("nv/totesnothing").once(function (val, key) {
+      zen.get("nv/totesnothing").once(function (val, key) {
         //console.log('***********', key, val);
         expect(val).to.be(undefined);
         done.t = true;
       });
 
-      gun
+      zen
         .get("nv/bz")
         .get("lul")
         .once(function (val, key) {
@@ -4631,39 +4626,39 @@ describe("ZEN", function () {
                 return;
               }
               done.c = 1;
-              nopasstun(done, gun);
+              nopasstun(done, zen);
             }
           }, 100);
         });
     });
 
     it("Callbacks should have database safe data copies", function (done) {
-      var gun = Gun();
+      var zen = Zen();
 
-      gun.get("ds/safe").put({ a: 1 });
+      zen.get("ds/safe").put({ a: 1 });
 
-      gun.get("ds/safe").on(function (data) {
+      zen.get("ds/safe").on(function (data) {
         data.b = 2;
       });
 
-      gun.get("ds/safe").once(function (data) {
-        expect(gun.back(-1)._.graph["ds/safe"].b).to.not.be.ok();
+      zen.get("ds/safe").once(function (data) {
+        expect(zen.back(-1)._.graph["ds/safe"].b).to.not.be.ok();
         if (done.c) {
           return;
         }
         done.c = 1;
-        nopasstun(done, gun);
+        nopasstun(done, zen);
       });
     });
 
     it("If chain cannot be called, ack", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         { wat: 1, a: true },
         "nl/app",
         function () {
-          var gun = Gun(),
+          var zen = Zen(),
             u;
-          var app = gun.get("nl/app");
+          var app = zen.get("nl/app");
 
           app.get(
             function (d) {
@@ -4712,7 +4707,7 @@ describe("ZEN", function () {
                           return;
                         }
                         done.d = 1;
-                        nopasstun(done, gun);
+                        nopasstun(done, zen);
                       }, 50);
                     }, 50);
                   },
@@ -4727,13 +4722,13 @@ describe("ZEN", function () {
     });
 
     it("Chain on known nested object should ack", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         { bar: { wat: 1 } },
         "nl/app",
         function () {
-          var gun = Gun(),
+          var zen = Zen(),
             u;
-          var app = gun.get("nl/app").get("bar");
+          var app = zen.get("nl/app").get("bar");
 
           app.get(function (d) {
             //d = (d.$$||d.$)._.put;
@@ -4751,7 +4746,7 @@ describe("ZEN", function () {
               return;
             }
             done.c = 1;
-            nopasstun(done, gun);
+            nopasstun(done, zen);
           }); //, {v2020:1});
 
           //console.log("----------");
@@ -4772,7 +4767,7 @@ describe("ZEN", function () {
                   return;
                 }
                 done.c = 1;
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               },
               { v2020: 1 },
             );
@@ -4783,8 +4778,8 @@ describe("ZEN", function () {
 
     it("Soul above but not beneath", function (done) {
       this.timeout(5000);
-      var gun = Gun();
-      var a = gun.get("sabnb");
+      var zen = Zen();
+      var a = zen.get("sabnb");
       a.get("profile").put({ _: { "#": "sabnbprofile" }, name: "Plum" });
 
       setTimeout(function () {
@@ -4796,7 +4791,7 @@ describe("ZEN", function () {
               return;
             }
             done.c = 1;
-            nopasstun(done, gun);
+            nopasstun(done, zen);
           });
         }, 100);
       }, 100);
@@ -4804,9 +4799,9 @@ describe("ZEN", function () {
 
     it("users map map who said map on", function (done) {
       this.timeout(1000 * 9);
-      var gun = Gun();
+      var zen = Zen();
 
-      gun.get("users/mm").put({
+      zen.get("users/mm").put({
         alice: {
           _: { "#": "alias/alice" },
           "pub/asdf": { _: { "#": "pub/asdf" }, pub: "asdf" },
@@ -4820,8 +4815,8 @@ describe("ZEN", function () {
       var check = {},
         c = 0,
         end;
-      //console.log(check, gun._.graph);
-      gun
+      //console.log(check, zen._.graph);
+      zen
         .get("users/mm")
         .map()
         .map()
@@ -4838,20 +4833,20 @@ describe("ZEN", function () {
           clearTimeout(end);
           end = setTimeout(
             function () {
-              //console.log("?", c, check, Object.keys(check), gun._.graph);
+              //console.log("?", c, check, Object.keys(check), zen._.graph);
               if (!Object.empty(check)) {
                 return;
-              } //if(Gun.obj.map(check, function(v){ if(v){ return v } })){ return }
+              } //if(Zen.obj.map(check, function(v){ if(v){ return v } })){ return }
               if (this && this.off) {
                 this.off();
               }
-              nopasstun(done, gun);
+              nopasstun(done, zen);
             }.bind(this),
             9,
           );
         });
 
-      var said = gun.get("pub/asdf").get("who").get("said");
+      var said = zen.get("pub/asdf").get("who").get("said");
 
       function run(i) {
         //if(i > 1){ return } // DEBUGGING!
@@ -4882,7 +4877,7 @@ describe("ZEN", function () {
 
     it("get map should not slowdown", function (done) {
       this.timeout(9000);
-      var gun = Gun({ test_no_peer: true }).get("g/m/no/slow");
+      var zen = Zen({ test_no_peer: true }).get("g/m/no/slow");
       //console.log("---------- setup data done -----------");
       var prev,
         diff,
@@ -4893,7 +4888,7 @@ describe("ZEN", function () {
         u;
       //var prev, diff, max = Infinity, total = 10000, largest = -1, gone = {};
       // TODO: It would be nice if we could change these numbers for different platforms/versions of javascript interpreters so we can squeeze as much out of them.
-      var hist = gun.get("history").map();
+      var hist = zen.get("history").map();
       var slowFailed = false;
       hist.on(function (time, index) {
         if (slowFailed) {
@@ -4943,34 +4938,34 @@ describe("ZEN", function () {
             done(new Error("diff is not a number"));
             return;
           }
-          nopasstun(done, gun);
+          nopasstun(done, zen);
           return;
         }
         prev = +new Date();
         var put = {};
         put[(turns += 1)] = prev;
-        gun.put({ history: put });
+        zen.put({ history: put });
         many = setTimeout(go, 1); // see above NOTE, increasing total runs to compensate.
       }, 1);
     });
 
     it("Check put callback", function (done) {
-      var gun = Gun();
+      var zen = Zen();
 
-      gun
+      zen
         .get("c/p/c")
         .get("a")
         .put("lol", function (ack) {
-          nopasstun(done, gun);
+          nopasstun(done, zen);
         });
     });
 
     it("Resume reads after put error", function (done) {
-      var gun = Gun();
+      var zen = Zen();
 
-      gun.get("r/r/a/p/e").put({ a: 1 });
+      zen.get("r/r/a/p/e").put({ a: 1 });
       setTimeout(function () {
-        gun
+        zen
           .get("r/r/a/p/e")
           .get("a")
           .get("b")
@@ -4980,10 +4975,10 @@ describe("ZEN", function () {
             expect(ack.err.toLowerCase().indexOf("array") >= 0).to.be.ok();
             expect(ack.err.toLowerCase().indexOf("a.b.c") >= 0).to.be.ok();
             setTimeout(function () {
-              gun.get("r/r/a/p/e").once(function (data) {
+              zen.get("r/r/a/p/e").once(function (data) {
                 expect(data.a).to.be(1);
                 //console.log("data!", data);
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               });
             }, 50);
           });
@@ -4992,15 +4987,15 @@ describe("ZEN", function () {
 
     it("Multiple subscribes should trigger", function (done) {
       // thanks to @ivkan for reporting and providing test.
-      var gun = Gun();
+      var zen = Zen();
       var check = {};
-      gun.get("m/s/key").put({ property: "value" });
+      zen.get("m/s/key").put({ property: "value" });
 
-      var subA = gun.get("m/s/key").on(function (data, key) {
+      var subA = zen.get("m/s/key").on(function (data, key) {
         check["a" + data.property] = 1;
       });
 
-      var subB = gun.get("m/s/key").on(function (data, key) {
+      var subB = zen.get("m/s/key").on(function (data, key) {
         check["b" + data.property] = 1;
         if (
           check.avalue &&
@@ -5014,74 +5009,74 @@ describe("ZEN", function () {
           done.c = true;
           subA.off();
           subB.off();
-          nopasstun(done, gun);
+          nopasstun(done, zen);
         }
       });
 
       setTimeout(function () {
-        gun.get("m/s/key").put({ property: "newValue" });
+        zen.get("m/s/key").put({ property: "newValue" });
       }, 1000);
     });
 
     it("Deep puts with peer should work", function (done) {
       // tests in async mode now automatically connect to localhost peer.
-      //var gun = Gun('http://localhost:8765/gun');
-      var gun = Gun();
-      //var user = gun.user();
+      //var zen = Zen('http://localhost:8765/zen');
+      var zen = Zen();
+      //var user = zen.user();
       //user.create('alice', 'password', function(){
-      gun
+      zen
         .get("who")
         .get("all")
-        .put({ what: "hello world!", when: Gun.state() }, function (ack) {
-          //user.get('who').get('all').put({what: "hello world!", when: Gun.state()}, function(ack){
-          gun
+        .put({ what: "hello world!", when: Zen.state() }, function (ack) {
+          //user.get('who').get('all').put({what: "hello world!", when: Zen.state()}, function(ack){
+          zen
             .get("who")
             .get("all")
             .once(function (data) {
               expect(data.what).to.be.ok();
               expect(data.when).to.be.ok();
-              nopasstun(done, gun);
+              nopasstun(done, zen);
             });
         });
       //});
     });
 
     it("Set a ref should be found", function (done) {
-      var gun = Gun();
+      var zen = Zen();
       var msg = { what: "hello world" };
       //var ref = user.get('who').get('all').set(msg);
       //user.get('who').get('said').set(ref);
-      var ref = gun
+      var ref = zen
         .get("s/r/who")
         .get("all")
         .set(msg, function (ack) {
           /*console.log('@@@', ack)*/
         });
-      gun
+      zen
         .get("s/r/who")
         .get("said")
         .set(ref, function (ack) {
           /*console.log('###', ack)*/
         });
-      gun
+      zen
         .get("s/r/who")
         .get("said")
         .map()
         .once(function (data) {
           expect(data.what).to.be.ok();
-          nopasstun(done, gun);
+          nopasstun(done, zen);
         });
     });
 
     /*describe('talk to live server tests', function(){
 			this.timeout(1000 * 9);
 			it.only('Second once on undefined should call', function(done){ // this test is passing when it fails by hand?
-				var gun = Gun('https://gunjs.herokuapp.com/gun');
-				gun.get('~@O8H2BJa4pNfecWamWN7efd888Pg1@hackernoon').once(function(data){
+				var zen = Zen('https://gunjs.herokuapp.com/zen');
+				zen.get('~@O8H2BJa4pNfecWamWN7efd888Pg1@hackernoon').once(function(data){
 					console.log(1, data);
 					expect(data).to.not.be.ok();
 					setTimeout(function(){
-						gun.get('~@O8H2BJa4pNfecWamWN7efd888Pg1@hackernoon').once(function(data){
+						zen.get('~@O8H2BJa4pNfecWamWN7efd888Pg1@hackernoon').once(function(data){
 							console.log(2, data);
 							expect(data).to.not.be.ok();
 							done();
@@ -5091,9 +5086,9 @@ describe("ZEN", function () {
 			});
 		});*/
     it("Nested listener should be called", function (done) {
-      var gun = Gun();
+      var zen = Zen();
       /*
-			var app = gun.get('nl/app').get('bar');
+			var app = zen.get('nl/app').get('bar');
 
 			app.on(function(d){
 				console.log("!!", d);
@@ -5102,12 +5097,12 @@ describe("ZEN", function () {
 			app.put({wat: 1});
 
 			console.debug.i=1;console.log("------------");
-			console.log(gun._.now);
+			console.log(zen._.now);
 			app.put({a: {b:2}});
 			console.log('_______________________');
 			return;*/
 
-      var app = gun.get("nl/app");
+      var app = zen.get("nl/app");
       var node = app.get("watcher/1").put({ stats: { num: 3 }, name: "trex" });
       var C = 0;
 
@@ -5125,7 +5120,7 @@ describe("ZEN", function () {
           }
           done.c = 1;
           this.off();
-          nopasstun(done, gun);
+          nopasstun(done, zen);
         });
       //return;
 
@@ -5137,10 +5132,10 @@ describe("ZEN", function () {
 
     it.skip("do not refire", function (done) {
       // for Wasis @yokowasis ! Thanks for finding.
-      var gun = Gun();
+      var zen = Zen();
 
       for (i = 0; i <= 100; i++) {
-        gun
+        zen
           .get("something")
           .get("level1")
           .put({
@@ -5149,7 +5144,7 @@ describe("ZEN", function () {
       }
 
       for (i = 0; i <= 100; i++) {
-        gun
+        zen
           .get("something")
           .get("level1")
           .get("level2")
@@ -5160,7 +5155,7 @@ describe("ZEN", function () {
 
       var c = 0;
       setTimeout(function () {
-        gun
+        zen
           .get("something")
           .get("level1")
           .on(() => {
@@ -5168,13 +5163,13 @@ describe("ZEN", function () {
           });
 
         setTimeout(function () {
-          gun
+          zen
             .get("something")
             .get("level1")
             .once(function (x) {
               setTimeout(function () {
                 expect(c).to.be(1);
-                nopasstun(done, gun);
+                nopasstun(done, zen);
               }, 100);
             });
         }, 100);
@@ -5182,24 +5177,24 @@ describe("ZEN", function () {
     });
     /*it.skip('Memory management', function(done){
 			this.timeout(9999999);
-			var gun = Gun(), c = 100000, big = "big";
+			var zen = Zen(), c = 100000, big = "big";
 			while(--c){big += "big"}
 			c = 0;
 			setInterval(function(){
-				var key = Gun.text.random(5);
-				gun.get(key).put({data: big});
+				var key = Zen.text.random(5);
+				zen.get(key).put({data: big});
 				setTimeout(function(){
-					gun.get(key).off();
+					zen.get(key).off();
 				},10);
 				if(typeof process === 'undefined'){ return }
 				var mem = process.memoryUsage();
 				console.log(((mem.heapUsed / mem.heapTotal) * 100).toFixed(0) + '% memory');
-				console.log(Object.keys(gun._.graph).length, 'item in memory graph:', Object.keys(gun._.graph));
+				console.log(Object.keys(zen._.graph).length, 'item in memory graph:', Object.keys(zen._.graph));
 			},25);
 		});
 
 		it('Custom extensions are chainable', function(done){
-			Gun.chain.filter = function(filter){
+			Zen.chain.filter = function(filter){
 			  var chain = this.chain();
 			  var context = this;
 			  var _tags;
@@ -5210,7 +5205,7 @@ describe("ZEN", function () {
 			      chain._.on('in', {get: key, $: this});
 			      return false;
 			    } else { 
-			     _tags = Gun.obj.ify(obj.tags);
+			     _tags = Zen.obj.ify(obj.tags);
 			      if(Array.isArray(filter)){
 			        context._.valid = filter.every(function(f){ return ( _tags[f] && _tags[f]==1) });
 			        if(context._.valid){
@@ -5230,24 +5225,24 @@ describe("ZEN", function () {
 			  return chain;
 			}
 
-			var gun = Gun();
+			var zen = Zen();
 
-			var fake1 = gun.get('fake1').put({name:'faker1',tags:JSON.stringify({a:1,b:0,c:1})});
-			var fake2 = gun.get('fake2').put({name:'faker2',tags:JSON.stringify({a:1,b:1,c:1})});
-			var list = gun.get('list');
+			var fake1 = zen.get('fake1').put({name:'faker1',tags:JSON.stringify({a:1,b:0,c:1})});
+			var fake2 = zen.get('fake2').put({name:'faker2',tags:JSON.stringify({a:1,b:1,c:1})});
+			var list = zen.get('list');
 			list.set(fake1);
 			list.set(fake2);
 
-			gun.get('fake1')//.map()
-			      .filter(['a','b'])  // Gun.chain.filter = function(tags){ .... }
+			zen.get('fake1')//.map()
+			      .filter(['a','b'])  // Zen.chain.filter = function(tags){ .... }
 			      .get(function(no){console.log("NO!", no)})
 			      .once(function(yes){console.log("YES!", yes)})
 		}); */
 
     it("Check that events are called with multiple instances", function (done) {
-      var gunA = Gun({ file: "tmp/A.json" });
-      var gunB = Gun({ file: "tmp/B.json" });
-      var gunC = Gun({ file: "tmp/C.json" });
+      var gunA = Zen({ file: "tmp/A.json" });
+      var gunB = Zen({ file: "tmp/B.json" });
+      var gunC = Zen({ file: "tmp/C.json" });
 
       var check = {};
 
@@ -5280,19 +5275,19 @@ describe("ZEN", function () {
       );
       done();
       return;
-      var alice = Gun({
+      var alice = Zen({
         localStorage: false,
         file: false,
         rad: false,
         radisk: false,
       });
-      var bob = Gun({
+      var bob = Zen({
         localStorage: false,
         file: false,
         rad: false,
         radisk: false,
       });
-      var carl = Gun({
+      var carl = Zen({
         localStorage: false,
         file: false,
         rad: false,
@@ -5345,12 +5340,12 @@ describe("ZEN", function () {
 
       alice.on("get", function (msg) {
         setTimeout(function () {
-          Gun.on.get.ack(msg);
+          Zen.on.get.ack(msg);
         }, 9);
       });
 
       setTimeout(async function () {
-        var pair = await SEA.pair();
+        var pair = await ZEN.pair();
         var user = alice.user();
         setTimeout(function () {
           var c = 0;
@@ -5377,26 +5372,26 @@ describe("ZEN", function () {
 
 			var alice =  {name: "alice" }
 
-			var gun = Gun();
+			var zen = Zen();
 
-			var root = gun.get( "root" );
+			var root = zen.get( "root" );
 			root.put( dfltSansUsers );
 
-			var alice = gun.get( "alice" ).put( { name: "alice" } );
+			var alice = zen.get( "alice" ).put( { name: "alice" } );
 			console.log( "Failed after this" );
 			root.get("1").get("sites").get("1").get("users" ).put( { 1: alice } );
 			console.log( "Failed before this" );
 		});*/
 
     it("get any any none", function (done) {
-      gun.get("full/none").get(function (at, ev) {
+      zen.get("full/none").get(function (at, ev) {
         var err = at.err,
           data = at.put,
           field = at.get;
         //console.log("*****", data);
         expect(data).to.be(undefined);
       });
-      gun.get("full/none").get(function (at, ev) {
+      zen.get("full/none").get(function (at, ev) {
         var err = at.err,
           data = at.put,
           field = at.get;
@@ -5406,12 +5401,12 @@ describe("ZEN", function () {
           return;
         }
         done.c = 1;
-        nopasstun(done, gun);
+        nopasstun(done, zen);
       });
     });
 
     it("get any any none later", function (done) {
-      gun.get("full/none/later").get(function (at, ev) {
+      zen.get("full/none/later").get(function (at, ev) {
         var err = at.err,
           data = at.put,
           field = at.get;
@@ -5419,23 +5414,23 @@ describe("ZEN", function () {
         expect(data).to.be(undefined);
       });
       setTimeout(function () {
-        gun.get("full/none/later").get(function (at, ev) {
+        zen.get("full/none/later").get(function (at, ev) {
           var err = at.err,
             data = at.put,
             field = at.get;
           //console.log("*****2", data);
           expect(data).to.be(undefined);
-          nopasstun(done, gun);
+          nopasstun(done, zen);
         });
       }, 400);
     });
 
     it("get get any parallel", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         { bob: { age: 29, name: "Bob!" } },
         "parallel/get/get",
         function () {
-          gun
+          zen
             .get("parallel/get/get")
             .get("bob")
             .get(function (data) {
@@ -5444,7 +5439,7 @@ describe("ZEN", function () {
               expect(data.age).to.be(29);
               expect(data.name).to.be("Bob!");
             });
-          gun
+          zen
             .get("parallel/get/get")
             .get("bob")
             .get(function (data) {
@@ -5456,7 +5451,7 @@ describe("ZEN", function () {
                 return;
               }
               done.c = 1;
-              nopasstun(done, gun);
+              nopasstun(done, zen);
             });
         },
         1000,
@@ -5464,36 +5459,36 @@ describe("ZEN", function () {
     });
 
     it("once on link to nothing @mimiza", function (done) {
-      gun.get("oltn").put({ "#": "this-does-not-exist" });
+      zen.get("oltn").put({ "#": "this-does-not-exist" });
 
-      gun.get("oltn").once((response) => {
+      zen.get("oltn").once((response) => {
         //console.log('did we call?', response) ;
         expect(response).to.not.be.ok();
-        nopasstun(done, gun);
+        nopasstun(done, zen);
       });
     });
 
     it("once on link to nothing deep @mimiza", function (done) {
-      gun.get("oltnd").get("deep").put({ "#": "this-does-not-exist" });
+      zen.get("oltnd").get("deep").put({ "#": "this-does-not-exist" });
 
-      gun
+      zen
         .get("oltnd")
         .get("deep")
         .once((response) => {
           //console.log('did we call?', response) ;
           expect(response).to.not.be.ok();
-          nopasstun(done, gun);
+          nopasstun(done, zen);
         });
     });
 
     return;
 
     it("get get any parallel later", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         { bob: { age: 29, name: "Bob!" } },
         "parallel/get/get/later",
         function () {
-          gun
+          zen
             .get("parallel/get/get/later")
             .path("bob")
             .any(function (err, data, field, at, ev) {
@@ -5502,7 +5497,7 @@ describe("ZEN", function () {
               expect(data.name).to.be("Bob!");
             });
           setTimeout(function () {
-            gun
+            zen
               .get("parallel/get/get/later")
               .path("bob")
               .any(function (err, data, field, at, ev) {
@@ -5518,13 +5513,13 @@ describe("ZEN", function () {
     });
 
     it("get get any none", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         { alice: { age: 31, name: "alice" } },
         "get/get/none",
         function () {
           var c = 0,
             s = 0;
-          gun
+          zen
             .get("get/get/none")
             .path("bob")
             .any(function (err, data, field, at, ev) {
@@ -5534,7 +5529,7 @@ describe("ZEN", function () {
               expect(data).to.be(undefined);
             });
           s = 1;
-          gun
+          zen
             .get("get/get/none")
             .path("bob")
             .any(function (err, data, field, at, ev) {
@@ -5554,12 +5549,12 @@ describe("ZEN", function () {
     });
 
     it("get get any none later", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         { alice: { age: 31, name: "alice" } },
         "get/get/none/later",
         function () {
           var c = 0;
-          gun
+          zen
             .get("get/get/none/later")
             .path("bob")
             .any(function (err, data, field, at, ev) {
@@ -5568,7 +5563,7 @@ describe("ZEN", function () {
               expect(data).to.be(undefined);
             });
           setTimeout(function () {
-            gun
+            zen
               .get("get/get/none/later")
               .path("bob")
               .any(function (err, data, field, at, ev) {
@@ -5586,11 +5581,11 @@ describe("ZEN", function () {
     });
 
     it("get get primitive get any", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         { bob: "is awesome" },
         "get/get/prim",
         function () {
-          gun
+          zen
             .get("get/get/prim")
             .path("bob")
             .path("age")
@@ -5598,7 +5593,7 @@ describe("ZEN", function () {
               //console.log("***** 1", data);
               expect(data).to.be(undefined);
             });
-          gun
+          zen
             .get("get/get/prim")
             .path("bob")
             .path("age")
@@ -5613,12 +5608,12 @@ describe("ZEN", function () {
     });
 
     it("get put any", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         { here: "we go" },
         "get/put/any",
         function () {
           //console.debug.i=1;console.log("---------------");
-          gun
+          zen
             .get("get/put/any")
             .put({})
             .any(function (err, data, field, at, ev) {
@@ -5631,11 +5626,11 @@ describe("ZEN", function () {
     });
     return;
     it("get any, get put any", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         { here: "we go" },
         "get/any/get/put/any",
         function () {
-          gun
+          zen
             .get("get/any/get/put/any")
             .any(function (err, data, field, at, ev) {
               if (done.first) {
@@ -5649,7 +5644,7 @@ describe("ZEN", function () {
               done.first = 1;
             });
           setTimeout(function () {
-            gun
+            zen
               .get("get/any/get/put/any")
               .put({ yes: "please" })
               .any(function (err, data, field, at, ev) {
@@ -5669,7 +5664,7 @@ describe("ZEN", function () {
     });
 
     it("mutate pointer to primitive deep on", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           bob: {
             age: 29,
@@ -5679,7 +5674,7 @@ describe("ZEN", function () {
         },
         "change/pointer",
         function () {
-          gun
+          zen
             .get("change/pointer")
             .path("bob")
             .path("pet")
@@ -5694,16 +5689,16 @@ describe("ZEN", function () {
               done.c = 1;
             });
           setTimeout(function () {
-            gun.get("change/pointer").put({
+            zen.get("change/pointer").put({
               bob: null,
             });
             setTimeout(function () {
-              gun.get("change/pointer").put({
+              zen.get("change/pointer").put({
                 bob: "hello!",
               });
             }, 400);
           }, 400);
-          gun.get("change/pointer").any(function (err, data) {
+          zen.get("change/pointer").any(function (err, data) {
             //console.log("****************", data);
             if (2 <= done.e && data.bob) {
               expect(data.bob).to.be("hello!");
@@ -5715,7 +5710,7 @@ describe("ZEN", function () {
               done.e = 2;
               return;
             }
-            expect(Gun.val.link.is(data.bob)).to.be.ok();
+            expect(Zen.val.link.is(data.bob)).to.be.ok();
             done.e = 1;
           });
         },
@@ -5724,7 +5719,7 @@ describe("ZEN", function () {
     });
 
     it("get only soul", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           bob: {
             age: 29,
@@ -5734,11 +5729,11 @@ describe("ZEN", function () {
         },
         "only/soul",
         function () {
-          gun
+          zen
             .get("only/soul") /*.path('bob')*/
             .any(
               function (err, data) {
-                expect(Gun.obj.empty(data, "_")).to.be.ok();
+                expect(Zen.obj.empty(data, "_")).to.be.ok();
                 done();
               },
               { ".": null },
@@ -5749,7 +5744,7 @@ describe("ZEN", function () {
     });
 
     it("get path only soul", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           bob: {
             age: 29,
@@ -5759,14 +5754,14 @@ describe("ZEN", function () {
         },
         "only/p/soul",
         function () {
-          gun
+          zen
             .get("only/p/soul")
             .path("bob")
             .any(
               function (err, data) {
                 //console.log("*********", err, data);
-                expect(Gun.val.link.is(data)).to.be.ok();
-                //expect(Gun.obj.empty(data, '_')).to.be.ok();
+                expect(Zen.val.link.is(data)).to.be.ok();
+                //expect(Zen.obj.empty(data, '_')).to.be.ok();
                 done();
               },
               { ".": null },
@@ -5777,7 +5772,7 @@ describe("ZEN", function () {
     });
 
     it("mutate pointer to self", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           bob: {
             age: 29,
@@ -5787,14 +5782,14 @@ describe("ZEN", function () {
         },
         "change/pointer/point",
         function () {
-          gun
+          zen
             .get("change/pointer/point")
             .path("bob")
             .any(function (err, data) {
               if (done.c) {
                 expect(data.age).to.be(30);
                 expect(data.name).to.be("Bob!");
-                expect(Gun.val.link.is(data.pet)).to.be.ok();
+                expect(Zen.val.link.is(data.pet)).to.be.ok();
                 expect(done.c).to.be(1);
                 done();
                 done.c = 2;
@@ -5802,18 +5797,18 @@ describe("ZEN", function () {
               }
               expect(data.age).to.be(29);
               expect(data.name).to.be("Bob!");
-              expect(Gun.val.link.is(data.pet)).to.be.ok();
+              expect(Zen.val.link.is(data.pet)).to.be.ok();
               done.c = 1;
             });
           setTimeout(function () {
-            gun.get("change/pointer/point").path("bob").put({ age: 30 });
+            zen.get("change/pointer/point").path("bob").put({ age: 30 });
           }, 400);
         },
         1000,
       );
     });
     it("mutate pointer to self deep", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           bob: {
             age: 29,
@@ -5823,7 +5818,7 @@ describe("ZEN", function () {
         },
         "change/pointer/point/deep",
         function () {
-          gun
+          zen
             .get("change/pointer/point/deep")
             .path("bob")
             .any(function (err, data) {
@@ -5831,17 +5826,17 @@ describe("ZEN", function () {
               if (done.c) {
                 expect(data.age).to.be(30);
                 expect(data.name).to.be("Bob!");
-                expect(Gun.val.link.is(data.pet)).to.be.ok();
+                expect(Zen.val.link.is(data.pet)).to.be.ok();
                 done();
                 return;
               }
               expect(data.age).to.be(29);
               expect(data.name).to.be("Bob!");
-              expect(Gun.val.link.is(data.pet)).to.be.ok();
+              expect(Zen.val.link.is(data.pet)).to.be.ok();
               done.c = 1;
             });
           setTimeout(function () {
-            gun
+            zen
               .get("change/pointer/point/deep")
               .path("bob")
               .path("age")
@@ -5853,7 +5848,7 @@ describe("ZEN", function () {
     });
 
     it("mutate pointer to primitive after any", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           bob: {
             _: { "#": "asdffdsa" },
@@ -5864,15 +5859,15 @@ describe("ZEN", function () {
         },
         "change/pointer/to/prime",
         function () {
-          var bob = gun.get("asdffdsa").any(function (err, data) {
+          var bob = zen.get("asdffdsa").any(function (err, data) {
             //console.log("***", data);
           });
-          gun
+          zen
             .get("change/pointer/to/prime")
             .path("bob")
             .any(function (err, data, f, at) {
               //console.log("***********", data);
-              if (!Gun.obj.is(data)) {
+              if (!Zen.obj.is(data)) {
                 expect(data).to.be(3);
                 if (done.c) {
                   return;
@@ -5883,10 +5878,10 @@ describe("ZEN", function () {
               }
               expect(data.age).to.be(29);
               expect(data.name).to.be("Bob!");
-              expect(Gun.val.link.is(data.pet)).to.be.ok();
+              expect(Zen.val.link.is(data.pet)).to.be.ok();
             });
           setTimeout(function () {
-            gun.get("change/pointer/to/prime").path("bob").put(3);
+            zen.get("change/pointer/to/prime").path("bob").put(3);
             setTimeout(function () {
               bob.put({ age: 30 });
             }, 100);
@@ -5897,7 +5892,7 @@ describe("ZEN", function () {
     });
 
     it("mutate pointer to primitive after any deep", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           bob: {
             age: 29,
@@ -5907,16 +5902,16 @@ describe("ZEN", function () {
         },
         "change/pointer/to/prime/deep",
         function () {
-          var cat = gun.get("sadffads").any(function (err, data) {
+          var cat = zen.get("sadffads").any(function (err, data) {
             //console.log("***", data);
           });
-          gun
+          zen
             .get("change/pointer/to/prime/deep")
             .path("bob")
             .path("pet")
             .any(function (err, data) {
               //console.log("*********", data);
-              if (!Gun.obj.is(data)) {
+              if (!Zen.obj.is(data)) {
                 expect(data).to.be(undefined);
                 if (done.c) {
                   return;
@@ -5929,7 +5924,7 @@ describe("ZEN", function () {
               expect(data.name).to.be("Fluffy");
             });
           setTimeout(function () {
-            gun.get("change/pointer/to/prime/deep").path("bob").put(3);
+            zen.get("change/pointer/to/prime/deep").path("bob").put(3);
             setTimeout(function () {
               cat.put({ laser_eyes: true });
             }, 100);
@@ -5940,7 +5935,7 @@ describe("ZEN", function () {
     });
     return;
     it.only("mutate pointer to another pointer after any", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         {
           bob: {
             _: { "#": "dafssfad" },
@@ -5951,19 +5946,19 @@ describe("ZEN", function () {
         },
         "change/pointer/to/pointer",
         function () {
-          var bob = gun.get("dafssfad").any(function (err, data) {
+          var bob = zen.get("dafssfad").any(function (err, data) {
             console.log("***", data);
           });
           console.debug.i = 1;
           console.log("--------------------");
-          gun
+          zen
             .get("change/pointer/to/pointer")
             .path("bob")
             .any(function (err, data) {
               console.log("*********", data);
               return;
-              if (done.soul && done.soul !== Gun.node.soul(data)) {
-                expect(Gun.node.soul(data)).to.be("fsdaadsf");
+              if (done.soul && done.soul !== Zen.node.soul(data)) {
+                expect(Zen.node.soul(data)).to.be("fsdaadsf");
                 expect(data.cat).to.be(true);
                 expect(data.age).to.not.be.ok();
                 expect(data.name).to.not.be.ok();
@@ -5975,17 +5970,17 @@ describe("ZEN", function () {
                 done.c = 1;
                 return;
               }
-              expect((done.soul = Gun.node.soul(data))).to.be("dafssfad");
+              expect((done.soul = Zen.node.soul(data))).to.be("dafssfad");
               expect(data.age).to.be(29);
               expect(data.name).to.be("Bob!");
-              expect(Gun.val.link.is(data.pet)).to.be.ok();
+              expect(Zen.val.link.is(data.pet)).to.be.ok();
             });
           return;
           setTimeout(function () {
-            gun
+            zen
               .get("change/pointer/to/pointer")
               .path("bob")
-              .put(Gun.node.ify({ cat: true }, "fsdaadsf"));
+              .put(Zen.node.ify({ cat: true }, "fsdaadsf"));
             setTimeout(function () {
               bob.put({ age: 30 });
             }, 100);
@@ -5996,7 +5991,7 @@ describe("ZEN", function () {
     });
     return;
     it.only("deep freeze put", function (done) {
-      gun.get("deep/freeze").put({
+      zen.get("deep/freeze").put({
         bob: {
           age: 29,
           name: "Bob!",
@@ -6006,7 +6001,7 @@ describe("ZEN", function () {
           },
         },
       });
-      gun
+      zen
         .get("deep/freeze")
         .path("bob")
         .path("pet")
@@ -6021,7 +6016,7 @@ describe("ZEN", function () {
     });
 
     it("deep freezing put", function (done) {
-      gun.get("deep/freeze/ing").put({
+      zen.get("deep/freeze/ing").put({
         bob: {
           age: 29,
           name: "Bob!",
@@ -6031,7 +6026,7 @@ describe("ZEN", function () {
           },
         },
       });
-      gun
+      zen
         .get("deep/freeze/ing")
         .path("bob")
         .path("pet")
@@ -6045,8 +6040,8 @@ describe("ZEN", function () {
           expect(data.species).to.be("kitty");
           done.c = 1;
         });
-      gun.get("deep/freeze/ing").put({ bob: "lol" });
-      gun
+      zen.get("deep/freeze/ing").put({ bob: "lol" });
+      zen
         .get("deep/freeze/ing")
         .path("bob")
         .path("pet")
@@ -6058,8 +6053,8 @@ describe("ZEN", function () {
     });
     return;
     it("put put put put", function () {
-      var gun = Gun();
-      var get = gun.get("put/put/put/put");
+      var zen = Zen();
+      var get = zen.get("put/put/put/put");
       get.put({});
       get.put({
         all: {
@@ -6071,14 +6066,14 @@ describe("ZEN", function () {
       get.put({ foo: "bar" });
       get.any(function (err, data) {
         //console.log("data", data);
-        expect(Gun.val.link.is(data.all)).to.be.ok();
+        expect(Zen.val.link.is(data.all)).to.be.ok();
         expect(data.foo).to.be("bar");
       });
     });
 
     it("perf put", function (done) {
-      var gun = Gun();
-      var hey = gun.get("heylo");
+      var zen = Zen();
+      var hey = zen.get("heylo");
       hey.put({ hello: "world" });
       hey.any(function (err, data) {
         expect(data.hello).to.be("world");
@@ -6087,42 +6082,42 @@ describe("ZEN", function () {
     });
 
     it("put", function (done) {
-      gun.put("hello", function (err, ok) {
+      zen.put("hello", function (err, ok) {
         expect(err).to.be.ok();
         done();
       });
     });
 
     it("put NaN", function (done) {
-      gun.put({ num: NaN }, function (err, ok) {
+      zen.put({ num: NaN }, function (err, ok) {
         expect(err).to.be.ok();
         done();
       });
     });
 
     it("put date", function (done) {
-      gun.put({ date: new Date() }, function (err, ok) {
+      zen.put({ date: new Date() }, function (err, ok) {
         expect(err).to.be.ok();
         done();
       });
     });
 
     it("put regex", function (done) {
-      gun.put({ reg: /regex/i }, function (err, ok) {
+      zen.put({ reg: /regex/i }, function (err, ok) {
         expect(err).to.be.ok();
         done();
       });
     });
 
     it("put node", function (done) {
-      gun.put({ hello: "world" }, function (err, ok) {
+      zen.put({ hello: "world" }, function (err, ok) {
         expect(err).to.not.be.ok();
         done();
       });
     });
 
     it("put node then value", function (done) {
-      var ref = gun.put({ hello: "world" });
+      var ref = zen.put({ hello: "world" });
       //console.log("---------");
       ref.put("hello", function (err, ok) {
         expect(err).to.be.ok();
@@ -6131,18 +6126,18 @@ describe("ZEN", function () {
     });
 
     it("put node then put", function (done) {
-      gun.put({ hello: "world" }).put({ goodbye: "world" }, function (err, ok) {
+      zen.put({ hello: "world" }).put({ goodbye: "world" }, function (err, ok) {
         expect(err).to.not.be.ok();
         done();
       });
     });
 
     it("put node with soul get soul", function (done) {
-      gun
+      zen
         .put({ _: { "#": "foo" }, hello: "world" })
         .get({ "#": "foo" }, function (err, node) {
           expect(err).to.not.be.ok();
-          expect(Gun.node.soul(node)).to.be("foo");
+          expect(Zen.node.soul(node)).to.be("foo");
           expect(node.hello).to.be("world");
           if (done.c) {
             return;
@@ -6153,17 +6148,17 @@ describe("ZEN", function () {
     });
 
     it("put node with soul get soul tweak", function (done) {
-      Gun().put({ _: { "#": "foo" }, hello: "world" });
+      Zen().put({ _: { "#": "foo" }, hello: "world" });
       setTimeout(function () {
-        var gun = Gun();
-        gun
+        var zen = Zen();
+        zen
           .put({ _: { "#": "foo" }, boo: "bear" })
           .get({ "#": "foo" }, function (err, node) {
             if (done.c >= 1) {
               return;
             }
             //console.log("**********", err, node);
-            expect(Gun.node.soul(node)).to.be("foo");
+            expect(Zen.node.soul(node)).to.be("foo");
             expect(err).to.not.be.ok();
             expect(node.boo).to.be("bear");
             //if(!done.c){ return done.c = 1 } done.c = 2;
@@ -6175,7 +6170,7 @@ describe("ZEN", function () {
     });
 
     it("put node key get", function (done) {
-      gun
+      zen
         .put({ hello: "key" })
         .key("yes/key", function (err, ok) {
           //console.log("***", err, ok);
@@ -6192,7 +6187,7 @@ describe("ZEN", function () {
         .get("yes/key", function (err, node) {
           //console.log("*******", err, node);
           expect(err).to.not.be.ok();
-          expect(Gun.node.soul(node)).to.be("yes/key");
+          expect(Zen.node.soul(node)).to.be("yes/key");
           expect(node.hello).to.be("key");
           done.r = 1;
           if (done.c) {
@@ -6205,11 +6200,11 @@ describe("ZEN", function () {
         });
     });
 
-    it("put node key gun get", function (done) {
-      gun.put({ hello: "a key" }).key("yes/a/key", function (err, ok) {
+    it("put node key zen get", function (done) {
+      zen.put({ hello: "a key" }).key("yes/a/key", function (err, ok) {
         expect(err).to.not.be.ok();
       });
-      gun.get("yes/a/key", function (err, node) {
+      zen.get("yes/a/key", function (err, node) {
         expect(err).to.not.be.ok();
         expect(node.hello).to.be("a key");
         if (done.c) {
@@ -6220,22 +6215,22 @@ describe("ZEN", function () {
       });
     });
 
-    it("gun key", function () {
+    it("zen key", function () {
       // Revisit this behavior?
       try {
-        gun.key("fail/key");
+        zen.key("fail/key");
       } catch (err) {
         expect(err).to.be.ok();
       }
     });
 
     it("get key no override", function (done) {
-      var gun = Gun();
-      gun
+      var zen = Zen();
+      zen
         .put({ cream: "pie" })
         .key("cream/pie")
         .get("cream/pie", function (err, node) {
-          expect(Gun.node.soul(node)).to.be("cream/pie");
+          expect(Zen.node.soul(node)).to.be("cream/pie");
           if (done.c) {
             return;
           }
@@ -6256,12 +6251,12 @@ describe("ZEN", function () {
           }
           done.c = 1;
         });
-      gun.get("cream/pie").key("pie/cream");
-      gun.get("pie/cream").put({ pie: "cream" });
+      zen.get("cream/pie").key("pie/cream");
+      zen.get("pie/cream").put({ pie: "cream" });
     });
 
     it("get key", function (done) {
-      gun
+      zen
         .get("yes/key", function (err, node) {
           expect(err).to.not.be.ok();
           expect(node.hello).to.be("key");
@@ -6285,33 +6280,33 @@ describe("ZEN", function () {
     });
 
     it("get key null", function (done) {
-      gun.get("yes/key").key("", function (err, ok) {
+      zen.get("yes/key").key("", function (err, ok) {
         expect(err).to.be.ok();
         done();
       });
     });
 
     it("key node has no key relations", function (done) {
-      var gun = Gun();
-      gun.put({ hello: "world" }).key("hello/earth");
-      gun.put({ continent: "africa" }).key("hello/earth");
-      gun.put({ place: "asia" }).key("hello/earth");
-      gun.put({ north: "america" }).key("hello/galaxy");
-      gun.put({ south: "pole" }).key("hello/galaxy");
-      gun.get("hello/earth").key("hello/galaxy", function (err, ok) {
+      var zen = Zen();
+      zen.put({ hello: "world" }).key("hello/earth");
+      zen.put({ continent: "africa" }).key("hello/earth");
+      zen.put({ place: "asia" }).key("hello/earth");
+      zen.put({ north: "america" }).key("hello/galaxy");
+      zen.put({ south: "pole" }).key("hello/galaxy");
+      zen.get("hello/earth").key("hello/galaxy", function (err, ok) {
         expect(err).to.not.be.ok();
       });
-      var node = gun.back(-1)._.graph["hello/earth"] || {}; // TODO: IS THIS CORRECT?
+      var node = zen.back(-1)._.graph["hello/earth"] || {}; // TODO: IS THIS CORRECT?
       expect(node["hello/galaxy"]).to.not.be.ok();
-      gun.get("hello/earth", function (err, pseudo) {
+      zen.get("hello/earth", function (err, pseudo) {
         expect(pseudo.hello).to.be("world");
         expect(pseudo.continent).to.be("africa");
         expect(pseudo.place).to.be("asia");
         expect(pseudo.north).to.not.be.ok();
       });
-      var galaxy = gun.back(-1)._.graph["hello/galaxy"] || {}; // TODO: IS THIS CORRECT?
+      var galaxy = zen.back(-1)._.graph["hello/galaxy"] || {}; // TODO: IS THIS CORRECT?
       expect(galaxy["hello/earth"]).to.not.be.ok();
-      gun.get("hello/galaxy", function (err, pseudo) {
+      zen.get("hello/galaxy", function (err, pseudo) {
         if (
           done.c ||
           !pseudo.hello ||
@@ -6334,17 +6329,17 @@ describe("ZEN", function () {
       });
     });
 
-    function soulnode(gun, kn, r) {
+    function soulnode(zen, kn, r) {
       // TODO: WARNING! Key implementation has changed significantly. Tests are somewhat hardcoded, sad day.
       r = r || [];
-      kn = Gun.obj.copy(kn);
+      kn = Zen.obj.copy(kn);
       delete kn._;
-      expect(Gun.obj.empty(kn, "##")).to.be.ok();
-      kn = gun.back(-1)._.graph[Gun.val.link.is(kn["##"])];
-      Gun.node.is(kn, function (node, s) {
-        var n = gun.back(-1)._.graph[s];
-        if (Gun.obj.has(n, "##")) {
-          soulnode(gun, n, r);
+      expect(Zen.obj.empty(kn, "##")).to.be.ok();
+      kn = zen.back(-1)._.graph[Zen.val.link.is(kn["##"])];
+      Zen.node.is(kn, function (node, s) {
+        var n = zen.back(-1)._.graph[s];
+        if (Zen.obj.has(n, "##")) {
+          soulnode(zen, n, r);
           return;
         }
         r.push(s);
@@ -6353,24 +6348,24 @@ describe("ZEN", function () {
     }
 
     it("get node put node merge", function (done) {
-      gun
+      zen
         .get("hello/key", function (err, node) {
           if (done.soul) {
             return;
           }
           expect(err).to.not.be.ok();
           expect(node.hello).to.be("key");
-          done.soul = Gun.node.soul(node);
+          done.soul = Zen.node.soul(node);
         })
         .put({ hi: "you" }, function (err, ok) {
           expect(err).to.not.be.ok();
-          var keynode = gun.back(-1)._.graph[done.soul],
+          var keynode = zen.back(-1)._.graph[done.soul],
             soul;
           expect(keynode.hi).to.not.be.ok();
-          var c = soulnode(gun, keynode),
+          var c = soulnode(zen, keynode),
             soul = c[0];
           expect(c.length).to.be(1);
-          var node = gun.back(-1)._.graph[soul];
+          var node = zen.back(-1)._.graph[soul];
           expect(node.hello).to.be("key");
           expect(node.hi).to.be("you");
         })
@@ -6378,7 +6373,7 @@ describe("ZEN", function () {
           if (done.c) {
             return;
           }
-          //expect(done.soul).to.be(Gun.node.soul(node)); // TODO: DISCUSSION! This has changed?
+          //expect(done.soul).to.be(Zen.node.soul(node)); // TODO: DISCUSSION! This has changed?
           expect(node.hi).to.be("you");
           expect(node.hello).to.be("key");
           done();
@@ -6388,7 +6383,7 @@ describe("ZEN", function () {
 
     it("get null put node never", function (done) {
       // TODO: GET returns nothing, and then doing a PUT?
-      gun
+      zen
         .get(null, function (err, ok) {
           expect(err).to.be.ok();
           done.err = true;
@@ -6404,8 +6399,8 @@ describe("ZEN", function () {
     });
 
     it("get key no data put", function (done) {
-      var gun = Gun({ init: true });
-      gun
+      var zen = Zen({ init: true });
+      zen
         .get("this/key/definitely/does/not/exist", function (err, data) {
           done.gcb = true;
           done.err = err;
@@ -6424,7 +6419,7 @@ describe("ZEN", function () {
     });
 
     it("get node put node merge conflict", function (done) {
-      gun
+      zen
         .get("hello/key", function (err, node) {
           if (done.soul) {
             return;
@@ -6432,19 +6427,19 @@ describe("ZEN", function () {
           expect(err).to.not.be.ok();
           expect(node.hello).to.be("key");
           expect(node.hi).to.be("you");
-          done.soul = Gun.node.soul(node);
+          done.soul = Zen.node.soul(node);
         })
         .put({ hi: "overwritten" }, function (err, ok) {
           if (done.c) {
             return;
           }
           expect(err).to.not.be.ok();
-          var keynode = gun.back(-1)._.graph[done.soul],
+          var keynode = zen.back(-1)._.graph[done.soul],
             soul;
-          var c = soulnode(gun, keynode),
+          var c = soulnode(zen, keynode),
             soul = c[0];
           expect(c.length).to.be(1);
-          var node = gun.back(-1)._.graph[soul];
+          var node = zen.back(-1)._.graph[soul];
           expect(node.hello).to.be("key");
           expect(node.hi).to.be("overwritten");
           done.w = 1;
@@ -6457,7 +6452,7 @@ describe("ZEN", function () {
           if (done.c) {
             return;
           }
-          //expect(done.soul).to.be(Gun.node.soul(node)); // since put has changed chains, do we keep the pseudomerge key context?
+          //expect(done.soul).to.be(Zen.node.soul(node)); // since put has changed chains, do we keep the pseudomerge key context?
           expect(node.hello).to.be("key");
           expect(node.hi).to.be("overwritten");
           done.r = 1;
@@ -6469,19 +6464,19 @@ describe("ZEN", function () {
     });
 
     it("get key path put", function (done) {
-      var gun = Gun().put({ foo: "lol", extra: "yes" }).key("key/path/put");
-      var data = gun.get("key/path/put");
+      var zen = Zen().put({ foo: "lol", extra: "yes" }).key("key/path/put");
+      var data = zen.get("key/path/put");
       data.path("foo").put("epic");
       data.once(function (val, field) {
         expect(val.foo).to.be("epic");
-        expect(Gun.node.soul(val)).to.be("key/path/put");
+        expect(Zen.node.soul(val)).to.be("key/path/put");
         done();
       });
     });
 
     it("put node path", function (done) {
-      var gun = Gun();
-      gun.put({ hello: "world" }).path("hello", function (err, val, field) {
+      var zen = Zen();
+      zen.put({ hello: "world" }).path("hello", function (err, val, field) {
         if (done.end) {
           return;
         } // it is okay for path's callback to be called multiple times.
@@ -6494,9 +6489,9 @@ describe("ZEN", function () {
     });
 
     it("put node path path", function (done) {
-      var gun = Gun();
+      var zen = Zen();
       //console.debug.i=1;console.log("-----------------");
-      var g = gun
+      var g = zen
         .put({ hello: { little: "world" } })
         .path("hello")
         .path("little", function (err, val, field, cat) {
@@ -6512,7 +6507,7 @@ describe("ZEN", function () {
     });
 
     it("put node path rel", function (done) {
-      gun.put({ foo: { bar: "lol" } }).path("foo", function (err, val, field) {
+      zen.put({ foo: { bar: "lol" } }).path("foo", function (err, val, field) {
         //console.log("*****", err, val, field);
         if (done.end) {
           return;
@@ -6526,7 +6521,7 @@ describe("ZEN", function () {
     });
 
     it("get node path", function (done) {
-      gun.get("hello/key").path("hi", function (err, val, field) {
+      zen.get("hello/key").path("hi", function (err, val, field) {
         if (done.end) {
           return;
         } // it is okay for path's callback to be called multiple times.
@@ -6540,25 +6535,25 @@ describe("ZEN", function () {
 
     it("put node get field", function (done) {
       // future feature.
-      var gun = Gun();
-      gun.put({ _: { "#": "soul/field" }, hi: "lol", foo: "bar" }); //.key('key/field');
-      gun.get({ "#": "soul/field", ".": "hi" }, function (err, val) {
+      var zen = Zen();
+      zen.put({ _: { "#": "soul/field" }, hi: "lol", foo: "bar" }); //.key('key/field');
+      zen.get({ "#": "soul/field", ".": "hi" }, function (err, val) {
         //expect(val.hi).to.be('lol'); // TODO: REVISE API?
         expect(val).to.be("lol");
-        //expect(Gun.obj.has(val,'foo')).to.not.be.ok();
+        //expect(Zen.obj.has(val,'foo')).to.not.be.ok();
         done();
       });
     });
 
     it("get node path put value", function (done) {
-      gun
+      zen
         .get("hello/key", function (err, node) {
           expect(err).to.not.be.ok();
           if (done.soul) {
             return;
           }
           expect(node.hi).to.be("overwritten");
-          done.soul = Gun.node.soul(node);
+          done.soul = Zen.node.soul(node);
         })
         .path("hi")
         .put("again", function (err, ok) {
@@ -6566,12 +6561,12 @@ describe("ZEN", function () {
             return;
           }
           expect(err).to.not.be.ok();
-          var keynode = gun.back(-1)._.graph[done.soul],
+          var keynode = zen.back(-1)._.graph[done.soul],
             soul;
-          var c = soulnode(gun, keynode),
+          var c = soulnode(zen, keynode),
             soul = c[0];
           expect(c.length).to.be(1);
-          var node = gun.back(-1)._.graph[(done.sub = soul)];
+          var node = zen.back(-1)._.graph[(done.sub = soul)];
           expect(node.hello).to.be("key");
           expect(node.hi).to.be("again");
           done.w = 1;
@@ -6595,7 +6590,7 @@ describe("ZEN", function () {
     });
 
     it("get node path put object", function (done) {
-      var foo = gun
+      var foo = zen
         .get("hello/key", function (err, node) {
           if (done.soul) {
             return;
@@ -6603,7 +6598,7 @@ describe("ZEN", function () {
           expect(err).to.not.be.ok();
           expect(node.hi).to.be("again");
           expect(node.hello).to.be("key");
-          done.soul = Gun.node.soul(node);
+          done.soul = Zen.node.soul(node);
         })
         .path("hi")
         .put({ yay: "value" }, function (err, ok) {
@@ -6611,22 +6606,22 @@ describe("ZEN", function () {
             return;
           }
           expect(err).to.not.be.ok();
-          var keynode = gun.back(-1)._.graph[done.soul],
+          var keynode = zen.back(-1)._.graph[done.soul],
             soul;
-          var c = soulnode(gun, keynode),
+          var c = soulnode(zen, keynode),
             soul = c[0];
           expect(c.length).to.be(1);
-          var root = gun.back(-1)._.graph[soul];
+          var root = zen.back(-1)._.graph[soul];
           expect(root.hello).to.be("key");
           expect(root.yay).to.not.be.ok();
-          expect(Gun.val.link.is(root.hi)).to.be.ok();
-          expect(Gun.val.link.is(root.hi)).to.not.be(soul);
-          var node = gun.back(-1)._.graph[Gun.val.link.is(root.hi)];
+          expect(Zen.val.link.is(root.hi)).to.be.ok();
+          expect(Zen.val.link.is(root.hi)).to.not.be(soul);
+          var node = zen.back(-1)._.graph[Zen.val.link.is(root.hi)];
           expect(node.yay).to.be("value");
           if (done.sub) {
-            expect(done.sub).to.be(Gun.val.link.is(root.hi));
+            expect(done.sub).to.be(Zen.val.link.is(root.hi));
           } else {
-            done.sub = Gun.val.link.is(root.hi);
+            done.sub = Zen.val.link.is(root.hi);
           }
           done.w = 1;
           if (done.r) {
@@ -6641,9 +6636,9 @@ describe("ZEN", function () {
           expect(field).to.be("hi");
           expect(node.yay).to.be("value");
           if (done.sub) {
-            expect(done.sub).to.be(Gun.node.soul(node));
+            expect(done.sub).to.be(Zen.node.soul(node));
           } else {
-            done.sub = Gun.node.soul(node);
+            done.sub = Zen.node.soul(node);
           }
           done.r = 1;
           if (done.w) {
@@ -6654,8 +6649,8 @@ describe("ZEN", function () {
     });
 
     it("get path wire", function (done) {
-      var gun = Gun();
-      var get = gun.get("shallow/path");
+      var zen = Zen();
+      var get = zen.get("shallow/path");
       var path = get.path("one");
       var put = path.put("good");
       put.once(function (val, field) {
@@ -6666,8 +6661,8 @@ describe("ZEN", function () {
     });
 
     it("get path wire shallow", function (done) {
-      var gun = Gun();
-      var get = gun.get("slightly/shallow/path");
+      var zen = Zen();
+      var get = zen.get("slightly/shallow/path");
       var path = get.path("one");
       var put = path.put({ you: "are", here: 1 });
       put.once(function (val, field) {
@@ -6679,13 +6674,13 @@ describe("ZEN", function () {
       });
     });
 
-    it("get put, Gun get path", function (done) {
+    it("get put, Zen get path", function (done) {
       // For testing lazy eval that it works on cb style.
-      var gun = Gun();
-      gun.get("test").put({ you: { are: "cool" } });
+      var zen = Zen();
+      zen.get("test").put({ you: { are: "cool" } });
       // TODO: BUG!? Occasionally has a stack overflow???? :/
       setTimeout(function () {
-        var g = Gun(); // TODO: NOTE! This will not work for in-memory only. This means it might not be viable as a test for core.
+        var g = Zen(); // TODO: NOTE! This will not work for in-memory only. This means it might not be viable as a test for core.
         g.get("test").path("you", function (e, d) {
           if (!d || done.c) {
             return;
@@ -6699,12 +6694,12 @@ describe("ZEN", function () {
       }, 250);
     });
 
-    it("get put, Gun get path to path", function (done) {
+    it("get put, Zen get path to path", function (done) {
       // For testing lazy eval that it works on cb style.
-      var gun = Gun();
-      gun.get("test1").put({ you: { are: "cool" } });
+      var zen = Zen();
+      zen.get("test1").put({ you: { are: "cool" } });
       setTimeout(function () {
-        var g = Gun(); // TODO: NOTE! This will not work for in-memory only. This means it might not be viable as a test for core.
+        var g = Zen(); // TODO: NOTE! This will not work for in-memory only. This means it might not be viable as a test for core.
         var p = g.get("test1").path("you");
         setTimeout(function () {
           p.path("are", function (e, d) {
@@ -6719,12 +6714,12 @@ describe("ZEN", function () {
       }, 100);
     });
 
-    it("get put, Gun get path path", function (done) {
+    it("get put, Zen get path path", function (done) {
       // For testing lazy eval that it works on cb style.
-      var gun = Gun();
-      gun.get("test2").put({ you: { are: "cool" } });
+      var zen = Zen();
+      zen.get("test2").put({ you: { are: "cool" } });
       setTimeout(function () {
-        var g = Gun(); // TODO: NOTE! This will not work for in-memory only. This means it might not be viable as a test for core.
+        var g = Zen(); // TODO: NOTE! This will not work for in-memory only. This means it might not be viable as a test for core.
         var p = g
           .get("test2")
           .path("you")
@@ -6740,7 +6735,7 @@ describe("ZEN", function () {
     });
 
     it("get get not", function (done) {
-      Gun.statedisk(
+      Zen.statedisk(
         { b: 1, c: 2 },
         "a",
         function () {
@@ -6762,9 +6757,9 @@ describe("ZEN", function () {
               done();
             }
           }
-          gun.get("a").path("b").get(cb); //.err(cb).not(cb).on(cb).once(cb);
-          gun.get("a").path("c").get(cb); //.err(cb).not(cb).on(cb).once(cb);
-          gun.get("a").path("d").get(cb); //.err(cb).not(cb).on(cb).once(cb);
+          zen.get("a").path("b").get(cb); //.err(cb).not(cb).on(cb).once(cb);
+          zen.get("a").path("c").get(cb); //.err(cb).not(cb).on(cb).once(cb);
+          zen.get("a").path("d").get(cb); //.err(cb).not(cb).on(cb).once(cb);
         },
         1000,
       );
@@ -6785,20 +6780,20 @@ describe("ZEN", function () {
           done();
         }
       }
-      gun.get("x").path("b").any(cb); //.err(cb).not(cb).on(cb).once(cb);
-      gun.get("x").path("c").any(cb); //.err(cb).not(cb).on(cb).once(cb);
-      gun.get("x").path("d").any(cb); //.err(cb).not(cb).on(cb).once(cb);
+      zen.get("x").path("b").any(cb); //.err(cb).not(cb).on(cb).once(cb);
+      zen.get("x").path("c").any(cb); //.err(cb).not(cb).on(cb).once(cb);
+      zen.get("x").path("d").any(cb); //.err(cb).not(cb).on(cb).once(cb);
     });
 
     it("get put, put deep", function (done) {
-      var gun = Gun();
-      var get = gun.get("put/deep/ish");
+      var zen = Zen();
+      var get = zen.get("put/deep/ish");
       get.put({});
       get.once(function (data) {
         // TODO: API CHANGE! Empty objects should react.
         //console.log("...1", data);
-        expect(Gun.obj.empty(data, "_")).to.be.ok(); // API CHANGED,
-        //expect(Gun.val.link.is(data.very)).to.be.ok();
+        expect(Zen.obj.empty(data, "_")).to.be.ok(); // API CHANGED,
+        //expect(Zen.val.link.is(data.very)).to.be.ok();
       }); //, {wait: 10000});
       setTimeout(function () {
         var put = get.put({
@@ -6812,12 +6807,12 @@ describe("ZEN", function () {
         });
         get.once(function (data) {
           //console.log("...2", data);
-          expect(Gun.val.link.is(data.very)).to.be.ok();
+          expect(Zen.val.link.is(data.very)).to.be.ok();
         });
         setTimeout(function () {
           put.once(function (data) {
             //console.log("...3", data);
-            expect(Gun.val.link.is(data.very)).to.be.ok();
+            expect(Zen.val.link.is(data.very)).to.be.ok();
             done.val = true;
           });
           var p = put.path("very");
@@ -6826,7 +6821,7 @@ describe("ZEN", function () {
             p.once(function (data) {
               //console.log("...4", data);
               expect(data.we).to.be("have gone!");
-              expect(Gun.val.link.is(data.deep)).to.be.ok();
+              expect(Zen.val.link.is(data.deep)).to.be.ok();
             });
             p.put("EXPLODE");
             setTimeout(function () {
@@ -6839,8 +6834,8 @@ describe("ZEN", function () {
     });
 
     it("get path wire shallow swoop", function (done) {
-      var gun = Gun();
-      var get = gun.get("slightly/shallow/path/swoop");
+      var zen = Zen();
+      var get = zen.get("slightly/shallow/path/swoop");
       var path = get.path("one.two");
       var put = path.put({ oh: "okay" });
       put.once(function (val, field) {
@@ -6852,8 +6847,8 @@ describe("ZEN", function () {
     });
 
     it("get path wiring", function (done) {
-      var gun = Gun();
-      var get = gun.get("deep/path");
+      var zen = Zen();
+      var get = zen.get("deep/path");
       var path = get.path("one.two");
       var path3 = path.path("three");
       var put = path3.put({ you: "found", the: "bottom!" });
@@ -6863,7 +6858,7 @@ describe("ZEN", function () {
         expect(val.the).to.be("bottom!");
         expect(field).to.be("three");
       });
-      gun
+      zen
         .get("deep/path")
         .path("one.two.three.you")
         .put("are")
@@ -6876,10 +6871,10 @@ describe("ZEN", function () {
     });
 
     it("get node path put object merge isolated", function (done) {
-      // MORAL OF THE STORY: in KEY ON.GET check for change as NODE = AT.CHANGE || GUN.__.GRAPH[AT.soul] && Gun.node.soul(NODE, 'KEY') === 1; BAM!
-      var gun = Gun();
-      var put = gun.put({ hello: "key" }).key("hello/key/iso");
-      var get = gun.get("hello/key/iso");
+      // MORAL OF THE STORY: in KEY ON.GET check for change as NODE = AT.CHANGE || ZEN.__.GRAPH[AT.soul] && Zen.node.soul(NODE, 'KEY') === 1; BAM!
+      var zen = Zen();
+      var put = zen.put({ hello: "key" }).key("hello/key/iso");
+      var get = zen.get("hello/key/iso");
       var puthi = get.put({ hi: "you" });
       puthi.on(function (node) {
         if (done.hi) {
@@ -6891,7 +6886,7 @@ describe("ZEN", function () {
         done.hi = 1;
       });
       setTimeout(function () {
-        var get2 = gun.get("hello/key/iso");
+        var get2 = zen.get("hello/key/iso");
         var path2 = get2.path("hi");
         path2._.id = "path2";
         var putyay = path2.put({ yay: "value" });
@@ -6904,7 +6899,7 @@ describe("ZEN", function () {
           done.yay = true;
         });
         setTimeout(function () {
-          var get3 = gun.get("hello/key/iso");
+          var get3 = zen.get("hello/key/iso");
           var path3 = get3.path("hi");
           path3._.id = "path3";
           var puthappy = path3.put({ happy: "faces" });
@@ -6923,13 +6918,13 @@ describe("ZEN", function () {
     });
 
     it("get node path put object merge", function (done) {
-      var g = gun.get("hello/key", function (err, node) {
+      var g = zen.get("hello/key", function (err, node) {
         if (done.soul) {
           return;
         }
         expect(err).to.not.be.ok();
-        expect((done.ref = Gun.val.link.is(node.hi))).to.be.ok();
-        done.soul = Gun.node.soul(node);
+        expect((done.ref = Zen.val.link.is(node.hi))).to.be.ok();
+        done.soul = Zen.node.soul(node);
       });
       g.path("hi")
         .put({ happy: "faces" }, function (err, ok) {
@@ -6937,16 +6932,16 @@ describe("ZEN", function () {
             return;
           }
           expect(err).to.not.be.ok();
-          var keynode = gun.back(-1)._.graph[done.soul],
+          var keynode = zen.back(-1)._.graph[done.soul],
             soul;
-          var c = soulnode(gun, keynode),
+          var c = soulnode(zen, keynode),
             soul = c[0];
           expect(c.length).to.be(1);
-          var root = gun.back(-1)._.graph[soul];
-          var sub = gun.back(-1)._.graph[done.ref];
+          var root = zen.back(-1)._.graph[soul];
+          var sub = zen.back(-1)._.graph[done.ref];
           expect(root.hello).to.be("key");
           expect(root.yay).to.not.be.ok();
-          expect(Gun.node.soul(sub)).to.be(done.ref);
+          expect(Zen.node.soul(sub)).to.be(done.ref);
           expect(sub.yay).to.be("value");
           expect(sub.happy).to.be("faces");
           if (done.sub) {
@@ -6968,9 +6963,9 @@ describe("ZEN", function () {
           expect(node.happy).to.be("faces");
           expect(node.yay).to.be("value");
           if (done.sub) {
-            expect(done.sub).to.be(Gun.node.soul(node));
+            expect(done.sub).to.be(Zen.node.soul(node));
           } else {
-            done.sub = Gun.node.soul(node);
+            done.sub = Zen.node.soul(node);
           }
           done.r = 1;
           if (done.w) {
@@ -6981,14 +6976,14 @@ describe("ZEN", function () {
     });
 
     it("get node path put value conflict relation", function (done) {
-      gun
+      zen
         .get("hello/key", function (err, node) {
           if (done.soul) {
             return;
           }
           expect(err).to.not.be.ok();
-          expect((done.ref = Gun.val.link.is(node.hi))).to.be.ok();
-          done.soul = Gun.node.soul(node);
+          expect((done.ref = Zen.val.link.is(node.hi))).to.be.ok();
+          done.soul = Zen.node.soul(node);
         })
         .path("hi")
         .put("crushed", function (err, ok) {
@@ -6996,16 +6991,16 @@ describe("ZEN", function () {
             return;
           }
           expect(err).to.not.be.ok();
-          var keynode = gun.back(-1)._.graph[done.soul],
+          var keynode = zen.back(-1)._.graph[done.soul],
             soul;
-          var c = soulnode(gun, keynode),
+          var c = soulnode(zen, keynode),
             soul = c[0];
           expect(c.length).to.be(1);
-          var root = gun.back(-1)._.graph[soul];
-          var sub = gun.back(-1)._.graph[done.ref];
+          var root = zen.back(-1)._.graph[soul];
+          var sub = zen.back(-1)._.graph[done.ref];
           expect(root.hello).to.be("key");
           expect(root.yay).to.not.be.ok();
-          expect(Gun.node.soul(sub)).to.be(done.ref);
+          expect(Zen.node.soul(sub)).to.be(done.ref);
           expect(sub.yay).to.be("value");
           expect(sub.happy).to.be("faces");
           expect(root.hi).to.be("crushed");
@@ -7029,9 +7024,9 @@ describe("ZEN", function () {
         });
     });
 
-    it.skip("put gun node", function (done) {
-      var mark = gun.put({ age: 23, name: "Mark Nadal" });
-      var timber = gun.put({ age: 3, name: "Timber Nadal" });
+    it.skip("put zen node", function (done) {
+      var mark = zen.put({ age: 23, name: "Mark Nadal" });
+      var timber = zen.put({ age: 3, name: "Timber Nadal" });
       mark.path("boss").put(timber, function (err) {
         expect(err).to.not.be.ok();
       });
@@ -7041,7 +7036,7 @@ describe("ZEN", function () {
     });
 
     it("put val", function (done) {
-      gun.put({ hello: "world" }).once(function (val) {
+      zen.put({ hello: "world" }).once(function (val) {
         expect(val.hello).to.be("world");
         expect(done.c).to.not.be.ok();
         done.c = 1;
@@ -7053,7 +7048,7 @@ describe("ZEN", function () {
     });
 
     it("put key val", function (done) {
-      gun
+      zen
         .put({ hello: "world" })
         .key("hello/world")
         .once(function (val, field) {
@@ -7071,7 +7066,7 @@ describe("ZEN", function () {
     });
 
     it("get val", function (done) {
-      gun.get("hello/world").once(function (val, field) {
+      zen.get("hello/world").once(function (val, field) {
         expect(val.hello).to.be("world");
         expect(done.c).to.not.be.ok();
         done.c = 1;
@@ -7083,7 +7078,7 @@ describe("ZEN", function () {
     });
 
     it("get path", function (done) {
-      gun
+      zen
         .get("hello/world")
         .path("hello")
         .once(function (val) {
@@ -7099,7 +7094,7 @@ describe("ZEN", function () {
     });
 
     it("get put path", function (done) {
-      gun
+      zen
         .get("hello/world")
         .put({ hello: "Mark" })
         .path("hello")
@@ -7115,7 +7110,7 @@ describe("ZEN", function () {
     });
 
     it("get path put", function (done) {
-      gun
+      zen
         .get("hello/world")
         .path("hello")
         .put("World")
@@ -7131,11 +7126,11 @@ describe("ZEN", function () {
     });
 
     it("get empty put", function (done) {
-      var gun = Gun({ init: true });
-      gun.get("nothing/here").put({ far: "wide" }, function (err, ok) {
+      var zen = Zen({ init: true });
+      zen.get("nothing/here").put({ far: "wide" }, function (err, ok) {
         done.put = true;
       });
-      gun.get({ "#": "asdfoobar" }).put({ far: "wide" }, function (err, ok) {
+      zen.get({ "#": "asdfoobar" }).put({ far: "wide" }, function (err, ok) {
         done.put2 = true;
       });
       setTimeout(function () {
@@ -7146,10 +7141,10 @@ describe("ZEN", function () {
     });
 
     it("get path empty put val", function (done) {
-      var gun = Gun({ init: true })
+      var zen = Zen({ init: true })
         .put({ hello: "Mark" })
         .key("hello/world/not");
-      gun
+      zen
         .get("hello/world/not")
         .path("earth")
         .put("mars")
@@ -7163,8 +7158,8 @@ describe("ZEN", function () {
     });
 
     it("get empty put val implicit", function (done) {
-      var gun = Gun();
-      var get = gun.get("hello/imp/world");
+      var zen = Zen();
+      var get = zen.get("hello/imp/world");
       var put = get.put({ planet: "the earth" });
       put.once(function (val) {
         expect(val.planet).to.be("the earth");
@@ -7173,8 +7168,8 @@ describe("ZEN", function () {
     });
 
     it("get empty path put val implicit split", function (done) {
-      var gun = Gun();
-      var get = gun.get("hello/imp/where");
+      var zen = Zen();
+      var get = zen.get("hello/imp/where");
       var path = get.path("where");
       var put = path.put("the mars");
       var val = put.once(function (val, field) {
@@ -7185,7 +7180,7 @@ describe("ZEN", function () {
     });
 
     it("get path empty put val implicit", function (done) {
-      gun
+      zen
         .get("hello/world")
         .path("earth")
         .put("mars")
@@ -7201,11 +7196,11 @@ describe("ZEN", function () {
     });
 
     it("get path val", function (done) {
-      var gun = Gun({ init: true })
+      var zen = Zen({ init: true })
         .put({ hello: "Mark" })
         .key("hello/world/not");
-      gun.get("hello/world").path("earth").put("mars");
-      gun
+      zen.get("hello/world").path("earth").put("mars");
+      zen
         .get("hello/world/not")
         .path("earth")
         .once(function (val) {
@@ -7220,7 +7215,7 @@ describe("ZEN", function () {
     });
 
     it("get path val implicit", function (done) {
-      gun
+      zen
         .get("hello/world")
         .path("earth")
         .once(function (val) {
@@ -7236,7 +7231,7 @@ describe("ZEN", function () {
 
     describe("some nots", function () {
       it("get not kick val", function (done) {
-        gun
+        zen
           .get("some/empty/thing")
           .not(function (key, kick) {
             // that if you call not first
@@ -7251,7 +7246,7 @@ describe("ZEN", function () {
 
       it("get not kick val when it already exists", function (done) {
         var foo;
-        foo = gun.get("some/empty/thing");
+        foo = zen.get("some/empty/thing");
         foo
           .not(function (key, kick) {
             done.not = true;
@@ -7266,7 +7261,7 @@ describe("ZEN", function () {
     });
 
     it("put path val sub", function (done) {
-      gun
+      zen
         .put({ last: { some: "object" } })
         .path("last")
         .once(function (val) {
@@ -7276,9 +7271,9 @@ describe("ZEN", function () {
     });
     //return;
     it("chain ordering", function (done) {
-      var sec = gun.get("order/second");
-      var res = Gun.on.stun(sec);
-      gun.get("order/first", function () {
+      var sec = zen.get("order/second");
+      var res = Zen.on.stun(sec);
+      zen.get("order/first", function () {
         // this has a race condition against the third get. However if it fulfills first...
         //console.log('callback', 0);
         done.zero = true;
@@ -7297,7 +7292,7 @@ describe("ZEN", function () {
         });
       });
 
-      gun.get("order/second", function () {
+      zen.get("order/second", function () {
         //console.log('callback', 2);
         done.two = true;
         expect(done.zero).to.be.ok();
@@ -7308,7 +7303,7 @@ describe("ZEN", function () {
     });
 
     it("get put null", function (done) {
-      gun
+      zen
         .put({ last: { some: "object" } })
         .path("last")
         .once(function (val, field) {
@@ -7325,10 +7320,10 @@ describe("ZEN", function () {
         });
     });
 
-    it("Gun get put null", function (done) {
+    it("Zen get put null", function (done) {
       // flip flop bug
-      var gun = Gun();
-      gun
+      var zen = Zen();
+      zen
         .put({ last: { some: "object" } })
         .path("last")
         .once(function (val, field) {
@@ -7347,7 +7342,7 @@ describe("ZEN", function () {
 
     it("var put key path", function (done) {
       // contexts should be able to be saved to a variable
-      var foo = gun.put({ foo: "bar" }).key("foo/bar");
+      var foo = zen.put({ foo: "bar" }).key("foo/bar");
       foo.path("hello.world.nowhere"); // this should become a sub-context, that doesn't alter the original
       setTimeout(function () {
         foo.path("foo").once(function (val) {
@@ -7360,7 +7355,7 @@ describe("ZEN", function () {
 
     it("var get path", function (done) {
       // contexts should be able to be saved to a variable
-      var foo = gun.get("foo/bar");
+      var foo = zen.get("foo/bar");
       foo.path("hello.world.nowhere"); // this should become a sub-context, that doesn't alter the original
       setTimeout(function () {
         foo.path("foo").once(function (val) {
@@ -7372,7 +7367,7 @@ describe("ZEN", function () {
     });
 
     it("get not put val path val", function (done) {
-      var todos = gun
+      var todos = zen
         .get("examples/list/foobar")
         .not(function (key) {
           this.put({
@@ -7403,27 +7398,27 @@ describe("ZEN", function () {
       data.b = { x: 2, y: "z" };
       data.a.kid = data.b;
       data.b.parent = data.a;
-      gun
+      zen
         .put(data, function (err, ok) {
           expect(err).to.not.be.ok();
         })
         .once(function (val) {
           setTimeout(function () {
             // TODO: Is this cheating? I don't think so cause we are using things outside of the API!
-            var a = gun.back(-1)._.graph[Gun.val.link.is(val.a)];
-            var b = gun.back(-1)._.graph[Gun.val.link.is(val.b)];
-            expect(Gun.val.link.is(val.a)).to.be(Gun.node.soul(a));
-            expect(Gun.val.link.is(val.b)).to.be(Gun.node.soul(b));
-            expect(Gun.val.link.is(a.kid)).to.be(Gun.node.soul(b));
-            expect(Gun.val.link.is(b.parent)).to.be(Gun.node.soul(a));
+            var a = zen.back(-1)._.graph[Zen.val.link.is(val.a)];
+            var b = zen.back(-1)._.graph[Zen.val.link.is(val.b)];
+            expect(Zen.val.link.is(val.a)).to.be(Zen.node.soul(a));
+            expect(Zen.val.link.is(val.b)).to.be(Zen.node.soul(b));
+            expect(Zen.val.link.is(a.kid)).to.be(Zen.node.soul(b));
+            expect(Zen.val.link.is(b.parent)).to.be(Zen.node.soul(a));
             done();
           }, 10);
         });
     });
 
-    it("gun put path and some changes node", function (done) {
+    it("zen put path and some changes node", function (done) {
       done.c = 0;
-      var ref = gun.put({
+      var ref = zen.put({
         foo: { bar: "lol" },
       });
       var sub = ref.path("foo").on(function (val) {
@@ -7443,10 +7438,10 @@ describe("ZEN", function () {
       });
     });
 
-    it("gun put two nodes, link one, path and detach", function (done) {
+    it("zen put two nodes, link one, path and detach", function (done) {
       done.c = 0;
       // this test is not written yet!
-      var ref = gun.put({
+      var ref = zen.put({
         foo: { bar: "lol" },
       });
       var sub = ref.path("foo").on(function (val) {
@@ -7467,8 +7462,8 @@ describe("ZEN", function () {
       // ref.put({foo: {extra: 'field'}});
     });
 
-    it("gun put path deep primitive", function (done) {
-      gun
+    it("zen put path deep primitive", function (done) {
+      zen
         .put({
           foo: {
             bar: {
@@ -7483,8 +7478,8 @@ describe("ZEN", function () {
         });
     });
 
-    it("gun put path deep node", function (done) {
-      gun
+    it("zen put path deep node", function (done) {
+      zen
         .put({
           foo: {
             bar: {
@@ -7520,15 +7515,15 @@ describe("ZEN", function () {
       cat.owner = mark;
       cat.master = timber;
       //console.debug.i=1;console.log("------------");
-      gun
+      zen
         .put(mark, function (err, ok) {
           expect(err).to.not.be.ok();
         })
         .once(function (val) {
           expect(val.age).to.be(23);
           expect(val.name).to.be("Mark Nadal");
-          expect(Gun.val.link.is(val.boss)).to.be.ok();
-          expect(Gun.val.link.is(val.pet)).to.be.ok();
+          expect(Zen.val.link.is(val.boss)).to.be.ok();
+          expect(Zen.val.link.is(val.pet)).to.be.ok();
         })
         .path("boss.pet.name")
         .once(function (val) {
@@ -7542,15 +7537,15 @@ describe("ZEN", function () {
           expect(val.name).to.be("timber Nadal");
           expect(val.phd).to.be.ok();
           expect(val.age).to.be(23);
-          expect(Gun.val.link.is(val.pet)).to.be.ok();
+          expect(Zen.val.link.is(val.pet)).to.be.ok();
           done();
         });
     });
 
     it("key get", function (done) {
-      var gun = Gun();
-      gun.get("key/get").put({ yay: "something" }).key("index/yay");
-      gun.get("index/yay", function (err, node) {
+      var zen = Zen();
+      zen.get("key/get").put({ yay: "something" }).key("index/yay");
+      zen.get("index/yay", function (err, node) {
         expect(node.yay).to.be("something");
         if (done.c) {
           return;
@@ -7561,13 +7556,13 @@ describe("ZEN", function () {
     });
 
     it("put partial sub merge", function (done) {
-      var gun = Gun();
-      var mark = gun
+      var zen = Zen();
+      var mark = zen
         .put({ name: "Mark", boss: { name: "timber" } })
         .key("person/mark")
         .once(function (mark) {
           //console.log("VAL1", mark);
-          done.marksoul = Gun.node.soul(mark);
+          done.marksoul = Zen.node.soul(mark);
           expect(mark.name).to.be("Mark");
         });
       mark.put({ age: 23, boss: { age: 3 } });
@@ -7575,7 +7570,7 @@ describe("ZEN", function () {
         mark
           .put({ citizen: "USA", boss: { citizen: "USA" } })
           .once(function (mark) {
-            //console.log("VAL2", mark, gun);
+            //console.log("VAL2", mark, zen);
             expect(mark.name).to.be("Mark");
             expect(mark.age).to.be(23);
             expect(mark.citizen).to.be("USA");
@@ -7597,7 +7592,7 @@ describe("ZEN", function () {
     });
 
     it("path path", function (done) {
-      var deep = gun.put({ some: { deeply: { nested: "value" } } });
+      var deep = zen.put({ some: { deeply: { nested: "value" } } });
       deep.path("some.deeply.nested").once(function (val) {
         expect(val).to.be("value");
       });
@@ -7612,24 +7607,24 @@ describe("ZEN", function () {
     });
 
     it("context null put value val error", function (done) {
-      gun.put("oh yes", function (err) {
+      zen.put("oh yes", function (err) {
         expect(err).to.be.ok();
         done();
       });
     });
 
     it("context no double emit", function (done) {
-      // annoying problem where somehow the gun.path in a put starts subscribing and firing to its context if we let get handle emitting for the chain in put.
+      // annoying problem where somehow the zen.path in a put starts subscribing and firing to its context if we let get handle emitting for the chain in put.
       var c = 0;
-      var gun = Gun();
-      var fo = gun.put({ fo: "bar" });
-      Gun.log.ba = 1;
+      var zen = Zen();
+      var fo = zen.put({ fo: "bar" });
+      Zen.log.ba = 1;
       fo.put({ ba: {} }).once(function (obj, field) {
         c += 1;
         expect(c).to.be(1);
         done();
       });
-      Gun.log.ba = 0;
+      Zen.log.ba = 0;
       var ba = fo.path("ba");
       ba.put({ co: "do" });
     });
@@ -7637,7 +7632,7 @@ describe("ZEN", function () {
     describe("random", function () {
       var foo;
       it("context null put node", function (done) {
-        foo = gun.put({ foo: "bar" }).once(function (obj) {
+        foo = zen.put({ foo: "bar" }).once(function (obj) {
           expect(obj.foo).to.be("bar");
           done(); //setTimeout(function(){ done() },1);
         });
@@ -7656,7 +7651,7 @@ describe("ZEN", function () {
         foo.put({ bar: { zoo: "who" } }).once(function (obj, field) {
           //console.log("terribly terrilby unpleasant", field, obj);
           expect(obj.foo).to.be("bar");
-          expect(Gun.val.link.is(obj.bar)).to.ok();
+          expect(Zen.val.link.is(obj.bar)).to.ok();
           done(); //setTimeout(function(){ done() },1);
         });
       });
@@ -7691,8 +7686,8 @@ describe("ZEN", function () {
             expect(obj.another).to.be("node");
             // double .vals here also RELATED to the #"context no double emit" but because of a faulty .not or .init system.
             bar.once(function (node) {
-              expect(Gun.val.link.is(node.combo)).to.be.ok();
-              expect(Gun.val.link.is(node.combo)).to.be(Gun.node.soul(obj));
+              expect(Zen.val.link.is(node.combo)).to.be.ok();
+              expect(Zen.val.link.is(node.combo)).to.be(Zen.node.soul(obj));
               done(); //setTimeout(function(){ done() },1);
             });
           });
@@ -7700,12 +7695,12 @@ describe("ZEN", function () {
     });
 
     it("val path put val", function (done) {
-      var gun = Gun();
+      var zen = Zen();
 
-      var al = gun
+      var al = zen
         .put({ gender: "m", age: 30, name: "alfred" })
         .key("user/alfred");
-      var beth = gun
+      var beth = zen
         .put({ gender: "f", age: 22, name: "beth" })
         .key("user/beth");
 
@@ -7716,7 +7711,7 @@ describe("ZEN", function () {
           })
           .path("friend")
           .once(function (aa) {
-            expect(Gun.node.soul(a)).to.be(Gun.node.soul(aa));
+            expect(Zen.node.soul(a)).to.be(Zen.node.soul(aa));
             done();
           });
       });
@@ -7726,41 +7721,41 @@ describe("ZEN", function () {
     // TODO: Souls match their graph.
     it("val path put val key", function (done) {
       // bug discovered from Jose's visualizer
-      var gun = Gun(),
-        s = Gun.time.is(),
+      var zen = Zen(),
+        s = Zen.time.is(),
         n = function () {
-          return Gun.time.is();
+          return Zen.time.is();
         };
       this.timeout(5000);
 
-      gun.put({ gender: "m", age: 30, name: "alfred" }).key("user/alfred");
-      gun.put({ gender: "f", age: 22, name: "beth" }).key("user/beth");
-      //gun.get('user/beth').path('friend').put(gun.get('user/alfred')); // ideal format which we have a future test for.
-      gun.get("user/alfred").once(function (a) {
+      zen.put({ gender: "m", age: 30, name: "alfred" }).key("user/alfred");
+      zen.put({ gender: "f", age: 22, name: "beth" }).key("user/beth");
+      //zen.get('user/beth').path('friend').put(zen.get('user/alfred')); // ideal format which we have a future test for.
+      zen.get("user/alfred").once(function (a) {
         //console.log("*****", a);
         //expect(a['_']['key']).to.be.ok();
-        gun.get("user/beth").put({ friend: a }, function (err, ok) {
+        zen.get("user/beth").put({ friend: a }, function (err, ok) {
           // b - friend_of -> a
           expect(err).to.not.be.ok();
-          var keynode = gun.back(-1)._.graph["user/alfred"];
-          var c = soulnode(gun, keynode),
+          var keynode = zen.back(-1)._.graph["user/alfred"];
+          var c = soulnode(zen, keynode),
             soul = c[0];
           expect(c.length).to.be(1);
         });
-        gun.get("user/beth").once(function (b) {
+        zen.get("user/beth").once(function (b) {
           //console.log("beth", b);
-          gun
+          zen
             .get("user/alfred")
             .put({ friend: b })
             .once(function (al) {
               // a - friend_of -> b
               //console.log("al again", al);
-              gun
+              zen
                 .get("user/beth")
                 .put({ cat: { name: "fluffy", age: 3, coat: "tabby" } })
                 .once(function (bet) {
-                  gun.get("user/alfred").path("friend.cat").key("the/cat");
-                  gun.get("the/cat").once(function (c) {
+                  zen.get("user/alfred").path("friend.cat").key("the/cat");
+                  zen.get("the/cat").once(function (c) {
                     //console.log("cat!!!", c);
                     expect(c.name).to.be("fluffy");
                     expect(c.age).to.be(3);
@@ -7775,7 +7770,7 @@ describe("ZEN", function () {
 
     it("map", function (done) {
       var c = 0,
-        set = gun.put({
+        set = zen.put({
           a: { here: "you" },
           b: { go: "dear" },
           c: { sir: "!" },
@@ -7799,13 +7794,13 @@ describe("ZEN", function () {
 
     it.skip("key soul", function (done) {
       // TODO: Deprecated? Maybe.
-      var gun = Gun();
-      gun.key(
+      var zen = Zen();
+      zen.key(
         "me",
         function (err, ok) {
           expect(err).to.not.be.ok();
-          var keynode = gun.back(-1)._.graph["me"];
-          var c = soulnode(gun, keynode),
+          var keynode = zen.back(-1)._.graph["me"];
+          var c = soulnode(zen, keynode),
             soul = c[0];
           expect(c.length).to.be(1);
 
@@ -7818,7 +7813,7 @@ describe("ZEN", function () {
 
     it.skip("no false positive null emit", function (done) {
       // TODO: THE API HAS CHANGED! REDO TEHSE!
-      var gun = Gun({
+      var zen = Zen({
           wire: {
             get: function (key, cb) {
               var g = {};
@@ -7834,8 +7829,8 @@ describe("ZEN", function () {
             },
           },
         }),
-        soul = Gun.text.random();
-      gun
+        soul = Zen.text.random();
+      zen
         .get(soul)
         .not(function (err, ok) {
           done.fail = true;
@@ -7852,30 +7847,30 @@ describe("ZEN", function () {
 
     it.skip("unique val on stream", function (done) {
       // TODO: THE API HAS CHANGED! REDO TEHSE!
-      var gun = Gun({
+      var zen = Zen({
           wire: {
             get: function (key, cb) {
-              if (Gun.obj.has(key, "#")) {
+              if (Zen.obj.has(key, "#")) {
                 key = key["#"];
                 var node = tmp.graph[key];
                 cb(null, node);
-                cb(null, Gun.is.node.ify({}, key));
+                cb(null, Zen.is.node.ify({}, key));
                 cb(null, {});
               }
             },
           },
         }),
         tmp = { graph: {} };
-      tmp.graph[(tmp.soul = Gun.text.random())] = tmp.node = { a: "b", c: "d" };
-      Gun.is.node.ify(tmp.node, tmp.soul);
+      tmp.graph[(tmp.soul = Zen.text.random())] = tmp.node = { a: "b", c: "d" };
+      Zen.is.node.ify(tmp.node, tmp.soul);
 
       tmp.graph["me"] = tmp.keynode = {};
-      Gun.obj.put((tmp.rel = {}), "#", tmp.soul);
+      Zen.obj.put((tmp.rel = {}), "#", tmp.soul);
       tmp.keynode[tmp.soul] = tmp.rel;
-      Gun.is.node.ify(tmp.keynode, "me");
+      Zen.is.node.ify(tmp.keynode, "me");
       tmp.keynode["#"]["key"] = 1;
 
-      gun
+      zen
         .get("me", function (err, data) {})
         .once(function (val) {
           done.count = (done.count || 0) + 1;
@@ -7890,7 +7885,7 @@ describe("ZEN", function () {
 
     it.skip("unique path val on stream", function (done) {
       // TODO: THE API HAS CHANGED! REDO TEHSE!
-      var gun = Gun({
+      var zen = Zen({
           wire: {
             get: function (key, cb) {
               var n = {};
@@ -7905,9 +7900,9 @@ describe("ZEN", function () {
             },
           },
         }),
-        soul = Gun.text.random();
+        soul = Zen.text.random();
 
-      gun
+      zen
         .get(soul)
         .path("a")
         .once(function (val) {
@@ -7922,14 +7917,14 @@ describe("ZEN", function () {
 
     it("double not", function (done) {
       // from the thought tutorial
-      var gun = Gun(gopt)
+      var zen = Zen(gopt)
         .get("thoughts")
         .not(function (key) {
           this.put({}).key(key);
         });
 
       setTimeout(function () {
-        gun
+        zen
           .not(function () {
             done.not = true;
           })
@@ -7944,9 +7939,9 @@ describe("ZEN", function () {
     });
 
     it("node path node path node path", function (done) {
-      var gun = Gun(/*gopt*/);
-      var data = gun.get("data");
-      gun
+      var zen = Zen(/*gopt*/);
+      var data = zen.get("data");
+      zen
         .put({
           a: 1,
           b: 2,
@@ -7995,9 +7990,9 @@ describe("ZEN", function () {
     });
 
     it("node path obj node path obj node path obj", function (done) {
-      var gun = Gun();
-      var data = gun.get("data1");
-      gun
+      var zen = Zen();
+      var data = zen.get("data1");
+      zen
         .put({
           a: { v: 1 },
           b: { v: 2 },
@@ -8046,43 +8041,43 @@ describe("ZEN", function () {
 
     describe("prototype crash", function () {
       it("instance.key", function (done) {
-        Gun().key("oye", function (err) {
+        Zen().key("oye", function (err) {
           expect(err).to.be.ok();
           done();
         });
       });
 
       it("instance.on", function (done) {
-        Gun().on();
+        Zen().on();
         done();
       });
 
       it("instance.path", function (done) {
-        Gun().path("oye", function (err) {
+        Zen().path("oye", function (err) {
           expect(err).to.be.ok();
           done();
         });
       });
 
       it("instance.map", function (done) {
-        Gun().map();
+        Zen().map();
         done();
       });
 
       it("instance.not", function (done) {
-        Gun().not();
+        Zen().not();
         done();
       });
 
       it("instance.val", function (done) {
-        Gun().once();
+        Zen().once();
         done();
       });
     });
 
     it("implicit put on empty get", function (done) {
-      var gun = Gun().get("init");
-      gun.on(function (val) {
+      var zen = Zen().get("init");
+      zen.on(function (val) {
         expect(val.not).to.be(true);
         if (done.c) {
           return;
@@ -8090,17 +8085,17 @@ describe("ZEN", function () {
         done();
         done.c = 1;
       });
-      gun.put({ not: true });
+      zen.put({ not: true });
     });
 
     it.skip("implicit put on empty get explicit not", function (done) {
       // HUH? This seems like wrong behavior.
-      var gun = Gun().get("init/not").not();
-      gun.on(function (val) {
+      var zen = Zen().get("init/not").not();
+      zen.on(function (val) {
         console.log("??", val);
         done.c = 1;
       });
-      gun.put({ not: true });
+      zen.put({ not: true });
       setTimeout(function () {
         expect(done.c).to.not.be.ok();
         done();
@@ -8108,8 +8103,8 @@ describe("ZEN", function () {
     });
 
     it("no implicit put on empty get", function (done) {
-      var gun = Gun({ init: true }).get("not/init");
-      gun.on(function (val) {
+      var zen = Zen({ init: true }).get("not/init");
+      zen.on(function (val) {
         console.log("hmmm???", val);
         expect(val.not).to.be(true);
         if (done.c) {
@@ -8117,7 +8112,7 @@ describe("ZEN", function () {
         }
         done.c = 1;
       });
-      gun.put({ not: true });
+      zen.put({ not: true });
       setTimeout(function () {
         expect(done.c).to.not.be.ok();
         done();
@@ -8125,8 +8120,8 @@ describe("ZEN", function () {
     });
 
     it("no implicit put on empty get explicit init", function (done) {
-      var gun = Gun({ init: true }).get("not/init/init").init();
-      gun.on(function (val) {
+      var zen = Zen({ init: true }).get("not/init/init").init();
+      zen.on(function (val) {
         if (val.not) {
           expect(val.not).to.be(true);
           if (done.c) {
@@ -8136,14 +8131,14 @@ describe("ZEN", function () {
           done.c = 1;
           return;
         }
-        expect(Gun.obj.empty(val, "_")).to.be.ok();
+        expect(Zen.obj.empty(val, "_")).to.be.ok();
       });
-      gun.put({ not: true });
+      zen.put({ not: true });
     });
 
     it("init", function (done) {
-      var gun = Gun().get("init/todo").init();
-      gun.on(function (val) {
+      var zen = Zen().get("init/todo").init();
+      zen.on(function (val) {
         console.log("*******", val);
         if (done.c) {
           return;
@@ -8154,14 +8149,14 @@ describe("ZEN", function () {
           done.c = 1;
           return;
         }
-        expect(Gun.obj.empty(val, "_")).to.be.ok();
+        expect(Zen.obj.empty(val, "_")).to.be.ok();
       });
-      gun.put({ data: "initialized!" });
+      zen.put({ data: "initialized!" });
     });
 
     describe("map able", function () {
       it("map chain", function (done) {
-        Gun()
+        Zen()
           .put({ a: 1, b: 2 })
           .map()
           .on(function (v, f) {
@@ -8173,7 +8168,7 @@ describe("ZEN", function () {
       });
 
       it("map chain after", function (done) {
-        var g = Gun().get("m/c/a");
+        var g = Zen().get("m/c/a");
         g.map().on(function (v, f) {
           done[f] = v;
           if (done.a && done.b) {
@@ -8184,7 +8179,7 @@ describe("ZEN", function () {
       });
 
       it("map chain map to", function (done) {
-        var g = Gun().get("m/c/m/to");
+        var g = Zen().get("m/c/m/to");
         var obj = {
             a: { x: 1, y: 2, z: 3 },
             b: { u: 4, v: 5, w: 6 },
@@ -8195,7 +8190,7 @@ describe("ZEN", function () {
           .on(function (v, f) {
             check[f] = 0;
             if (
-              Gun.obj.map(check, function (v, f) {
+              Zen.obj.map(check, function (v, f) {
                 if (v) {
                   return true;
                 }
@@ -8211,7 +8206,7 @@ describe("ZEN", function () {
       });
 
       it("map chain map", function (done) {
-        var g = Gun().get("m/c/m");
+        var g = Zen().get("m/c/m");
         var obj = {
             a: { x: 1, y: 2, z: 3 },
             b: { u: 4, v: 5, w: 6 },
@@ -8222,7 +8217,7 @@ describe("ZEN", function () {
           .on(function (v, f) {
             check[f] = 0;
             if (
-              Gun.obj.map(check, function (v, f) {
+              Zen.obj.map(check, function (v, f) {
                 if (v) {
                   return true;
                 }
@@ -8236,7 +8231,7 @@ describe("ZEN", function () {
       });
 
       it("map chain map before", function (done) {
-        var g = Gun().get("m/c/m/b");
+        var g = Zen().get("m/c/m/b");
         var obj = {
             a: { x: 1, y: 2, z: 3 },
             b: { u: 4, v: 5, w: 6 },
@@ -8248,7 +8243,7 @@ describe("ZEN", function () {
           .on(function (v, f) {
             check[f] = 0;
             if (
-              Gun.obj.map(check, function (v, f) {
+              Zen.obj.map(check, function (v, f) {
                 if (v) {
                   return true;
                 }
@@ -8262,8 +8257,8 @@ describe("ZEN", function () {
     });
 
     it("init todo", function (done) {
-      var gun = Gun(),
-        todo = gun.get("init/todo/early");
+      var zen = Zen(),
+        todo = zen.get("init/todo/early");
       todo.path("random1").put("eat chocolate");
       todo.map().on(function (val, field) {
         expect(val).to.be("eat chocolate");
@@ -8277,8 +8272,8 @@ describe("ZEN", function () {
     });
 
     it("init todo defer", function (done) {
-      var gun = Gun(),
-        todo = gun.get("init/todo/defer");
+      var zen = Zen(),
+        todo = zen.get("init/todo/defer");
       todo.map().on(function (val, field) {
         expect(val).to.be("eat chocolate");
         expect(field).to.be("random1");
@@ -8296,13 +8291,13 @@ describe("ZEN", function () {
     /* // CHANGELOG: API 0.3 BREAKING CHANGE, .set has been deprecated!
 		it('set', function(done){
 			done.c = 0;
-			var u, gun = Gun();
-			gun.get('set').set().set().once(function(val){
-				var keynode = gun.__.graph['set'];
-				expect(Gun.node.soul.ify(keynode, '.')).to.be.ok();
-				Gun.is.node(keynode, function(rel, soul){
-					rel = gun.__.by(soul).node;
-					expect(Gun.obj.empty(rel, Gun._.meta)).to.be.ok();
+			var u, zen = Zen();
+			zen.get('set').set().set().once(function(val){
+				var keynode = zen.__.graph['set'];
+				expect(Zen.node.soul.ify(keynode, '.')).to.be.ok();
+				Zen.is.node(keynode, function(rel, soul){
+					rel = zen.__.by(soul).node;
+					expect(Zen.obj.empty(rel, Zen._.meta)).to.be.ok();
 				});
 				done.c += 1;
 				setTimeout(function(){
@@ -8313,26 +8308,26 @@ describe("ZEN", function () {
 		});
 
 		it('root set', function(done){
-			var gun = Gun().set();
-			gun.on(function(val, field){
-				expect(Gun.obj.empty(val, Gun._.meta)).to.be.ok();
+			var zen = Zen().set();
+			zen.on(function(val, field){
+				expect(Zen.obj.empty(val, Zen._.meta)).to.be.ok();
 				if(done.c){return} done(); done.c = 1;
 			});
 		});
 
 		// TODO: BUG! We need 2 more tests... without .set()... and multiple paths on the same node.
 		it('set multiple', function(done){ // kinda related to flip flop?
-			var gun = Gun().get('sets').set(), i = 0;
-			gun.once(function(val){
+			var zen = Zen().get('sets').set(), i = 0;
+			zen.once(function(val){
 				console.log("TEST 1", val);
-				expect(Gun.obj.empty(val, Gun._.meta)).to.be.ok();
-				expect(Gun.node.soul(val)).to.be('sets');
-				var keynode = gun.__.graph['sets'];
-				expect(Gun.obj.empty(keynode, Gun._.meta)).to.not.be.ok();
+				expect(Zen.obj.empty(val, Zen._.meta)).to.be.ok();
+				expect(Zen.node.soul(val)).to.be('sets');
+				var keynode = zen.__.graph['sets'];
+				expect(Zen.obj.empty(keynode, Zen._.meta)).to.not.be.ok();
 			});
-			gun.set(1); //.set(2).set(3).set(4); // if you set an object you'd have to do a `.back`
-			gun.map(function(val, field){
-			//gun.map().once(function(val, field){ // TODO: SEAN! DON'T LET ME FORGET!
+			zen.set(1); //.set(2).set(3).set(4); // if you set an object you'd have to do a `.back`
+			zen.map(function(val, field){
+			//zen.map().once(function(val, field){ // TODO: SEAN! DON'T LET ME FORGET!
 				console.log("\n TEST 2+", field, val);
 				return;
 				i += 1;
@@ -8340,25 +8335,25 @@ describe("ZEN", function () {
 				if(i % 4 === 0){
 					setTimeout(function(){
 						done.i = 0;
-						Gun.obj.map(gun.__.graph, function(){ done.i++ });
+						Zen.obj.map(zen.__.graph, function(){ done.i++ });
 						expect(done.i).to.be(1); // make sure there isn't double.
-						Gun.log.verbose = false;
+						Zen.log.verbose = false;
 						done()
 					},10);
 				}
 			});
-			gun.set(2);
+			zen.set(2);
 		});
 		*/
 
     it("val should not print relation", function (done) {
       // #132
-      var users = Gun().get("example").path("users");
-      users.path(Gun.text.random()).put("bob");
-      users.path(Gun.text.random()).put("sam");
+      var users = Zen().get("example").path("users");
+      users.path(Zen.text.random()).put("bob");
+      users.path(Zen.text.random()).put("sam");
       setTimeout(function () {
         users.once(function (v) {
-          expect(Gun.val.link.is(v)).to.not.be.ok();
+          expect(Zen.val.link.is(v)).to.not.be.ok();
           expect(Object.keys(v).length).to.be(3);
           done();
         });
@@ -8371,12 +8366,12 @@ describe("ZEN", function () {
             cb();
           },
           put: function (nodes, cb, opt) {
-            Gun.union(gun1, nodes);
+            Zen.union(gun1, nodes);
             cb();
           },
         },
-        gun1 = Gun({ wire: { get: hooks.get } }).get("race"),
-        gun2 = Gun({ wire: hooks }); //.get('race');
+        gun1 = Zen({ wire: { get: hooks.get } }).get("race"),
+        gun2 = Zen({ wire: hooks }); //.get('race');
 
       setTimeout(function () {
         gun2.put({ the: "data" }).key("race");
@@ -8394,12 +8389,12 @@ describe("ZEN", function () {
     });
 
     it("get pseudo merge", function (done) {
-      var gun = Gun();
+      var zen = Zen();
 
-      gun.put({ a: 1, z: -1 }).key("pseudo");
-      gun.put({ b: 2, z: 0 }).key("pseudo");
+      zen.put({ a: 1, z: -1 }).key("pseudo");
+      zen.put({ b: 2, z: 0 }).key("pseudo");
 
-      gun.get("pseudo").once(function (val) {
+      zen.get("pseudo").once(function (val) {
         expect(val.a).to.be(1);
         expect(val.b).to.be(2);
         expect(val.z).to.be(0);
@@ -8408,12 +8403,12 @@ describe("ZEN", function () {
     });
 
     it("get pseudo merge on", function (done) {
-      var gun = Gun();
+      var zen = Zen();
 
-      gun.put({ a: 1, z: -1 }).key("pseudon");
-      gun.put({ b: 2, z: 0 }).key("pseudon");
+      zen.put({ a: 1, z: -1 }).key("pseudon");
+      zen.put({ b: 2, z: 0 }).key("pseudon");
 
-      gun.get("pseudon").on(function (val) {
+      zen.get("pseudon").on(function (val) {
         if (done.val) {
           return;
         } // TODO: Maybe prevent repeat ons where there is no diff? (may not happen to after 1.0.0)
@@ -8429,19 +8424,19 @@ describe("ZEN", function () {
       // TODO: These tests should be replaced with PANIC tests!
       // ctx.halt
       var acb, bcb, ag, bg;
-      Gun.on("opt").event(function (gun, o) {
+      Zen.on("opt").event(function (zen, o) {
         if (connect) {
           return;
         }
-        gun.__.opt.wire = {
+        zen.__.opt.wire = {
           get: function (key, cb, opt) {
             key = key["#"];
             if (o.alice) {
               acb = cb;
-              ag = gun.__.graph;
+              ag = zen.__.graph;
             } else {
               bcb = cb;
-              bg = gun.__.graph;
+              bg = zen.__.graph;
             }
             var other = o.alice ? gun2 : gun1;
             if (connect) {
@@ -8454,7 +8449,7 @@ describe("ZEN", function () {
           put: function (nodes, cb, opt) {
             var other = o.alice ? gun2 : gun1;
             if (connect) {
-              Gun.union(other, nodes);
+              Zen.union(other, nodes);
             }
             cb();
           },
@@ -8469,7 +8464,7 @@ describe("ZEN", function () {
         acb(null, node);
       }
       var connect,
-        gun1 = Gun({ alice: true })
+        gun1 = Zen({ alice: true })
           .get("pseudo/merge")
           .put({ hello: "world!" }) /*.not(function(key){
 				this.put({hello: "world!"}).key(key);
@@ -8479,7 +8474,7 @@ describe("ZEN", function () {
         expect(val.hello).to.be("world!");
       });
       setTimeout(function () {
-        gun2 = Gun({ bob: true })
+        gun2 = Zen({ bob: true })
           .get("pseudo/merge")
           .put({ hi: "mars!" }); /*.not(function(key){
 					this.put({hi: "mars!"}).key(key);
@@ -8505,7 +8500,7 @@ describe("ZEN", function () {
               expect(val.hello).to.be("world!");
               expect(val.hi).to.be("mars!");
               expect(done.g1).to.be.ok();
-              Gun({});
+              Zen({});
               done();
             });
           }, 10);
@@ -8515,8 +8510,8 @@ describe("ZEN", function () {
 
     it("get map val -> map val", function (done) {
       // Terje's bug
-      var gun = Gun(); // we can test GUN locally.
-      var passengers = gun.get("passengers").not(function (key) {
+      var zen = Zen(); // we can test ZEN locally.
+      var passengers = zen.get("passengers").not(function (key) {
         this.put({
           randombob: {
             name: "Bob",
@@ -8558,8 +8553,8 @@ describe("ZEN", function () {
     });
 
     it("put map update sub", function (done) {
-      var g = Gun();
-      var list = gun.get("map/sub");
+      var g = Zen();
+      var list = zen.get("map/sub");
       list.put({ a: { x: 1 }, b: { y: 1 } });
       var check = {};
       list.map().on(function (v, f) {
@@ -8579,8 +8574,8 @@ describe("ZEN", function () {
     });
 
     it("put map update sub val", function (done) {
-      var g = Gun();
-      var list = gun.get("map/sub/val");
+      var g = Zen();
+      var list = zen.get("map/sub/val");
       list.put({ a: { x: 1 }, b: { y: 1 } });
       list.path("a").path("w").put(2);
       var check = {};
@@ -8600,8 +8595,8 @@ describe("ZEN", function () {
     });
 
     it("put map update sub val after", function (done) {
-      var g = Gun();
-      var list = gun.get("map/sub/val/after");
+      var g = Zen();
+      var list = zen.get("map/sub/val/after");
       var check = {};
       list.map().once(function (v, f) {
         check[f] = v;
@@ -8623,8 +8618,8 @@ describe("ZEN", function () {
     });
 
     it("put map update sub val after to", function (done) {
-      var g = Gun();
-      var list = gun.get("map/sub/val/after/to");
+      var g = Zen();
+      var list = zen.get("map/sub/val/after/to");
       var check = {};
       list.map().once(function (v, f) {
         //console.log("*************", f,v);return;
@@ -8645,8 +8640,8 @@ describe("ZEN", function () {
     });
 
     it("put map simple after", function (done) {
-      var g = Gun();
-      var list = gun.get("map/simple/after");
+      var g = Zen();
+      var list = zen.get("map/simple/after");
       var check = {};
       list.map().once(function (v, f) {
         check[f] = v;
@@ -8665,8 +8660,8 @@ describe("ZEN", function () {
     });
 
     it("put map simple after to", function (done) {
-      var g = Gun();
-      var list = gun.get("map/simple/after/to");
+      var g = Zen();
+      var list = zen.get("map/simple/after/to");
       var check = {};
       list.map().once(function (v, f) {
         check[f] = v;
@@ -8687,9 +8682,9 @@ describe("ZEN", function () {
     });
 
     it("put map", function (done) {
-      var gun = Gun();
-      var get = gun.get("map/that");
-      var put = gun.put({ a: 1, b: 2, c: 3 }).key("map/that");
+      var zen = Zen();
+      var get = zen.get("map/that");
+      var put = zen.put({ a: 1, b: 2, c: 3 }).key("map/that");
       get.map(function (v, f) {
         if (1 === v) {
           done.a = true;
@@ -8711,8 +8706,8 @@ describe("ZEN", function () {
     });
 
     it("put map before", function (done) {
-      var gun = Gun();
-      var get = gun.get("map/that/before");
+      var zen = Zen();
+      var get = zen.get("map/that/before");
       get.map(function (v, f) {
         if (1 === v) {
           done.a = true;
@@ -8736,9 +8731,9 @@ describe("ZEN", function () {
 
     it("get map map val", function (done) {
       // Terje's bug
-      var gun = Gun(/*{init: true}*/); // we can test GUN locally.
-      var passengers = gun.get("passengers/map").not(function (key) {
-        gun
+      var zen = Zen(/*{init: true}*/); // we can test ZEN locally.
+      var passengers = zen.get("passengers/map").not(function (key) {
+        zen
           .put({
             randombob: {
               name: "Bob",
@@ -8786,10 +8781,10 @@ describe("ZEN", function () {
     });
 
     it("not before map deep after conflict", function (done) {
-      var gun = Gun();
-      var g = gun.get("n/b/l/a/c").not(function (k) {
+      var zen = Zen();
+      var g = zen.get("n/b/l/a/c").not(function (k) {
         console.log("not", k);
-        gun
+        zen
           .put({
             a: {
               x: 1,
@@ -8820,10 +8815,10 @@ describe("ZEN", function () {
     });
 
     it("not before map deep after", function (done) {
-      var gun = Gun();
-      var g = gun.get("n/b/l/a").not(function (k) {
+      var zen = Zen();
+      var g = zen.get("n/b/l/a").not(function (k) {
         console.log("not", k);
-        gun
+        zen
           .put({
             a: {
               x: 1,
@@ -8851,8 +8846,8 @@ describe("ZEN", function () {
     });
 
     it("before map after", function (done) {
-      var gun = Gun();
-      var g = gun.get("b/l/a");
+      var zen = Zen();
+      var g = zen.get("b/l/a");
       g.put({ a: { x: 1, y: 1 } });
       var check = {};
       g.map()
@@ -8874,8 +8869,8 @@ describe("ZEN", function () {
     });
 
     it("before map deep after", function (done) {
-      var gun = Gun();
-      var g = gun.get("b/d/l/a");
+      var zen = Zen();
+      var g = zen.get("b/d/l/a");
       g.put({ a: { x: 1, y: 1 } });
       var check = {};
       g.map()
@@ -8896,8 +8891,8 @@ describe("ZEN", function () {
     });
 
     it("get map map map map", function (done) {
-      var gun = Gun();
-      var g = gun.get("m/m/m/m");
+      var zen = Zen();
+      var g = zen.get("m/m/m/m");
       console.log(
         " // TODO: BUG!!! If you make them have the same fields, they do not both iterate.",
       );
@@ -8935,9 +8930,9 @@ describe("ZEN", function () {
     });
 
     it("get users map path path any", function (done) {
-      var gun = Gun();
+      var zen = Zen();
       var check = {};
-      gun
+      zen
         .get("g/n/m/f")
         .map()
         .path("spouse")
@@ -8945,11 +8940,11 @@ describe("ZEN", function () {
         .any(function (e, v, f) {
           console.log("********", f, v, this);
           check[v.name] = true;
-          if (check["ACME INC"] && check["GUN INC"]) {
+          if (check["ACME INC"] && check["ZEN INC"]) {
             done();
           }
         });
-      gun.put({
+      zen.put({
         _: { "#": "g/n/m/f" },
         alice: {
           name: "alice",
@@ -8958,7 +8953,7 @@ describe("ZEN", function () {
             name: "carl",
             age: 25,
             work: {
-              name: "GUN INC",
+              name: "ZEN INC",
             },
           },
           bout: { huh: 1 },
@@ -8978,8 +8973,8 @@ describe("ZEN", function () {
     });
 
     it("get users map path path val after", function (done) {
-      var gun = Gun();
-      gun.put({
+      var zen = Zen();
+      zen.put({
         _: { "#": "g/n/m/f/a" },
         alice: {
           name: "alice",
@@ -8988,7 +8983,7 @@ describe("ZEN", function () {
             name: "carl",
             age: 25,
             work: {
-              name: "GUN INC",
+              name: "ZEN INC",
             },
           },
           bout: { huh: 1 },
@@ -9008,7 +9003,7 @@ describe("ZEN", function () {
       setTimeout(function () {
         //console.debug.i=1;console.log("----------------------");
         var check = {};
-        gun
+        zen
           .get("g/n/m/f/a")
           .map()
           .path("spouse")
@@ -9016,7 +9011,7 @@ describe("ZEN", function () {
           .any(function (e, v, f) {
             console.log("********", f, v, this);
             check[v.name] = true;
-            if (check["ACME INC"] && check["GUN INC"]) {
+            if (check["ACME INC"] && check["ZEN INC"]) {
               done();
             }
           });
@@ -9024,9 +9019,9 @@ describe("ZEN", function () {
     });
 
     it("get users map path path any later", function (done) {
-      var gun = Gun();
-      gun.get("g/n/m/f/l").map().path("spouse").path("work");
-      gun.put({
+      var zen = Zen();
+      zen.get("g/n/m/f/l").map().path("spouse").path("work");
+      zen.put({
         _: { "#": "g/n/m/f/l" },
         alice: {
           name: "alice",
@@ -9035,7 +9030,7 @@ describe("ZEN", function () {
             name: "carl",
             age: 25,
             work: {
-              name: "GUN INC",
+              name: "ZEN INC",
             },
           },
           bout: { huh: 1 },
@@ -9054,9 +9049,9 @@ describe("ZEN", function () {
       });
       setTimeout(function () {
         var work = {};
-        console.log("..........", gun);
+        console.log("..........", zen);
         return;
-        gun
+        zen
           .get("g/n/m/f")
           .map()
           .path("spouse")
@@ -9065,7 +9060,7 @@ describe("ZEN", function () {
             console.log("********", f, v, this);
             return;
             check[v.name] = true;
-            if (check["ACME INC"] && check["GUN INC"]) {
+            if (check["ACME INC"] && check["ZEN INC"]) {
               done();
             }
           });
@@ -9073,11 +9068,11 @@ describe("ZEN", function () {
     });
 
     it("get graph node field ref", function (done) {
-      var gun = Gun();
-      gun.put({ data: { a: 1, b: 2 } }, null, "g/n/f");
+      var zen = Zen();
+      zen.put({ data: { a: 1, b: 2 } }, null, "g/n/f");
       console.debug.i = 1;
       console.log("-----------------");
-      gun
+      zen
         .get("g/n/f")
         .path("data")
         .path("a")
@@ -9118,9 +9113,9 @@ describe("ZEN", function () {
     return;
     it("get map path val", function (done) {
       // Terje's bug
-      var gun = Gun();
+      var zen = Zen();
       var ctx = { l: -1, d: 0 };
-      var passengers = gun.get("passengers/path").not(function (key) {
+      var passengers = zen.get("passengers/path").not(function (key) {
         this.put({
           randombob: {
             name: "Bob",
@@ -9160,9 +9155,9 @@ describe("ZEN", function () {
     });
 
     it("FILT ER FILTER", function (done) {
-      var g = Gun();
-      var a = gun.put({});
-      var b = gun.put({ age: 19, name: "bob" });
+      var g = Zen();
+      var a = zen.put({});
+      var b = zen.put({ age: 19, name: "bob" });
 
       console.debug.i = 1;
       console.log("~~~~~~~~~~~~~~~~~~~~~~~~~");
@@ -9178,8 +9173,8 @@ describe("ZEN", function () {
     });
 
     it("map path before", function (done) {
-      var gun = Gun();
-      var g = gun.put({ a: { x: 1 }, b: { x: 2 }, c: { x: 3 } });
+      var zen = Zen();
+      var g = zen.put({ a: { x: 1 }, b: { x: 2 }, c: { x: 3 } });
       var c = 0;
       var m = g
         .map()
@@ -9193,8 +9188,8 @@ describe("ZEN", function () {
     });
 
     it("map path", function (done) {
-      var gun = Gun();
-      var g = gun.get("map/path/ing");
+      var zen = Zen();
+      var g = zen.get("map/path/ing");
       var c = 0;
       var m = g
         .map()
@@ -9208,8 +9203,8 @@ describe("ZEN", function () {
     });
 
     it("map path path", function (done) {
-      var gun = Gun();
-      var g = gun.get("map/path/path/ing");
+      var zen = Zen();
+      var g = zen.get("map/path/path/ing");
       var c = 0;
       var m = g
         .map()
@@ -9225,8 +9220,8 @@ describe("ZEN", function () {
 
     it("put path deep val -> path val", function (done) {
       // Terje's bug
-      var gun = Gun();
-      gun
+      var zen = Zen();
+      zen
         .put({ you: { have: { got: { to: { be: { kidding: "me!" } } } } } })
         .path("you.have.got.to.be")
         .once(function (val, field) {
@@ -9240,9 +9235,9 @@ describe("ZEN", function () {
 
     it("get set path put, map path val -> path val", function (done) {
       // Terje's bug
-      var gun = Gun();
+      var zen = Zen();
       var ctx = { l: -1, d: 0 };
-      var passengers = gun; //.get('passengers/set/path');
+      var passengers = zen; //.get('passengers/set/path');
       passengers = passengers.put({
         randombob: { name: "Bob", direction: {} },
       });
@@ -9268,7 +9263,7 @@ describe("ZEN", function () {
 
     it("path rel should not slowdown", function (done) {
       this.timeout(5000);
-      var gun = Gun(/*gopt*/).put({
+      var zen = Zen(/*gopt*/).put({
         history: {},
       });
       var prev,
@@ -9278,7 +9273,7 @@ describe("ZEN", function () {
         largest = -1,
         gone = {};
       var run = 0;
-      gun.path("history").map(function (entry, index) {
+      zen.path("history").map(function (entry, index) {
         //if(!entry){ return } // TODO: BUG! KNOWN BUG!!!!!!! FIX!!!!!
         ++run;
         var i = run + "";
@@ -9298,10 +9293,10 @@ describe("ZEN", function () {
           }, 20);
         }
         return;
-        //console.log("THE GRAPH\n", gun.__.graph);
+        //console.log("THE GRAPH\n", zen.__.graph);
         //expect(gone[index]).to.not.be.ok();
         gone[index] = diff;
-        diff = Gun.time.is() - (entry.time || prev);
+        diff = Zen.time.is() - (entry.time || prev);
         largest = largest < diff ? diff : largest;
         //console.log('turn', turns, 'index', index, 'diff', diff, 'largest', largest);
         expect(diff > max).to.not.be.ok();
@@ -9313,7 +9308,7 @@ describe("ZEN", function () {
           //console.log("was it", turns > total, 'or', diff > (max + 5));
           clearTimeout(many);
           return;
-          expect(Gun.num.is(diff)).to.be.ok();
+          expect(Zen.num.is(diff)).to.be.ok();
           if (done.c) {
             return;
           }
@@ -9321,7 +9316,7 @@ describe("ZEN", function () {
           done.c = 1;
           return;
         }
-        prev = Gun.time.is();
+        prev = Zen.time.is();
         turns += 1;
         var val = {
           x: turns,
@@ -9332,8 +9327,8 @@ describe("ZEN", function () {
         };
         var put = {};
         put[turns] = val;
-        gun.put({ history: put });
-        //gun.path(['history', turns += 1]).put({
+        zen.put({ history: put });
+        //zen.path(['history', turns += 1]).put({
       }, 1);
     });
 
@@ -9342,8 +9337,8 @@ describe("ZEN", function () {
       this.timeout(5000);
       //this.timeout(60000);
 
-      //Gun.log.debug = 1; console.log("~~~~~ START ~~~~~~");
-      var gun = Gun(gopt).put({
+      //Zen.log.debug = 1; console.log("~~~~~ START ~~~~~~");
+      var zen = Zen(gopt).put({
         history: {},
       });
       //console.log("-------- DATA SET UP -----------");
@@ -9353,13 +9348,13 @@ describe("ZEN", function () {
         total = 100,
         largest = -1,
         gone = {};
-      gun.path("history").map(function (entry, index) {
+      zen.path("history").map(function (entry, index) {
         //if(!entry){ return } // TODO: BUG! KNOWN BUG!!!!!!! FIX!!!!!
         //console.log("WAT", index, entry);
-        //console.log("THE GRAPH\n", gun.__.graph);
+        //console.log("THE GRAPH\n", zen.__.graph);
         //expect(gone[index]).to.not.be.ok();
         gone[index] = diff;
-        diff = Gun.time.is() - (entry.time || prev);
+        diff = Zen.time.is() - (entry.time || prev);
         largest = largest < diff ? diff : largest;
         console.log(
           "turn",
@@ -9379,7 +9374,7 @@ describe("ZEN", function () {
       var many = setInterval(function () {
         if (turns > total || diff > max + 5) {
           clearTimeout(many);
-          expect(Gun.num.is(diff)).to.be.ok();
+          expect(Zen.num.is(diff)).to.be.ok();
           if (done.c) {
             return;
           }
@@ -9387,9 +9382,9 @@ describe("ZEN", function () {
           done.c = 1;
           return;
         }
-        prev = Gun.time.is();
-        Gun.log.base = Gun.log.ref = Gun.log.fer = prev;
-        //if(turns === 0){ Gun.log.debug = 1; console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"); }
+        prev = Zen.time.is();
+        Zen.log.base = Zen.log.ref = Zen.log.fer = prev;
+        //if(turns === 0){ Zen.log.debug = 1; console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"); }
         //console.log("-------------- ", turns + 1, "-----------------");
         var val = {
           TURN: turns + 1,
@@ -9400,15 +9395,15 @@ describe("ZEN", function () {
           time: prev,
         };
         //var put = {}; put[turns += 1] = val;
-        //gun.put({history: put});
-        gun.path(["history", (turns += 1)]).put(val);
+        //zen.put({history: put});
+        zen.path(["history", (turns += 1)]).put(val);
       }, 1);
     });
 
-    it("gun get on, later gun put key", function (done) {
-      var gun = Gun();
+    it("zen get on, later zen put key", function (done) {
+      var zen = Zen();
 
-      var keyC = gun.get("keyC").on(function (val) {
+      var keyC = zen.get("keyC").on(function (val) {
         expect(val.hello).to.be("world");
         if (done.done) {
           return;
@@ -9418,23 +9413,23 @@ describe("ZEN", function () {
       });
 
       setTimeout(function () {
-        gun.put({ hello: "world" }).key("keyC");
+        zen.put({ hello: "world" }).key("keyC");
       }, 100);
     });
 
-    it("gun get put, sub path put, original val", function (done) {
+    it("zen get put, sub path put, original val", function (done) {
       // bug from Jesse working on Trace //
-      var gun = Gun(gopt).get("players");
+      var zen = Zen(gopt).get("players");
 
-      gun.put({
+      zen.put({
         taken: true,
         history: { 0: {}, 1: {} },
       });
 
-      gun.path("history").put(null).back().path("taken").put(false);
+      zen.path("history").put(null).back().path("taken").put(false);
 
-      // TODO: BUG! There is a variation of this, where we just do `.val` rather than `gun.val` and `.val` by itself (chained off of the sub-paths) doesn't even get called. :(
-      gun.on(function (players) {
+      // TODO: BUG! There is a variation of this, where we just do `.val` rather than `zen.val` and `.val` by itself (chained off of the sub-paths) doesn't even get called. :(
+      zen.on(function (players) {
         // this val is subscribed to the original put and therefore does not get any of the sub-path listeners, therefore it gets called EARLY with the original/old data rather than waiting for the sub-path data to "finish" and then get called.
         expect(players.history).to.be(null);
         expect(players.taken).to.be(false);
@@ -9446,10 +9441,10 @@ describe("ZEN", function () {
       });
     });
 
-    it("gun put recursive path slowdown", function (done) {
+    it("zen put recursive path slowdown", function (done) {
       this.timeout(5000);
-      var gun = Gun();
-      gun.__.opt.wire.put = null;
+      var zen = Zen();
+      zen.__.opt.wire.put = null;
       function put(num, t) {
         var now = new Date().getTime();
         var cb;
@@ -9461,7 +9456,7 @@ describe("ZEN", function () {
               );
             };
           }
-          Gun.ify({
+          Zen.ify({
             //hello: 'world'}, cb);
             deeply: {
               nested: i,
@@ -9480,7 +9475,7 @@ describe("ZEN", function () {
 			put(5000);*/
       put(1000, true);
 
-      var gun2 = Gun();
+      var gun2 = Zen();
       gun2.__.opt.wire.put = null;
       function put2(num, t) {
         var now = new Date().getTime();
@@ -9506,9 +9501,9 @@ describe("ZEN", function () {
         }
         return new Date().getTime() - now;
       }
-      Gun.log.start = Gun.time.is();
+      Zen.log.start = Zen.time.is();
       put2(1);
-      put2(1000); // TODO: BUG! Interesting! If you add another 0 it causes a stack overflow! If I make Gun.time.now() not recurse then it runs but takes 4x as long. Even on the 10k ops there seems to be about a 4x overhead with the API versus raw serializer.
+      put2(1000); // TODO: BUG! Interesting! If you add another 0 it causes a stack overflow! If I make Zen.time.now() not recurse then it runs but takes 4x as long. Even on the 10k ops there seems to be about a 4x overhead with the API versus raw serializer.
       put2(1, true);
       //put2(2);
       //put2(10);
@@ -9520,7 +9515,7 @@ describe("ZEN", function () {
     it("choke time.now by using a while loop", function () {
       var i = 10; //100000; // causes an overflow.
       while (--i) {
-        Gun.time.now();
+        Zen.time.now();
       }
     });
     /* // TODO: These tests should be deleted.
@@ -9532,7 +9527,7 @@ describe("ZEN", function () {
 				},0);
 			}
 			return;
-				Gun.schedule(start, function(){
+				Zen.schedule(start, function(){
 					console.log("ended in", (Date.now() - start)/1000);
 				});
 				setImmediate(function(){
@@ -9547,7 +9542,7 @@ describe("ZEN", function () {
 			function speed(other){
 				var i = 10000;
 				while(i--){
-					var $ = {soul: Gun.text.random()};
+					var $ = {soul: Zen.text.random()};
 					var at = {node: {_: {}}};
 					var obj = {
 						deeply: {
@@ -9583,58 +9578,58 @@ describe("ZEN", function () {
 			speed(100000000, foo);
 			console.log('w/ named fn', (Date.now() - start)/1000);
 		});
-		it("gun put recursive path slowdown MUTANT TEST", function(done){
+		it("zen put recursive path slowdown MUTANT TEST", function(done){
 			this.timeout(30000);
 
-			Gun.chain.put = function(val, cb, opt){
-				var gun = this.chain(), obj;
-				var drift = Gun.time.now(), call = {};
+			Zen.chain.put = function(val, cb, opt){
+				var zen = this.chain(), obj;
+				var drift = Zen.time.now(), call = {};
 				cb = cb || function(){};
-				gun._.at('soul').event(
+				zen._.at('soul').event(
 				//(
 				function($){
-					var chain = $.$ || gun;
-					var ctx = {}, obj = val, $ = Gun.obj.copy($);
+					var chain = $.$ || zen;
+					var ctx = {}, obj = val, $ = Zen.obj.copy($);
 					var hash = $.field? $.soul + $.field : ($.from? $.from + ($.at || '') : $.soul);
 					if(call[hash]){ return }
-					gun.__.meta($.soul).put = true;
+					zen.__.meta($.soul).put = true;
 					call[hash] = true;
-					if(Gun.is.once(obj)){
+					if(Zen.is.once(obj)){
 						if($.from && $.at){
 							$.soul = $.from;
 							$.field = $.at;
 						} // no else!
 						if(!$.field){
-							return cb.call(gun, {err: Gun.log("No field exists for " + (typeof obj) + "!")});
+							return cb.call(zen, {err: Zen.log("No field exists for " + (typeof obj) + "!")});
 						} else
-						if(gun.__.graph[$.soul]){
+						if(zen.__.graph[$.soul]){
 							ctx.tmp = {};
 							ctx.tmp[ctx.field = $.field] = obj;
 							obj = ctx.tmp;
 						} else {
-							return cb.call(gun, {err: Gun.log("No node exists to put " + (typeof obj) + " in!")});
+							return cb.call(zen, {err: Zen.log("No node exists to put " + (typeof obj) + " in!")});
 						}
 					}
-					if(Gun.obj.is(obj)){
+					if(Zen.obj.is(obj)){
 						if($.field && !ctx.field){
 							ctx.tmp = {};
 							ctx.tmp[ctx.field = $.field] = obj;
 							obj = ctx.tmp;
 						}
-						Gun.ify(obj || val, function(env, cb){
+						Zen.ify(obj || val, function(env, cb){
 							var at;
 							if(!env || !(at = env.at) || !env.at.node){ return }
 							if(!at.node._){
 								at.node._ = {};
 							}
-							if(!Gun.node.soul(at.node)){
+							if(!Zen.node.soul(at.node)){
 								if(obj === at.obj){
 									env.graph[at.node._['#'] = at.soul = $.soul] = at.node;
 									cb(at, at.soul);
 								} else {
 									function path(err, data){
 										if(at.soul){ return }
-										at.soul = Gun.node.soul(data) || Gun.node.soul(at.obj) || Gun.roulette.call(gun); // TODO: refactor Gun.roulette!
+										at.soul = Zen.node.soul(data) || Zen.node.soul(at.obj) || Zen.roulette.call(zen); // TODO: refactor Zen.roulette!
 										env.graph[at.node._['#'] = at.soul] = at.node;
 							//var start = performance.now();
 										cb(at, at.soul);
@@ -9645,37 +9640,37 @@ describe("ZEN", function () {
 								//var diff1 = (first - start), diff2 = (second - first), diff3 = (third - second);
 								//(diff1 || diff2 || diff3) && console.log(diff1, '    ', diff2,  '    ', diff3);
 							}
-							if(!at.node._[Gun._.state]){
-								at.node._[Gun._.state] = {};
+							if(!at.node._[Zen._.state]){
+								at.node._[Zen._.state] = {};
 							}
 							if(!at.field){ return }
-							at.node._[Gun._.state][at.field] = drift;
+							at.node._[Zen._.state][at.field] = drift;
 						})(function(err, ify){
 							//console.log("chain.put PUT <----", ify.graph, '\n');
-							if(err || ify.err){ return cb.call(gun, err || ify.err) }
-							if(err = Gun.union(gun, ify.graph).err){ return cb.call(gun, err) }
-							if($.from = Gun.val.link.is(ify.root[$.field])){ $.soul = $.from; $.field = null }
-							Gun.obj.map(ify.graph, function(node, soul){ Gun.union(gun, Gun.union.pseudo(soul)) });
-							gun._.at('soul').emit({soul: $.soul, field: $.field, key: $.key, PUT: 'SOUL', WAS: 'ON'}); // WAS ON
+							if(err || ify.err){ return cb.call(zen, err || ify.err) }
+							if(err = Zen.union(zen, ify.graph).err){ return cb.call(zen, err) }
+							if($.from = Zen.val.link.is(ify.root[$.field])){ $.soul = $.from; $.field = null }
+							Zen.obj.map(ify.graph, function(node, soul){ Zen.union(zen, Zen.union.pseudo(soul)) });
+							zen._.at('soul').emit({soul: $.soul, field: $.field, key: $.key, PUT: 'SOUL', WAS: 'ON'}); // WAS ON
 							//return cb(null, true);
-							if(Gun.fn.is(ctx.hook = gun.__.opt.hooks.put)){
+							if(Zen.fn.is(ctx.hook = zen.__.opt.hooks.put)){
 								ctx.hook(ify.graph, function(err, data){ // now iterate through those nodes to a persistence layer and get a callback once all are saved
-									if(err){ return cb.call(gun, err) }
-									return cb.call(gun, null, data);
+									if(err){ return cb.call(zen, err) }
+									return cb.call(zen, null, data);
 								}, opt);
 							} else {
 								//console.Log("Warning! You have no persistence layer to save to!");
-								cb.call(gun, null); // This is in memory success, hardly "success" at all.
+								cb.call(zen, null); // This is in memory success, hardly "success" at all.
 							}
 						});
 					}
 				})
-				gun._.at('soul').emit({soul: Gun.roulette.call(gun), field: null, empty: true});
-				return gun;
+				zen._.at('soul').emit({soul: Zen.roulette.call(zen), field: null, empty: true});
+				return zen;
 			}
 
-			var gun = Gun(); //.get('bug').put({});
-			gun.__.opt.hooks.put = null;
+			var zen = Zen(); //.get('bug').put({});
+			zen.__.opt.hooks.put = null;
 			function put(num, t) {
 				var now = new Date().getTime();
 				var cb;
@@ -9686,7 +9681,7 @@ describe("ZEN", function () {
 							t && done();
 						}
 					}
-					gun.put({   //hello: 'world'}, cb);
+					zen.put({   //hello: 'world'}, cb);
 						deeply: {
 							nested: i
 						}
@@ -9705,13 +9700,13 @@ describe("ZEN", function () {
 			put(10000, true);
 		});
 		*/
-    it("gun get empty set, path not -> this put", function (done) {
+    it("zen get empty set, path not -> this put", function (done) {
       // Issue #99 #101, bug in survey and trace game.
       var test = { c: 0 },
         u;
-      var gun = Gun();
-      var game = gun.get("some/not/yet/set/put/thing").not(function (key) {
-        gun.put({ alias: {} }).key(key);
+      var zen = Zen();
+      var game = zen.get("some/not/yet/set/put/thing").not(function (key) {
+        zen.put({ alias: {} }).key(key);
       }); //.set();
       var me = game.path("alias").on(function (val) {
         if (!done.put) {
@@ -9719,7 +9714,7 @@ describe("ZEN", function () {
         }
         expect(val).to.not.be(u);
         expect(val.a).to.be("b");
-        var meid = Gun.node.soul(val);
+        var meid = Zen.node.soul(val);
         var self = this;
         /*
 				expect(self === game).to.not.be.ok();
@@ -9737,11 +9732,11 @@ describe("ZEN", function () {
       }, 100);
     });
 
-    it("gun get empty set path empty later path put multi", function (done) {
+    it("zen get empty set path empty later path put multi", function (done) {
       // Issue #99 #101, bug in survey and trace game. // ctx.halt
       done.c = 0;
-      var gun = Gun();
-      var data = gun.get("some/not/yet/set/put/thing/2");
+      var zen = Zen();
+      var data = zen.get("some/not/yet/set/put/thing/2");
       var path = data.path("sub");
       function put(d, t, f) {
         setTimeout(function () {
@@ -9761,8 +9756,8 @@ describe("ZEN", function () {
 
     it("ToDo", function (done) {
       // Simulate ToDo app!
-      var gun = Gun().get("example/todo/data");
-      gun.on(function renderToDo(val) {
+      var zen = Zen().get("example/todo/data");
+      zen.on(function renderToDo(val) {
         if (done.done) {
           return;
         }
@@ -9772,28 +9767,28 @@ describe("ZEN", function () {
           return done();
         }
         delete val._;
-        Gun.obj.map(val, function (val, field) {
+        Zen.obj.map(val, function (val, field) {
           return (done.id = field);
         });
         expect(val[done.id]).to.be("groceries");
       });
       setTimeout(function () {
         // form submit
-        gun.path("random1").put("groceries");
+        zen.path("random1").put("groceries");
         setTimeout(function () {
           // clear off element
           done.clear = true;
-          gun.path(done.id).put(null);
+          zen.path(done.id).put(null);
         }, 100);
       }, 200);
     });
 
-    it("gun put null path on put sub object", function (done) {
+    it("zen put null path on put sub object", function (done) {
       // consensus4's bug
       done.c = 1;
-      var gun = Gun();
-      //Gun.log.verbose = true;
-      var game = gun
+      var zen = Zen();
+      //Zen.log.verbose = true;
+      var game = zen
         .put({ board: null, teamA: null, teamB: null, turn: null })
         .key("the/game");
       game.path("board").on(function (board, field) {
@@ -9817,10 +9812,10 @@ describe("ZEN", function () {
       }, 100);
     });
 
-    it("get init put map -> put, foreach gun path map", function (done) {
+    it("get init put map -> put, foreach zen path map", function (done) {
       // replicate Jesse's Trace game bug
       done.c = 0;
-      var gun = Gun(gopt)
+      var zen = Zen(gopt)
         .opt({ init: true })
         .get("players")
         .init()
@@ -9844,17 +9839,17 @@ describe("ZEN", function () {
           },
         )
         .once(function (p) {
-          done.p = Gun.node.soul(p);
-          done.m = Gun.val.link.is(p[0]);
-          expect(Gun.val.link.is(p[0])).to.be.ok();
-          expect(Gun.val.link.is(p[1])).to.be.ok();
-          expect(Gun.val.link.is(p[2])).to.be.ok();
-          expect(Gun.val.link.is(p[3])).to.be.ok();
+          done.p = Zen.node.soul(p);
+          done.m = Zen.val.link.is(p[0]);
+          expect(Zen.val.link.is(p[0])).to.be.ok();
+          expect(Zen.val.link.is(p[1])).to.be.ok();
+          expect(Zen.val.link.is(p[2])).to.be.ok();
+          expect(Zen.val.link.is(p[3])).to.be.ok();
         });
 
       var players = [],
         me;
-      gun.map(function (player, number) {
+      zen.map(function (player, number) {
         players[number] = player;
         players[number].history = [];
         if (!player.taken && !me) {
@@ -9871,9 +9866,9 @@ describe("ZEN", function () {
         }
       });
 
-      Gun.list.map([0, 1, 2, 3], function (player, number) {
+      Zen.list.map([0, 1, 2, 3], function (player, number) {
         number = number - 1;
-        gun.path(number + ".history").map(function (entry, logNum) {
+        zen.path(number + ".history").map(function (entry, logNum) {
           done.c++;
           players[number].history[logNum] = entry;
           expect(entry.x).to.be(1);
@@ -9886,12 +9881,12 @@ describe("ZEN", function () {
       });
     });
 
-    it("gun get path empty val", function (done) {
+    it("zen get path empty val", function (done) {
       // flip flop bug
       done.c = 0;
       var u;
-      var gun = Gun(gopt);
-      var game = gun.get("game1/players");
+      var zen = Zen(gopt);
+      var game = zen.get("game1/players");
       var me = game.path("player1").once(function (val) {
         if (!done.c) {
           done.fail = true;
@@ -9909,11 +9904,11 @@ describe("ZEN", function () {
       }, 10);
     });
 
-    it("gun get path empty on", function (done) {
+    it("zen get path empty on", function (done) {
       done.c = 0;
       var u;
-      var gun = Gun(gopt);
-      var game = gun.get("game2/players");
+      var zen = Zen(gopt);
+      var game = zen.get("game2/players");
       var me = game.path("player2").on(function (val) {
         if (!done.c) {
           done.fail = true;
@@ -9936,20 +9931,20 @@ describe("ZEN", function () {
       }, 10);
     });
 
-    it("gun get path empty not", function (done) {
+    it("zen get path empty not", function (done) {
       var u;
-      var gun = Gun(gopt).opt({ init: true });
-      var game = gun.get("game3/players").init();
+      var zen = Zen(gopt).opt({ init: true });
+      var game = zen.get("game3/players").init();
       var me = game.path("player3").not(function (field) {
         expect(field).to.be("player3");
         done();
       });
     });
 
-    it("gun get path empty init", function (done) {
+    it("zen get path empty init", function (done) {
       var u;
-      var gun = Gun(gopt).opt({ init: true });
-      var game = gun.get("game4/players").init();
+      var zen = Zen(gopt).opt({ init: true });
+      var game = zen.get("game4/players").init();
       var me = game
         .path("player4")
         .init()
@@ -9964,10 +9959,10 @@ describe("ZEN", function () {
     });
 
     it("no invalid graph", function (done) {
-      var gun = Gun({
+      var zen = Zen({
         wire: {
           put: function (graph) {
-            expect(Gun.is.graph(graph)).to.be.ok();
+            expect(Zen.is.graph(graph)).to.be.ok();
             if (done.c) {
               return;
             }
@@ -9978,18 +9973,18 @@ describe("ZEN", function () {
           },
         },
       }).get("example/todo/data/graph");
-      gun.on(function renderToDo(val) {
+      zen.on(function renderToDo(val) {
         done.on = true;
       });
       setTimeout(function () {
-        gun.path(Gun.text.random()).put("hoorah");
+        zen.path(Zen.text.random()).put("hoorah");
       }, 100);
     });
 
     it("no undefined field", function (done) {
-      var gun = Gun();
-      var chat = gun.get("example/chat/data/graph/field").not(function (key) {
-        gun
+      var zen = Zen();
+      var chat = zen.get("example/chat/data/graph/field").not(function (key) {
+        zen
           .put({ 1: { who: "Welcome", what: "to the chat app!", when: 1 } })
           .key(key);
       });
@@ -10009,22 +10004,22 @@ describe("ZEN", function () {
       });
       setTimeout(function () {
         var msg = {};
-        msg.when = Gun.time.is();
+        msg.when = Zen.time.is();
         msg.what = "lol!";
         msg.who = "Alice";
-        chat.path(msg.when + "_" + Gun.text.random(4)).put(msg);
+        chat.path(msg.when + "_" + Zen.text.random(4)).put(msg);
       }, 100);
     });
     /* // This test didn't work for what I was wanting to test :(, will either remove it or modify it if I think of a clever solution to test what I want to test.
 		it("simulate json app", function(done){
 			var peers = {};
-			peers.server = Gun();
+			peers.server = Zen();
 			function wipeServer(){
-				peers.server = Gun();
+				peers.server = Zen();
 			}
 			var gopt = {wire:{
 				put: function(graph, cb){
-					Gun.union(peers.server, graph);
+					Zen.union(peers.server, graph);
 					cb(null);
 				}
 				,get: function(lex, cb){
@@ -10036,7 +10031,7 @@ describe("ZEN", function () {
 							if(g[soul]){
 								var n = g[soul];
 								cb(null, n);
-								cb(null, Gun.is.node.ify({}, soul));
+								cb(null, Zen.is.node.ify({}, soul));
 								cb(null, {});
 							}
 						}
@@ -10050,16 +10045,16 @@ describe("ZEN", function () {
 							}
 							var node = graph[soul];
 							cb(null, node);
-							cb(null, Gun.is.node.ify({}, soul));
+							cb(null, Zen.is.node.ify({}, soul));
 							cb(null, {});
 						},5);
 					},5);
 				}
 			}}
-			peers.g = Gun(gopt);
+			peers.g = Zen(gopt);
 			function reload(){
-				peers.localStorage = Gun.obj.copy(peers.g.__.graph);
-				peers.g2 = Gun(gopt);
+				peers.localStorage = Zen.obj.copy(peers.g.__.graph);
+				peers.g2 = Zen(gopt);
 			}
 			var ref = peers.g.get('example/json/data/test');
 			setTimeout(function(){
@@ -10068,7 +10063,7 @@ describe("ZEN", function () {
 					wipeServer();
 					reload();
 					setTimeout(function(){
-						Gun.log.debug = 1; console.log("~~~~~~~~~~~~~~~~~~~");
+						Zen.log.debug = 1; console.log("~~~~~~~~~~~~~~~~~~~");
 						var ref = peers.g2.get('example/json/data/test');
 						ref.on(function(data){
 							console.log("on!", data);
@@ -10079,11 +10074,11 @@ describe("ZEN", function () {
 		});
 		*/
     it("simulate chat app", function (done) {
-      var server = Gun();
+      var server = Zen();
       var gopt = {
         wire: {
           put: function (graph, cb) {
-            Gun.union(server, graph);
+            Zen.union(server, graph);
             cb(null);
           },
           get: function (lex, cb) {
@@ -10100,15 +10095,15 @@ describe("ZEN", function () {
               var node = graph[soul];
               //console.log("replying to Bob...", node);
               cb(null, node);
-              cb(null, Gun.is.node.ify({}, soul));
+              cb(null, Zen.is.node.ify({}, soul));
               cb(null, {});
             }, 5);
           },
         },
       };
-      var gun = Gun(gopt);
-      var chat = gun.get("example/chat/data/graph/field").not(function (key) {
-        gun
+      var zen = Zen(gopt);
+      var chat = zen.get("example/chat/data/graph/field").not(function (key) {
+        zen
           .put({ 1: { who: "Welcome", what: "to the chat app!", when: 1 } })
           .key(key);
       });
@@ -10120,8 +10115,8 @@ describe("ZEN", function () {
         expect(val.what).to.be.ok();
       });
       setTimeout(function () {
-        var gun2 = Gun(gopt);
-        //Gun.log.debug =1; console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        var gun2 = Zen(gopt);
+        //Zen.log.debug =1; console.log("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         var chat2 = gun2
           .get("example/chat/data/graph/field")
           .not(function (key) {
@@ -10141,27 +10136,27 @@ describe("ZEN", function () {
       }, 100);
     });
 
-    it.skip("gun path via gun path", function (done) {
+    it.skip("zen path via zen path", function (done) {
       // TODO: Future feature?
-      var gun = Gun();
-      var book = gun.put({ name: "Potato Cooking" });
-      var author = gun.put({ name: "Bob Bobson" });
+      var zen = Zen();
+      var book = zen.put({ name: "Potato Cooking" });
+      var author = zen.put({ name: "Bob Bobson" });
       author.path(book.path("name")).put(book);
     });
 
-    it("gun set", function (done) {
-      var gun = Gun();
-      var users = gun.get("users/s");
-      var alice = gun
+    it("zen set", function (done) {
+      var zen = Zen();
+      var users = zen.get("users/s");
+      var alice = zen
         .put({ name: "alice", birth: Math.random() })
         .key("person/alice");
-      var bob = gun
+      var bob = zen
         .put({ name: "bob", birth: Math.random() })
         .key("person/bob");
-      var carl = gun
+      var carl = zen
         .put({ name: "carl", birth: Math.random() })
         .key("person/carl");
-      var dave = gun
+      var dave = zen
         .put({ name: "dave", birth: Math.random() })
         .key("person/dave");
 
@@ -10183,7 +10178,7 @@ describe("ZEN", function () {
       bob.path("friends").set(alice);
       dave.path("friends").set(alice).back().set(carl);
 
-      var team = gun.get("team/lions").put({ name: "Lions" });
+      var team = zen.get("team/lions").put({ name: "Lions" });
       team.path("members").set(alice);
       team.path("members").set(bob);
       team.path("members").set(alan); // Test set with set
@@ -10217,16 +10212,16 @@ describe("ZEN", function () {
 
     it("get context", function (done) {
       // TODO: HUH?????? This was randomly causing errors?
-      var gun = Gun();
-      var ref = gun.get("ctx/lol").get("ctx/foo").put({ hello: "world" });
-      gun.get("ctx/lol").once(function (implicit) {
+      var zen = Zen();
+      var ref = zen.get("ctx/lol").get("ctx/foo").put({ hello: "world" });
+      zen.get("ctx/lol").once(function (implicit) {
         done.fail = true;
         expect(implicit).to.not.be.ok();
       });
-      gun.get("ctx/lol").not(function () {
+      zen.get("ctx/lol").not(function () {
         done.please = true;
       });
-      gun.get("ctx/foo").once(function (data) {
+      zen.get("ctx/foo").once(function (data) {
         expect(data.hello).to.be("world");
         expect(done.fail).to.not.be.ok();
         expect(done.please).to.be.ok();
@@ -10236,10 +10231,10 @@ describe("ZEN", function () {
 
     it.skip("chaining val", function (done) {
       // Not implemented yet!
-      var gun = Gun();
-      gun.get("users/cv").set(gun.put({ name: "alice" }));
-      gun.get("users/cv").set(gun.put({ name: "bob" }));
-      gun
+      var zen = Zen();
+      zen.get("users/cv").set(zen.put({ name: "alice" }));
+      zen.get("users/cv").set(zen.put({ name: "bob" }));
+      zen
         .get("users/cv")
         .once()
         .map(function (person) {
@@ -10253,7 +10248,7 @@ describe("ZEN", function () {
             done.carl = true;
           }
         });
-      gun.get("users/cv").set(gun.put({ name: "carl" }));
+      zen.get("users/cv").set(zen.put({ name: "carl" }));
       setTimeout(function () {
         console.log("wha?", done.alice, done.bob, done.carl);
         expect(done.alice).to.be.ok();
@@ -10269,16 +10264,16 @@ describe("ZEN", function () {
       // must be at least three layers
       var obj = { 1: { 2: { data: false } } };
 
-      // define gun and place the deep object
-      gun = Gun().get("deep change").put(obj);
+      // define zen and place the deep object
+      zen = Zen().get("deep change").put(obj);
 
       // listen for changes
-      Gun.log.debug = 1;
+      Zen.log.debug = 1;
       console.log("------------------");
-      gun.path("1.2.data").on(function (data) {
+      zen.path("1.2.data").on(function (data) {
         console.log("??????", data);
         if (data) {
-          // gun will never receive the "true" update
+          // zen will never receive the "true" update
           done();
         }
       });
@@ -10287,14 +10282,14 @@ describe("ZEN", function () {
       // synchronous deviations will succeed
       setTimeout(function () {
         obj[1][2].data = true;
-        gun.put(obj);
+        zen.put(obj);
       }, 50);
     });
 
     it("should allow more than 2 items depthwise", function (done) {
       // Issue #186
-      var gun = Gun();
-      var list = gun.get("list");
+      var zen = Zen();
+      var list = zen.get("list");
       // create a list two layers deep
       list.put({
         depth: 1,
@@ -10303,7 +10298,7 @@ describe("ZEN", function () {
         },
       });
 
-      //Gun.log.verbose=true;Gun.log.debug=1;console.log("----------------------");
+      //Zen.log.verbose=true;Zen.log.debug=1;console.log("----------------------");
       // append a third item
       list.path("next").put({
         to: {
@@ -10313,7 +10308,7 @@ describe("ZEN", function () {
       setTimeout(function () {
         //list.path('next').once('wat');
 
-        //console.log("!!!!!!", gun.__.graph);
+        //console.log("!!!!!!", zen.__.graph);
 
         // try to read the third item
         list.path("next.to").once(function () {
@@ -10351,18 +10346,18 @@ describe("ZEN", function () {
       var bsmi = {
         group1: {
           item1: {
-            10: Gun.obj.copy(obj),
+            10: Zen.obj.copy(obj),
           },
         } /*,
 				group2: {
 					item2: {
-						10: Gun.obj.copy(obj)
+						10: Zen.obj.copy(obj)
 					}
 				}*/,
       };
 
-      var gun = Gun();
-      var BSMI = gun.get("bsmi").put(bsmi);
+      var zen = Zen();
+      var BSMI = zen.get("bsmi").put(bsmi);
 
       // path is <group><itemId><powerRail>
       //BSMI  is a set  holding all items
@@ -10401,27 +10396,27 @@ describe("ZEN", function () {
 
     it("Don't put on parents", function (done) {
       // TODO: ADD TO 0.5 BRANCH! // Another Stefdv find.
-      var test = gun.get("test");
+      var test = zen.get("test");
       test.path("try.this.at.lvl4").put({ msg: "hoi" });
       test.once(function (node, b) {
         delete node._;
-        expect(Gun.obj.empty(node, "try")).to.be.ok();
-        node = Gun.obj.copy(gun.__.graph[Gun.val.link.is(node.try)]);
+        expect(Zen.obj.empty(node, "try")).to.be.ok();
+        node = Zen.obj.copy(zen.__.graph[Zen.val.link.is(node.try)]);
 
         delete node._;
-        expect(Gun.obj.empty(node, "this")).to.be.ok();
-        node = Gun.obj.copy(gun.__.graph[Gun.val.link.is(node.this)]);
+        expect(Zen.obj.empty(node, "this")).to.be.ok();
+        node = Zen.obj.copy(zen.__.graph[Zen.val.link.is(node.this)]);
 
         delete node._;
-        expect(Gun.obj.empty(node, "at")).to.be.ok();
-        node = Gun.obj.copy(gun.__.graph[Gun.val.link.is(node.at)]);
+        expect(Zen.obj.empty(node, "at")).to.be.ok();
+        node = Zen.obj.copy(zen.__.graph[Zen.val.link.is(node.at)]);
 
         delete node._;
-        expect(Gun.obj.empty(node, "lvl4")).to.be.ok();
-        node = Gun.obj.copy(gun.__.graph[Gun.val.link.is(node.lvl4)]);
+        expect(Zen.obj.empty(node, "lvl4")).to.be.ok();
+        node = Zen.obj.copy(zen.__.graph[Zen.val.link.is(node.lvl4)]);
 
         delete node._;
-        expect(Gun.obj.empty(node, "msg")).to.be.ok();
+        expect(Zen.obj.empty(node, "msg")).to.be.ok();
         expect(node.msg).to.be("hoi");
         done();
       });
@@ -10429,9 +10424,9 @@ describe("ZEN", function () {
 
     it("Deep not fails to fire", function (done) {
       // @d3x0r's bug!
-      var gun = Gun().get("org.d3x0r.voxelarium.local." + Gun.text.random());
+      var zen = Zen().get("org.d3x0r.voxelarium.local." + Zen.text.random());
 
-      var player = gun.path("player");
+      var player = zen.path("player");
 
       player
         .path("id")
@@ -10477,9 +10472,9 @@ describe("ZEN", function () {
       this.timeout(9000);
       var localStorage = localStorage || { clear: function () {} };
       localStorage.clear();
-      var gun = Gun();
+      var zen = Zen();
       var text = String.random(1024 * 1024 * 6);
-      gun.put({ i: text }, function (ack) {
+      zen.put({ i: text }, function (ack) {
         var err = ack.err,
           ok = ack.ok;
         if (done.c) {
@@ -10499,14 +10494,14 @@ describe("ZEN", function () {
       this.timeout(9000);
       var localStorage = localStorage || { clear: function () {} };
       localStorage.clear();
-      var gun = Gun();
+      var zen = Zen();
       var i = 999,
         obj = {};
       while (--i) {
         obj[i] = String.random(99);
       }
       //console.log("save:", obj);
-      gun.get("lSack").put(obj, function (ack) {
+      zen.get("lSack").put(obj, function (ack) {
         //console.log("ack:", ack)
         done();
         done.c = 1;
@@ -10516,15 +10511,15 @@ describe("ZEN", function () {
 
   describe("Streams", function () {
     return;
-    var gun = Gun(),
+    var zen = Zen(),
       g = function () {
-        return Gun({ wire: { get: ctx.get } });
+        return Zen({ wire: { get: ctx.get } });
       },
       ctx = { gen: 9, extra: 100, network: 2 };
 
     it("prep hook", function (done) {
       this.timeout(ctx.gen * ctx.extra);
-      var peer = Gun(),
+      var peer = Zen(),
         ref;
       ctx.get = function (key, cb) {
         var c = 0;
@@ -10535,13 +10530,13 @@ describe("ZEN", function () {
         }
         setTimeout(function badNetwork() {
           c += 1;
-          var soul = Gun.node.soul(ref);
+          var soul = Zen.node.soul(ref);
           var graph = {};
           var data = /*graph[soul] = */ { _: { "#": soul, ">": {} } };
           if (!ref["f" + c]) {
             return (cb(null, data), cb(null, {}));
           }
-          data._[Gun._.state]["f" + c] = ref._[Gun._.state]["f" + c];
+          data._[Zen._.state]["f" + c] = ref._[Zen._.state]["f" + c];
           data["f" + c] = ref["f" + c];
           cb(null, data);
           setTimeout(badNetwork, ctx.network);
@@ -10552,20 +10547,20 @@ describe("ZEN", function () {
         ctx.get.fake["f" + i] = i;
         ctx.length = i;
       }
-      ctx.get.fake = Gun.is.node.ify(ctx.get.fake, "big");
+      ctx.get.fake = Zen.is.node.ify(ctx.get.fake, "big");
       var big = peer.put(ctx.get.fake).once(function (val) {
         ref = val;
         ctx.get({ "#": "big" }, function (err, graph) {
-          if (Gun.obj.empty(graph)) {
+          if (Zen.obj.empty(graph)) {
             done();
           }
         });
-        gun.opt({ wire: { get: ctx.get } });
+        zen.opt({ wire: { get: ctx.get } });
       });
     });
 
     it("map chain", function (done) {
-      var set = gun.put({
+      var set = zen.put({
         a: { here: "you" },
         b: { go: "dear" },
         c: { sir: "!" },
@@ -10590,7 +10585,7 @@ describe("ZEN", function () {
     });
 
     it("map chain path", function (done) {
-      var set = gun.put({
+      var set = zen.put({
         a: { name: "Mark", pet: { coat: "tabby", name: "Hobbes" } },
         b: { name: "Alice", pet: { coat: "calico", name: "Cali" } },
         c: { name: "Bob", pet: { coat: "tux", name: "Casper" } },
@@ -10675,10 +10670,10 @@ describe("ZEN", function () {
           delete obj._;
           expect(obj.f1).to.be(1);
           expect(obj["f" + ctx.length]).to.be(ctx.length);
-          var raw = Gun.obj.copy(ctx.get.fake);
+          var raw = Zen.obj.copy(ctx.get.fake);
           delete raw._;
           expect(obj).to.be.eql(raw);
-          Gun.log.debug = 0;
+          Zen.log.debug = 0;
           done();
         });
     });
@@ -10705,7 +10700,7 @@ describe("ZEN", function () {
 
     it("val emits all data", function (done) {
       // bug in chat app
-      var chat = Gun()
+      var chat = Zen()
         .get("example/chat/data")
         .not(function () {
           this.put({
@@ -10722,13 +10717,13 @@ describe("ZEN", function () {
         chat
           .map(function (m) {})
           .once(function (msg, field) {
-            var msg = Gun.obj.copy(msg);
+            var msg = Zen.obj.copy(msg);
             if (msg.what) {
               expect(msg.what).to.be.ok();
               seen[msg.when] = true;
             }
             if (
-              !Gun.obj.map(seen, function (boo) {
+              !Zen.obj.map(seen, function (boo) {
                 if (!boo) {
                   return true;
                 }
@@ -10743,7 +10738,7 @@ describe("ZEN", function () {
 
   describe("Node Links", function () {
     it("put node link then read through link resolves in plain scope", function (done) {
-      var g = Gun();
+      var g = Zen();
       var target = g.get("target").get("12345");
       target.put("hello world", function (ack) {
         expect(ack.err).to.not.be.ok();
@@ -10761,14 +10756,14 @@ describe("ZEN", function () {
       });
     });
     it("slash path resolves same chain as chained get", function (done) {
-      var g = Gun();
+      var g = Zen();
       var chain1 = g.get("p").get("q");
       var chain2 = g.get("p/q");
       expect(chain1).to.be(chain2);
       done();
     });
     it("read through slash path returns primitive value", function (done) {
-      var g = Gun();
+      var g = Zen();
       g.get("x")
         .get("y")
         .put(42, function (ack) {
@@ -10779,7 +10774,7 @@ describe("ZEN", function () {
         });
     });
     it("three-level slash path resolves correctly", function (done) {
-      var g = Gun();
+      var g = Zen();
       g.get("deep")
         .get("lvl2")
         .get("lvl3")
@@ -10791,7 +10786,7 @@ describe("ZEN", function () {
         });
     });
     it("link to primitive has-chain resolves via slash path", function (done) {
-      var g = Gun();
+      var g = Zen();
       var scope = g.get("a").get("b");
       scope.put("hello", function (ack) {
         g.get("link")
@@ -10808,7 +10803,7 @@ describe("ZEN", function () {
     });
     it(".on() subscription resolves primitive via slash-path link", function (done) {
       this.timeout(5000);
-      var g = Gun();
+      var g = Zen();
       var scope = g.get("aOn").get("bOn");
       scope.put("world", function (ack) {
         expect(ack.err).to.not.be.ok();

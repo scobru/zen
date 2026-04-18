@@ -19,8 +19,8 @@
   }, 1);
   stool.setup(
     (window.setup = function () {
-      //window.BigText = Gun.text.random(1024, 'abcdef');
-      //window.MedText = Gun.text.random(200, 'abcdef');
+      //window.BigText = Zen.text.random(1024, 'abcdef');
+      //window.MedText = Zen.text.random(200, 'abcdef');
       //window.jsonText = JSON.stringify(window.BigText);
       //window.radText = Radisk.encode(window.BigText);
 
@@ -261,7 +261,7 @@
   /* TEMPORARY COPY OF RADIX UNIT TESTS TO BOOST SPEED */
   /* THESE ARE PROBABLY STALE AND NEED TO BE COPIED FROM UNIT TESTS AGAIN */
   /*stool.add('map', function(){
-		Gun.obj.map(ALLZ, function(v,i){
+		Zen.obj.map(ALLZ, function(v,i){
 			v;
 		});
 	});
@@ -307,11 +307,11 @@
       ALLZ[v] = i;
       radix(v, i);
     });
-    Gun.obj.empty(all) === true && bad3;
+    Zen.obj.empty(all) === true && bad3;
     Radix.map(radix, function (v, k) {
       delete all[k];
     });
-    Gun.obj.empty(all) !== true && bad4;
+    Zen.obj.empty(all) !== true && bad4;
   });
   stool.add("fast?", function () {
     ALLZ["rubia"];
@@ -326,11 +326,11 @@
       all[v] = v;
       //rad(v, i)
     });
-    Gun.obj.empty(all) === true && bad5;
+    Zen.obj.empty(all) === true && bad5;
     Radix.map(radix, function (v, k) {
       delete all[k];
     });
-    Gun.obj.empty(all) !== true && bad6;
+    Zen.obj.empty(all) !== true && bad6;
   });
   stool.add("4", function () {
     var all = {},
@@ -347,7 +347,7 @@
       all[v] = v;
       //rad(v, i)
     });
-    Gun.obj.empty(all) === true && bad7;
+    Zen.obj.empty(all) === true && bad7;
     Radix.map(
       radix,
       function (v, k, a, b) {
@@ -356,7 +356,7 @@
       },
       { start: start, end: end },
     );
-    Gun.obj.empty(all) !== true && bad8;
+    Zen.obj.empty(all) !== true && bad8;
   });
   stool.add("5", function () {
     var all = {},
@@ -373,7 +373,7 @@
       all[v] = v;
       //rad(v, i)
     });
-    Gun.obj.empty(all) === true && bad9;
+    Zen.obj.empty(all) === true && bad9;
     Radix.map(
       radix,
       function (v, k, a, b) {
@@ -382,7 +382,7 @@
       },
       { start: start, end: end },
     );
-    Gun.obj.empty(all) !== true && bad10;
+    Zen.obj.empty(all) !== true && bad10;
   });
   stool.add("reverse item", function () {
     Radix.map(
@@ -406,7 +406,7 @@
     r("zach", 6);
     r("zachary", 7);
     var by = ["alice", "bob", "carl", "carlo", "dave", "zach", "zachary"];
-    Gun.obj.map(by, function (k, i) {
+    Zen.obj.map(by, function (k, i) {
       r(k, i);
     });
     Radix.map(

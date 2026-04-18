@@ -66,7 +66,7 @@ describe(
       return servers.atLeast(config.servers);
     });
 
-    it("GUN has spawned!", function () {
+    it("ZEN has spawned!", function () {
       var tests = [],
         i = 0;
       servers.each(function (client) {
@@ -82,18 +82,18 @@ describe(
                 res.end("I am " + env.i + "!");
               });
               var port = env.config.port + env.i;
-              var Gun = __index;
+              var Zen = __index;
               var peers = [],
                 i = env.config.servers;
               while (i--) {
                 var tmp = env.config.port + (i + 1);
                 if (port != tmp) {
                   // ignore ourselves
-                  peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+                  peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
                 }
               }
               console.log(port, " connect to ", peers);
-              var gun = Gun({
+              var zen = Zen({
                 file: env.i + "data",
                 peers: peers,
                 web: server,
@@ -148,7 +148,7 @@ describe(
         tests.push(
           client.run(
             function (test) {
-              //Gun.state.drift = Math.random() * 10000;
+              //Zen.state.drift = Math.random() * 10000;
               localStorage.clear();
               var env = test.props;
               test.async();
@@ -160,14 +160,14 @@ describe(
                   env.config.IP +
                   ":" +
                   (env.config.port + i) +
-                  "/gun",
+                  "/zen",
               );
               //}
               console.log("Connect to", peers);
-              var gun = Gun(peers);
+              var zen = Zen(peers);
               var num = 0,
                 total = 0,
-                check = Gun.obj.map(env.ids, function (v, id, t) {
+                check = Zen.obj.map(env.ids, function (v, id, t) {
                   var i = env.config.each;
                   while (i--) {
                     t(id + (i + 1), 1);
@@ -185,7 +185,7 @@ describe(
                 .text(num + " / " + total + " Verified")
                 .prependTo("body");
               var wait;
-              gun
+              zen
                 .get("test")
                 .map()
                 .on(function (data, key) {
@@ -203,7 +203,7 @@ describe(
                   wait = setTimeout(function () {
                     wait = false;
                     if (
-                      Gun.obj.map(check, function (still) {
+                      Zen.obj.map(check, function (still) {
                         if (still) {
                           return true;
                         }
@@ -234,7 +234,7 @@ describe(
                     }
                     i += 1;
                     var p = env.id + i;
-                    gun
+                    zen
                       .get("test")
                       .get(p)
                       .put("Hello world, " + p + "!");

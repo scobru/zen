@@ -20,7 +20,7 @@ var config = {
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
     "/cryptomodules.js": __dirname + "/../../lib/cryptomodules.js",
-    "/sea.js": __dirname + "/../../zen.js",
+    "/zen.js": __dirname + "/../../zen.js",
   },
 };
 
@@ -63,7 +63,7 @@ describe("End-to-End Encryption on User Accounts", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     return server.run(
       function (test) {
         var env = test.props;
@@ -78,8 +78,8 @@ describe("End-to-End Encryption on User Accounts", function () {
         var server = __http.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
-        var Gun = __index;
-        var gun = Gun({ file: env.i + "data", web: server });
+        var Zen = __index;
+        var zen = Zen({ file: env.i + "data", web: server });
         server.listen(port, function () {
           test.done();
         });
@@ -93,7 +93,7 @@ describe("End-to-End Encryption on User Accounts", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers load SEA!", function () {
+  it("Browsers load ZEN!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -109,7 +109,7 @@ describe("End-to-End Encryption on User Accounts", function () {
               document.head.appendChild(script);
             }
             load("cryptomodules.js", function () {
-              load("sea.js", function () {
+              load("zen.js", function () {
                 test.done();
               });
             });
@@ -121,7 +121,7 @@ describe("End-to-End Encryption on User Accounts", function () {
     return Promise.all(tests);
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -130,11 +130,11 @@ describe("End-to-End Encryption on User Accounts", function () {
           function (test) {
             localStorage.clear();
             var env = test.props;
-            var gun = Gun(
-              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+            var zen = Zen(
+              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
             );
-            window.gun = gun;
-            window.user = gun.user();
+            window.zen = zen;
+            window.user = zen.user();
           },
           { i: (i += 1), config: config },
         ),
@@ -218,7 +218,7 @@ describe("End-to-End Encryption on User Accounts", function () {
         window.user.get("hello").put("world");
       }, 100);
 
-      window.gun
+      window.zen
         .get("alias/bob")
         .map()
         .on(function (data) {
@@ -259,7 +259,7 @@ describe("End-to-End Encryption on User Accounts", function () {
   it("Alice tries to crack Bob", function () {
     return alice.run(function (test) {
       test.async();
-      gun
+      zen
         .get("pub/" + window.PUB)
         .get("crackers")
         .put("gonna crack");
@@ -272,7 +272,7 @@ describe("End-to-End Encryption on User Accounts", function () {
   it("Alice has no cracked Bob", function () {
     return alice.run(function (test) {
       test.async();
-      gun.get("pub/" + window.PUB).val(function (data) {
+      zen.get("pub/" + window.PUB).val(function (data) {
         if (
           data.pub === window.PUB &&
           data.hello === "mars" &&

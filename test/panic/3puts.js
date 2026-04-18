@@ -76,7 +76,7 @@ describe("Put ACK", function () {
     return relays.atLeast(config.relays);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     var tests = [],
       i = 0;
     relays.each(function (client) {
@@ -95,12 +95,12 @@ describe("Put ACK", function () {
               res.end("I am " + env.i + "!");
             });
             var port = env.config.port + env.i;
-            var Gun;
+            var Zen;
             try {
-              Gun = __index;
+              Zen = __index;
             } catch (e) {
               console.log(
-                "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+                "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
               );
             }
             var peers = [],
@@ -109,7 +109,7 @@ describe("Put ACK", function () {
               var tmp = env.config.port + (i + 1);
               if (port != tmp) {
                 // ignore ourselves
-                peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+                peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
               }
             }
             console.log(port, " connect to ", peers);
@@ -133,7 +133,7 @@ describe("Put ACK", function () {
               return;
             }
 
-            var gun = Gun({
+            var zen = Zen({
               file: false,
               rad: false,
               localStorage: false,
@@ -168,7 +168,7 @@ describe("Put ACK", function () {
     );
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -182,16 +182,16 @@ describe("Put ACK", function () {
               indexedDB.deleteDatabase("radata");
             } catch (e) {}
             var env = test.props;
-            var gun = Gun({
+            var zen = Zen({
               peers:
                 "http://" +
                 env.config.IP +
                 ":" +
                 (env.config.port + 1) +
-                "/gun",
+                "/zen",
               localStorage: window.ALICE ? false : true,
             });
-            window.ref = gun.get("test").on(function () {});
+            window.ref = zen.get("test").on(function () {});
           },
           { i: (i += 1), config: config },
         ),

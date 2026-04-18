@@ -70,7 +70,7 @@ describe("Put ACK", function () {
     return relays.atLeast(config.relays);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     var tests = [],
       i = 0;
     relays.each(function (client) {
@@ -89,12 +89,12 @@ describe("Put ACK", function () {
               res.end("I am " + env.i + "!");
             });
             var port = env.config.port + env.i;
-            var Gun;
+            var Zen;
             try {
-              Gun = __index;
+              Zen = __index;
             } catch (e) {
               console.log(
-                "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+                "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
               );
             }
             var peers = [],
@@ -102,7 +102,7 @@ describe("Put ACK", function () {
             while (i--) {
               // make sure to connect to self/same.
               var tmp = env.config.port + (i + 1);
-              peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+              peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
             }
             global.peerID = String.fromCharCode(64 + env.i);
             console.log(env.i, port, " connect to ", peers);
@@ -125,14 +125,14 @@ describe("Put ACK", function () {
               test.done();
               return;
             }
-            // TODO what should gun be when testing on rod?
-            var gun = Gun({
+            // TODO what should zen be when testing on rod?
+            var zen = Zen({
               file: env.i + "data",
               pid: peerID,
               peers: peers,
               web: server,
             });
-            global.gun = gun;
+            global.zen = zen;
             server.listen(port, function () {
               test.done();
             });
@@ -154,9 +154,9 @@ describe("Put ACK", function () {
           function (test) {
             var env = test.props;
             test.async();
-            var peers = gun.back("opt.peers");
+            var peers = zen.back("opt.peers");
 
-            gun.get("test").on(function (a) {}); // connections are lazy, so trigger a read. A feature, tho also a bug in this case, should probably have its own tests to determine if this ought be intended or not.
+            zen.get("test").on(function (a) {}); // connections are lazy, so trigger a read. A feature, tho also a bug in this case, should probably have its own tests to determine if this ought be intended or not.
 
             setTimeout(function () {
               var p = [],

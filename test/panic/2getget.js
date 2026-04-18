@@ -78,7 +78,7 @@ describe("GET GET", function () {
     return relays.atLeast(config.relays);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     var tests = [],
       i = 0;
     relays.each(function (client) {
@@ -97,12 +97,12 @@ describe("GET GET", function () {
               res.end("I am " + env.i + "!");
             });
             var port = env.config.port + env.i;
-            var Gun;
+            var Zen;
             try {
-              Gun = __index;
+              Zen = __index;
             } catch (e) {
               console.log(
-                "GUN not found! You need to link GUN to PANIC. Nesting the `gun` repo inside a `node_modules` parent folder often fixes this.",
+                "ZEN not found! You need to link ZEN to PANIC. Nesting the `zen` repo inside a `node_modules` parent folder often fixes this.",
               );
             }
             var peers = [],
@@ -111,7 +111,7 @@ describe("GET GET", function () {
               var tmp = env.config.port + (i + 1);
               if (port != tmp) {
                 // ignore ourselves
-                peers.push("http://" + env.config.IP + ":" + tmp + "/gun");
+                peers.push("http://" + env.config.IP + ":" + tmp + "/zen");
               }
             }
             console.log(port, " connect to ", peers);
@@ -135,14 +135,14 @@ describe("GET GET", function () {
               return;
             }
 
-            var gun = Gun({ file: env.i + "data", peers: peers, web: server });
+            var zen = Zen({ file: env.i + "data", peers: peers, web: server });
             server.listen(port, function () {
               test.done();
             });
 
             /* BELOW IS HACKY NON-STANDARD TEST STUFF, DO NOT REUSE */
             setInterval(function () {
-              var tmp = gun._.graph.a;
+              var tmp = zen._.graph.a;
               if (!tmp || !tmp.hello) {
                 return;
               }
@@ -162,7 +162,7 @@ describe("GET GET", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -176,17 +176,17 @@ describe("GET GET", function () {
               indexedDB.deleteDatabase("radata");
             } catch (e) {}
             var env = test.props;
-            var gun = Gun({
+            var zen = Zen({
               peers:
                 "http://" +
                 env.config.IP +
                 ":" +
                 (env.config.port + 1) +
-                "/gun",
+                "/zen",
               localStorage: false,
             });
-            window.gun = gun;
-            window.ref = gun.get("a");
+            window.zen = zen;
+            window.ref = zen.get("a");
           },
           { i: (i += 1), config: config },
         ),
@@ -200,7 +200,7 @@ describe("GET GET", function () {
     return alice.run(function (test) {
       console.log("I AM ALICE");
       test.async();
-      gun.get("random").get(function (ack) {
+      zen.get("random").get(function (ack) {
         setTimeout(function () {
           test.done();
         }, 1000);

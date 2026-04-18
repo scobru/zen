@@ -60,7 +60,7 @@ describe("Make sure the leveldb storage engine works", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     return server.run(
       function (test) {
         test.async();
@@ -82,7 +82,7 @@ describe("Make sure the leveldb storage engine works", function () {
         ));
 
         // Load the libraries under test
-        const Gun = __index;
+        const Zen = __index;
         const debug = __level;
 
         // // Add debug message
@@ -101,8 +101,8 @@ describe("Make sure the leveldb storage engine works", function () {
           res.end("Number five is alive!");
         });
 
-        // Initialize gun & start server
-        const gun = (global.gun = Gun({ ...opts, level }));
+        // Initialize zen & start server
+        const zen = (global.zen = Zen({ ...opts, level }));
         opts.web.listen(config.port + 1, function () {
           test.done();
         });
@@ -116,18 +116,18 @@ describe("Make sure the leveldb storage engine works", function () {
       function (test) {
         test.async();
         const { config, opts } = test.props;
-        const Gun = __index;
+        const Zen = __index;
 
-        // Start gun
-        const gun = (global.gun = Gun({
+        // Start zen
+        const zen = (global.zen = Zen({
           ...opts,
-          peers: "http://" + config.ip + ":" + (config.port + 1) + "/gun",
+          peers: "http://" + config.ip + ":" + (config.port + 1) + "/zen",
           lack: 1000 * 60 * 60,
         }));
 
         // Save data
         // Timeout allows callbacks to fire before server read
-        const ref = gun.get("asdf");
+        const ref = zen.get("asdf");
         ref.put({ hello: "world" });
         setTimeout(() => {
           test.done();
@@ -142,7 +142,7 @@ describe("Make sure the leveldb storage engine works", function () {
       test.async();
 
       // Read data (triggers fetch from alice + write to disk)
-      const ref = gun.get("asdf");
+      const ref = zen.get("asdf");
       ref.on((data) => {
         if (data.hello !== "world") {
           return test.fail("Invalid data returned");
@@ -185,13 +185,13 @@ describe("Make sure the leveldb storage engine works", function () {
         const encode = __encoding_down;
         const levelup = __levelup;
 
-        // Initialize gun opts
+        // Initialize zen opts
         const level = (global.level = levelup(
           encode(leveldown("./lvldata"), { valueEncoding: "json" }),
         ));
 
         // Load the libraries under test
-        const Gun = __index;
+        const Zen = __index;
         const debug = __level;
 
         // // Add debug messages
@@ -205,8 +205,8 @@ describe("Make sure the leveldb storage engine works", function () {
           res.end("Number five is alive!");
         });
 
-        // Initialize gun & start server
-        const gun = (global.gun = Gun({ ...opts, level }));
+        // Initialize zen & start server
+        const zen = (global.zen = Zen({ ...opts, level }));
         opts.web.listen(config.port + 1, () => {
           test.done();
         });
@@ -220,7 +220,7 @@ describe("Make sure the leveldb storage engine works", function () {
       test.async();
 
       // Read data
-      const ref = gun.get("asdf");
+      const ref = zen.get("asdf");
       ref.on((data) => {
         if (data.hello !== "world") {
           return test.fail("Invalid data returned");

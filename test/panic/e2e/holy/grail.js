@@ -40,7 +40,7 @@ var server = panic.clients.filter("Node.js").pluck(1);
 var browsers = panic.clients.excluding(server);
 var alice = browsers.pluck(1);
 var bob = browsers.excluding(alice).pluck(1);
-var serverPath = path.join(__dirname, "gun-server.js");
+var serverPath = path.join(__dirname, "zen-server.js");
 
 // start the server on :8765
 spawn("node", [serverPath]);
@@ -91,7 +91,7 @@ describe("The holy grail", function () {
       })
       .then(function () {
         return browsers.run(function () {
-          window.ref = gun.get(uniqueKey).put({
+          window.ref = zen.get(uniqueKey).put({
             text: "ignore",
           });
         }, scope);

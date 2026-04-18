@@ -49,11 +49,11 @@
         return a + b + c;
       };
       //window.localStorage.clear();
-      var g = (window.g = window.g || Gun());
-      //gun.get('users').path(1).path('where').put(pos);
-      //var got = gun.get('hewo');
+      var g = (window.g = window.g || Zen());
+      //zen.get('users').path(1).path('where').put(pos);
+      //var got = zen.get('hewo');
       //got.put({hello: 'world'});
-      var on = Gun.on;
+      var on = Zen.on;
       on("data", function (o) {
         o.a = false;
       });
@@ -77,7 +77,7 @@
         //console.log('any', err, node);
       };
       var ok = function (node, field) {
-        //$('#log').append(field  + ' ' + Gun.text.ify(node));
+        //$('#log').append(field  + ' ' + Zen.text.ify(node));
         //console.log('ok', field, node);
       };
       var err = function (err) {
@@ -89,16 +89,16 @@
         this._ = {};
       }
       Thing.prototype.get = function (lex) {
-        var gun = this,
-          at = gun._;
-        return gun;
+        var zen = this,
+          at = zen._;
+        return zen;
       };
       Thing.prototype.on = function (cb) {
-        var gun = this,
-          at = gun._;
+        var zen = this,
+          at = zen._;
         if (at.cache) {
         }
-        return gun;
+        return zen;
       };
       var thing = new Thing();
 
@@ -1642,16 +1642,16 @@
       }
       {
         function map(node, soul) {
-          Gun.tab.store.put(soul, node);
+          Zen.tab.store.put(soul, node);
         }
         function ify(err, env) {
           if (err) {
             return;
           }
-          Gun.obj.map(env.graph, map);
+          Zen.obj.map(env.graph, map);
         }
         function on(cat) {
-          Gun.ify(cat.put.data, ify);
+          Zen.ify(cat.put.data, ify);
         }
         CHAINA7.chain.put = function (data, cb, opt) {
           var chain = this,
@@ -1833,22 +1833,22 @@
       }
       {
         function map(node, soul) {
-          Gun.tab.store.put(soul, node);
+          Zen.tab.store.put(soul, node);
         }
         function ify(err, env) {
           if (err) {
             return;
           }
-          Gun.obj.map(env.graph, map);
+          Zen.obj.map(env.graph, map);
         }
         function wrap(cat, data) {
           if (!cat) {
             return data;
           }
           if (cat.lex.field) {
-            data = Gun.obj.put({}, cat.lex.field, data);
+            data = Zen.obj.put({}, cat.lex.field, data);
           }
-          data = Gun.is.node.soul.ify(data, cat.lex.soul);
+          data = Zen.is.node.soul.ify(data, cat.lex.soul);
           if (cat.lex.soul) {
             return data;
           }
@@ -1859,7 +1859,7 @@
         }
         function on(cat) {
           var data = wrap(cat, cat.put.data);
-          Gun.ify(data, ify);
+          Zen.ify(data, ify);
         }
         CHAINA8.chain.put = function (data, cb, opt) {
           var chain = this,
@@ -2000,9 +2000,9 @@
             return data;
           }
           if (cat.lex.field) {
-            data = Gun.obj.put({}, cat.lex.field, data);
+            data = Zen.obj.put({}, cat.lex.field, data);
           }
-          data = Gun.is.node.soul.ify(data, cat.lex.soul);
+          data = Zen.is.node.soul.ify(data, cat.lex.soul);
           if (cat.lex.soul) {
             return data;
           }
@@ -2013,13 +2013,13 @@
         }
         function on(cat) {
           var at = cat,
-            state = Gun.time.is();
+            state = Zen.time.is();
           var data = wrap(cat, cat.put.data);
-          Gun.ify(data, end, {
+          Zen.ify(data, end, {
             node: function (env, cb) {
               var eat = env.at;
               if (1 === eat.path.length && at.node) {
-                eat.soul = Gun.is.rel(at.node[eat.path[0]]);
+                eat.soul = Zen.is.rel(at.node[eat.path[0]]);
               }
               cb(env, eat);
             },
@@ -2028,23 +2028,23 @@
               if (!eat.field) {
                 return;
               }
-              Gun.is.node.state.ify(eat.node, {
+              Zen.is.node.state.ify(eat.node, {
                 field: eat.field,
                 state: state,
               });
             },
-            uuid: gun.__.opt.uuid,
+            uuid: zen.__.opt.uuid,
             state: state,
           });
         }
         function ack(err, ok) {
-          //if(Gun.fns.is(opt.any)){ opt.any.call(gun, err, ok) } // TODO: gun context!
+          //if(Zen.fns.is(opt.any)){ opt.any.call(zen, err, ok) } // TODO: zen context!
         }
         function end(err, env) {
           if (err) {
             return;
           }
-          Gun.put(gun, env.graph, ack, env.opt); // TODO: incorrect options!
+          Zen.put(zen, env.graph, ack, env.opt); // TODO: incorrect options!
         }
         CHAINA9.chain.put = function (data, cb, opt) {
           var chain = this,
@@ -2082,7 +2082,7 @@
         if ((node = graph[soul])) {
           return cb.call(chain, null, node);
         }
-        Gun.tab.store.get(soul, function (err, data) {
+        Zen.tab.store.get(soul, function (err, data) {
           graph[soul] = data;
           cb.call(chain, err, data);
         });
@@ -2149,7 +2149,7 @@
           at.count++;
           at.err = cat.err;
           if ((node = cat.node)) {
-            if ((val = Gun.is.rel(node[cat.lex.field]))) {
+            if ((val = Zen.is.rel(node[cat.lex.field]))) {
               return CHAINB1.get(chain, { soul: val }, got);
             }
             if ((val = node[field])) {
@@ -2193,9 +2193,9 @@
             return data;
           }
           if (cat.lex.field) {
-            data = Gun.obj.put({}, cat.lex.field, data);
+            data = Zen.obj.put({}, cat.lex.field, data);
           }
-          data = Gun.is.node.soul.ify(data, cat.lex.soul);
+          data = Zen.is.node.soul.ify(data, cat.lex.soul);
           if (cat.lex.soul) {
             return data;
           }
@@ -2206,13 +2206,13 @@
         }
         function run(cat) {
           var at = cat,
-            state = Gun.time.is();
+            state = Zen.time.is();
           var data = wrap(cat, cat.put.data);
-          Gun.ify(data, end, {
+          Zen.ify(data, end, {
             node: function (env, cb) {
               var eat = env.at;
               if (1 === eat.path.length && at.node) {
-                eat.soul = Gun.is.rel(at.node[eat.path[0]]);
+                eat.soul = Zen.is.rel(at.node[eat.path[0]]);
               }
               cb(env, eat);
             },
@@ -2221,23 +2221,23 @@
               if (!eat.field) {
                 return;
               }
-              Gun.is.node.state.ify(eat.node, {
+              Zen.is.node.state.ify(eat.node, {
                 field: eat.field,
                 state: state,
               });
             },
-            uuid: gun.__.opt.uuid,
+            uuid: zen.__.opt.uuid,
             state: state,
           });
         }
         function ack(err, ok) {
-          //if(Gun.fns.is(opt.any)){ opt.any.call(gun, err, ok) } // TODO: gun context!
+          //if(Zen.fns.is(opt.any)){ opt.any.call(zen, err, ok) } // TODO: zen context!
         }
         function end(err, env) {
           if (err) {
             return;
           }
-          Gun.put(gun, env.graph, ack, env.opt); // TODO: incorrect options!
+          Zen.put(zen, env.graph, ack, env.opt); // TODO: incorrect options!
         }
         CHAINB1.chain.put = function (data, cb, opt) {
           var chain = this,
@@ -2259,7 +2259,7 @@
             node = cat.node,
             field = lex.field,
             val;
-          if (field && (val = Gun.is.rel(node[field]))) {
+          if (field && (val = Zen.is.rel(node[field]))) {
             return CHAINB1.get(chain, { soul: val }, got);
           }
           chain.cb(cat.node);
@@ -2298,7 +2298,7 @@
         if ((node = graph[soul])) {
           return cb.call(chain, null, node);
         }
-        Gun.tab.store.get(soul, function (err, data) {
+        Zen.tab.store.get(soul, function (err, data) {
           graph[soul] = data;
           cb.call(chain, err, data);
         });
@@ -2365,7 +2365,7 @@
           at.count++;
           at.err = cat.err;
           if ((node = cat.node)) {
-            if ((val = Gun.is.rel(node[cat.lex.field]))) {
+            if ((val = Zen.is.rel(node[cat.lex.field]))) {
               return CHAINB2.get(chain, { soul: val }, got);
             }
             if ((val = node[field])) {
@@ -2409,9 +2409,9 @@
             return data;
           }
           if (cat.lex.field) {
-            data = Gun.obj.put({}, cat.lex.field, data);
+            data = Zen.obj.put({}, cat.lex.field, data);
           }
-          data = Gun.is.node.soul.ify(data, cat.lex.soul);
+          data = Zen.is.node.soul.ify(data, cat.lex.soul);
           if (cat.lex.soul) {
             return data;
           }
@@ -2422,18 +2422,18 @@
         }
         function run(cat) {
           var at = cat,
-            state = Gun.time.is();
+            state = Zen.time.is();
           var data = wrap(cat, cat.put.data);
           /*end(null, {graph: {
 						users: {_: {'#': 'users', '>': {1: 9}}, 1: {'#': 'fdsa'}},
 						fdsa: {_: {'#': 'fdsa', '>': {where: 9}}, where: {'#': 'sadf'}},
 						sadf: {_: {'#': 'sadf', '>': {lat: 9, lng: 9, i: 9}}, lat: 0.123456789, lng: 0.987654321, i:1}
 					}});return;*/
-          Gun.ify(data, end, {
+          Zen.ify(data, end, {
             node: function (env, cb) {
               var eat = env.at;
               if (1 === eat.path.length && at.node) {
-                eat.soul = Gun.is.rel(at.node[eat.path[0]]);
+                eat.soul = Zen.is.rel(at.node[eat.path[0]]);
               }
               cb(env, eat);
             },
@@ -2442,23 +2442,23 @@
               if (!eat.field) {
                 return;
               }
-              Gun.is.node.state.ify(eat.node, {
+              Zen.is.node.state.ify(eat.node, {
                 field: eat.field,
                 state: state,
               });
             },
-            uuid: gun.__.opt.uuid,
+            uuid: zen.__.opt.uuid,
             state: state,
           });
         }
         function ack(err, ok) {
-          //if(Gun.fns.is(opt.any)){ opt.any.call(gun, err, ok) } // TODO: gun context!
+          //if(Zen.fns.is(opt.any)){ opt.any.call(zen, err, ok) } // TODO: zen context!
         }
         function end(err, env) {
           if (err) {
             return;
           }
-          Gun.put(gun, env.graph, ack, env.opt); // TODO: incorrect options!
+          Zen.put(zen, env.graph, ack, env.opt); // TODO: incorrect options!
         }
         CHAINB2.chain.put = function (data, cb, opt) {
           var chain = this,
@@ -2480,7 +2480,7 @@
             node = cat.node,
             field = lex.field,
             val;
-          if (field && (val = Gun.is.rel(node[field]))) {
+          if (field && (val = Zen.is.rel(node[field]))) {
             return CHAINB2.get(chain, { soul: val }, got);
           }
           chain.cb(cat.node);
@@ -2500,22 +2500,22 @@
 
       function gun_get(soul) {
         gun_get.as = "a";
-        if (!gun_get.a) Gun.tab.store.get(soul, gun_get.load);
+        if (!gun_get.a) Zen.tab.store.get(soul, gun_get.load);
         return gun_get;
       }
       gun_get.load = function (err, data) {
         gun_get[gun_get.as] = data;
       };
       gun_get.path = function (f) {
-        var soul = Gun.is.rel(gun_get.a[f]);
+        var soul = Zen.is.rel(gun_get.a[f]);
         gun_get.as = "b";
-        if (!gun_get.b) Gun.tab.store.get(soul, gun_get.load);
+        if (!gun_get.b) Zen.tab.store.get(soul, gun_get.load);
         return gun_get;
       };
       gun_get.pathing = function (f) {
-        var soul = Gun.is.rel(gun_get.b[f]);
+        var soul = Zen.is.rel(gun_get.b[f]);
         gun_get.as = "c";
-        if (!gun_get.c) Gun.tab.store.get(soul, gun_get.load);
+        if (!gun_get.c) Zen.tab.store.get(soul, gun_get.load);
         return gun_get;
       };
       gun_get.on = function (cb) {
@@ -2526,13 +2526,13 @@
       window.puti = window.puti || 0;
       window.geti = window.geti || 0;
       localStorage.clear();
-      var gun = g.get("heylo");
-      gun.once(ok);
+      var zen = g.get("heylo");
+      zen.once(ok);
       //var ok = function(a,b){ console.log('wat', a,b) }
       /*
-			gun.get('users').put({1: {where: {lat: Math.random(), lng: Math.random(), i: 1}}});
-			//Gun.log.debug=1;console.log("------------------");
-			var val = gun.get('users').path(1).path('where').once(ok);
+			zen.get('users').put({1: {where: {lat: Math.random(), lng: Math.random(), i: 1}}});
+			//Zen.log.debug=1;console.log("------------------");
+			var val = zen.get('users').path(1).path('where').once(ok);
 			*/
     }),
   );
@@ -2541,63 +2541,63 @@
     // do nothing
   });
   stool.add("write", function () {
-    gun.put({ hello: "world" });
+    zen.put({ hello: "world" });
   });
   stool.add("read", function () {
-    gun.once(ok);
+    zen.once(ok);
   });
   return;
   // without variable caching:
   stool.add("write", function () {
-    gun.get("hi").put({ hello: "world" });
+    zen.get("hi").put({ hello: "world" });
   });
   stool.add("read", function () {
-    gun.get("hi").once(ok);
+    zen.get("hi").once(ok);
   });
   return;
   /*
 	stool.add('put', function(){
-		gun.get('users').put({1: {where: {lat: Math.random(), lng: Math.random(), i: 1}}});
+		zen.get('users').put({1: {where: {lat: Math.random(), lng: Math.random(), i: 1}}});
 	});
 	stool.add('on', function(){
 		val.once(ok);
 	});
 	stool.add('on', function(){
-		gun.get('users').path(1).path('where').once(ok);
+		zen.get('users').path(1).path('where').once(ok);
 	});
 	return;
 	stool.add('put', function(){
-		gun.get(puti++).put(hewo, any);asdf;
+		zen.get(puti++).put(hewo, any);asdf;
 	});return;
 	stool.add('put', function(){
-		gun.get(geti++, any);
+		zen.get(geti++, any);
 	});
 	return;
 	stool.add('get', function(){
 		got.on(ok);
 	});
 	stool.add('get', function(){
-		gun.get('users', any);
+		zen.get('users', any);
 	});
 	return;
 	return;
 	stool.add('get path * 2 put', function(){
-		gun.get('users').path(i).path('where').put(pos);
+		zen.get('users').path(i).path('where').put(pos);
 	});
 	stool.add('get path path on', function(){
-		gun.get('users').path(i).path('where').on(ok);
+		zen.get('users').path(i).path('where').on(ok);
 	});
 	stool.add('get path path', function(){
-		gun.get('users').path(i).path('where', any);
+		zen.get('users').path(i).path('where', any);
 	});
 	stool.add('get path', function(){
-		gun.get('users').path(i, any);
+		zen.get('users').path(i, any);
 	});
 	stool.add('get on', function(){
-		gun.get('users').on(ok);
+		zen.get('users').on(ok);
 	});
 	stool.add('get', function(){
-		gun.get('users', any);
+		zen.get('users', any);
 	});
 	stool.add('get', function(){
 		got.on(ok);
@@ -2607,7 +2607,7 @@
 	});
 	return;
 	stool.add('get path * 2 on', function(){
-		gun.get('users').path(i).path('where').on(function(node){
+		zen.get('users').path(i).path('where').on(function(node){
 			console.log(node);
 		});
 	});
@@ -2717,11 +2717,11 @@
 		chain.get('users').path(i).path('where').put(pos);
 	});
 	*/
-  stool.add("Gun.ify", function () {
-    Gun.graph.ify(data);
+  stool.add("Zen.ify", function () {
+    Zen.graph.ify(data);
   });
-  stool.add("Gun.ify", function () {
-    Gun.ify(data);
+  stool.add("Zen.ify", function () {
+    Zen.ify(data);
   });
   return;
   stool.add("JSON.ify", function () {

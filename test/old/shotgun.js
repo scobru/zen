@@ -11,7 +11,7 @@ if (process.env.LIVE || process.env.NODE_ENV === "production") {
   // Keys are hosted outside this public repo folder, you must provide your own with environment variables.
   if (
     (__fs.existsSync || __path.existsSync)(
-      (keys = __dirname + "/../../../linux/.ssh/keys-gun.js"),
+      (keys = __dirname + "/../../../linux/.ssh/keys-zen.js"),
     )
   ) {
     var loaded = await import(keys);

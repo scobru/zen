@@ -1,12 +1,12 @@
 import "./base64.js";
 import __array from "./array.js";
 
-// This is Buffer implementation used in SEA. Functionality is mostly
+// This is Buffer implementation used in ZEN. Functionality is mostly
 // compatible with NodeJS 'safe-buffer' and is used for encoding conversions
 // between binary and 'hex' | 'utf8' | 'base64'
 // See documentation and validation for safe implementation in:
 // https://github.com/feross/safe-buffer#update
-var SeaArray = __array;
+var ZenArray = __array;
 function SafeBuffer(...props) {
   console.warn("new SafeBuffer() is depreciated, please use SafeBuffer.from()");
   return SafeBuffer.from(...props);
@@ -31,7 +31,7 @@ Object.assign(SafeBuffer, {
         if (!bytes || !bytes.length) {
           throw new TypeError("Invalid first argument for type 'hex'.");
         }
-        buf = SeaArray.from(bytes);
+        buf = ZenArray.from(bytes);
       } else if (enc === "utf8" || "binary" === enc) {
         // EDIT BY MARK: I think this is safe, tested it against a couple "binary" strings. This lets SafeBuffer match NodeJS Buffer behavior more where it safely btoas regular strings.
         const length = input.length;
@@ -40,7 +40,7 @@ Object.assign(SafeBuffer, {
           { length: length },
           (_, i) => (words[i] = input.charCodeAt(i)),
         );
-        buf = SeaArray.from(words);
+        buf = ZenArray.from(words);
       } else if (enc === "base64") {
         const dec = atob(input);
         const length = dec.length;
@@ -49,10 +49,10 @@ Object.assign(SafeBuffer, {
           { length: length },
           (_, i) => (bytes[i] = dec.charCodeAt(i)),
         );
-        buf = SeaArray.from(bytes);
+        buf = ZenArray.from(bytes);
       } else if (enc === "binary") {
         // deprecated by above comment
-        buf = SeaArray.from(input); // some btoas were mishandled.
+        buf = ZenArray.from(input); // some btoas were mishandled.
       } else {
         console.info("SafeBuffer.from unknown encoding: " + enc);
       }
@@ -65,18 +65,18 @@ Object.assign(SafeBuffer, {
       if (input instanceof ArrayBuffer) {
         buf = new Uint8Array(input);
       }
-      return SeaArray.from(buf || input);
+      return ZenArray.from(buf || input);
     }
   },
   // This is 'safe-buffer.alloc' sans encoding support
   alloc(length, fill = 0 /*, enc*/) {
-    return SeaArray.from(
+    return ZenArray.from(
       new Uint8Array(Array.from({ length: length }, () => fill)),
     );
   },
   // This is normal UNSAFE 'buffer.alloc' or 'new Buffer(length)' - don't use!
   allocUnsafe(length) {
-    return SeaArray.from(new Uint8Array(Array.from({ length: length })));
+    return ZenArray.from(new Uint8Array(Array.from({ length: length })));
   },
   // This puts together array of array like members
   concat(arr) {
@@ -86,12 +86,12 @@ Object.assign(SafeBuffer, {
         "First argument must be Array containing ArrayBuffer or Uint8Array instances.",
       );
     }
-    return SeaArray.from(
+    return ZenArray.from(
       arr.reduce((ret, item) => ret.concat(Array.from(item)), []),
     );
   },
 });
 SafeBuffer.prototype.from = SafeBuffer.from;
-SafeBuffer.prototype.toString = SeaArray.prototype.toString;
+SafeBuffer.prototype.toString = ZenArray.prototype.toString;
 
 export default SafeBuffer;

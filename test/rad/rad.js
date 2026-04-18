@@ -17,7 +17,7 @@ import __radix from "../../lib/radix.js";
 import __radisk from "../../lib/radisk.js";
 import __rfs from "../../lib/rfs.js";
 var root;
-var Gun;
+var Zen;
 {
   var env;
   if (typeof global !== "undefined") {
@@ -31,9 +31,9 @@ var Gun;
     env.window && root.localStorage && root.localStorage.clear();
   } catch (e) {}
   //try{ indexedDB.deleteDatabase('radatatest') }catch(e){}
-  if (root.Gun) {
-    root.Gun = root.Gun;
-    root.Gun.TESTING = true;
+  if (root.Zen) {
+    root.Zen = root.Zen;
+    root.Zen.TESTING = true;
   } else {
     try {
       __fs.unlinkSync("tmp/data.json");
@@ -41,8 +41,8 @@ var Gun;
     try {
       __fsrm("tmp/radatatest");
     } catch (e) {}
-    root.Gun = __gun;
-    root.Gun.TESTING = true;
+    root.Zen = __gun;
+    root.Zen.TESTING = true;
   }
 
   try {
@@ -51,9 +51,9 @@ var Gun;
 }
 
 {
-  Gun = root.Gun;
+  Zen = root.Zen;
 
-  var Radix = (Gun.window && Gun.window.Radix) || __radix;
+  var Radix = (Zen.window && Zen.window.Radix) || __radix;
 
   describe("RAD", function () {
     var names = [
@@ -278,7 +278,7 @@ var Gun;
       "Zimmermann",
     ];
 
-    //console.log("HYPER TEST");var z = 10000; while(--z){ names.push(Gun.text.random(7)) }this.timeout(9000);
+    //console.log("HYPER TEST");var z = 10000; while(--z){ names.push(Zen.text.random(7)) }this.timeout(9000);
 
     describe("Radix", function () {
       var radix = Radix();
@@ -436,14 +436,14 @@ var Gun;
       });
     });
 
-    if (Gun.window && !Gun.window.RindexedDB) {
+    if (Zen.window && !Zen.window.RindexedDB) {
       return;
     }
 
     var opt = {};
     opt.file = "radatatest";
-    var Radisk = (Gun.window && Gun.window.Radisk) || __radisk;
-    opt.store = ((Gun.window && Gun.window.RindexedDB) || __rfs)(opt);
+    var Radisk = (Zen.window && Zen.window.Radisk) || __radisk;
+    opt.store = ((Zen.window && Zen.window.RindexedDB) || __rfs)(opt);
     opt.chunk = 1000;
     var rad = Radisk(opt),
       esc = String.fromCharCode(27);
@@ -453,7 +453,7 @@ var Gun;
 
       /*it('parse', function(done){
         this.timeout(60000);
-        if(Gun.window){ return done() }
+        if(Zen.window){ return done() }
         var raw = __fs.readFileSync(__dirname + '/parse.rad').toString();
         rad.parse('!', function(err, disk){
             console.log("!!!!", err);
@@ -466,7 +466,7 @@ var Gun;
       });
       it("deleted", function (done) {
         this.timeout(60 * 1000);
-        if (!Gun.window) {
+        if (!Zen.window) {
           return done();
         }
         //await new Promise(function(res){ indexedDB.deleteDatabase('radatatest').onsuccess = function(e){ res() } } );
@@ -695,21 +695,21 @@ var Gun;
     });
 
     var ntmp = names;
-    describe("RAD + GUN", function () {
+    describe("RAD + ZEN", function () {
       this.timeout(1000 * 9);
       var ochunk = 1000;
-      Gun.on("opt", function (root) {
+      Zen.on("opt", function (root) {
         root.opt.localStorage = false;
-        Gun.window && console.log("RAD disabling localStorage during tests.");
+        Zen.window && console.log("RAD disabling localStorage during tests.");
         this.to.next(root);
       });
-      var gun = Gun({ chunk: ochunk });
+      var zen = Zen({ chunk: ochunk });
 
       /*it('deleting old tests (may take long time)', function(done){
         done(); // Mocha doesn't print test until after its done, so show this first.
     }); it('deleted', function(done){
         this.timeout(60 * 1000);
-        if(!Gun.window){ return done() }
+        if(!Zen.window){ return done() }
         indexedDB.deleteDatabase('radatatest').onsuccess = function(e){ done() }
     });*/
 
@@ -721,7 +721,7 @@ var Gun;
             all[++i] = true;
             tmp = v.toLowerCase();
             //console.only.i=1;console.log("save", tmp, v, i);
-            gun.get('names').get(tmp).put({name: v, age: i}, function(ack){
+            zen.get('names').get(tmp).put({name: v, age: i}, function(ack){
                 //console.log("???", ack);
                 expect(ack.err).to.not.be.ok();
                 delete all[i];
@@ -739,7 +739,7 @@ var Gun;
         names.forEach(function (v, i) {
           all[++i] = true;
           tmp = v.toLowerCase();
-          gun
+          zen
             .get("names")
             .get(tmp)
             .put({ name: v, age: i }, function (ack) {
@@ -754,8 +754,8 @@ var Gun;
       });
 
       it("read one", function (done) {
-        var g = Gun({ chunk: ochunk });
-        //gun.get('names').get({'.': {'*': find}, '%': 1000 * 100}).once().map().once(function(data, key){
+        var g = Zen({ chunk: ochunk });
+        //zen.get('names').get({'.': {'*': find}, '%': 1000 * 100}).once().map().once(function(data, key){
         g.get("names")
           .get("stu")
           .once(function (data, key) {
@@ -772,11 +772,11 @@ var Gun;
 
       it("small range", function (done) {
         var check = {};
-        gun.get("users").get("alice").put({ cool: "beans" });
-        gun.get("users").get("alexander").put({ nice: "beans" });
-        gun.get("users").get("bob").put({ lol: "beans" });
+        zen.get("users").get("alice").put({ cool: "beans" });
+        zen.get("users").get("alexander").put({ nice: "beans" });
+        zen.get("users").get("bob").put({ lol: "beans" });
         //console.log("=================");console.only.i=1;
-        gun
+        zen
           .get("users")
           .get({ ".": { "*": "a" }, "%": 1000 * 100 })
           .map()
@@ -795,17 +795,17 @@ var Gun;
       });
 
       /*it.only('small range once TEST', function(done){
-        var gun = Gun({file: 'yuio'});
+        var zen = Zen({file: 'yuio'});
         var check = {};
-        gun.get('people').get('alice').put({cool: 'beans'});
-        gun.get('people').get('alexander').put({nice: 'beans'});
-        gun.get('people').get('bob').put({lol: 'beans'});
+        zen.get('people').get('alice').put({cool: 'beans'});
+        zen.get('people').get('alexander').put({nice: 'beans'});
+        zen.get('people').get('bob').put({lol: 'beans'});
         //setTimeout(function(){
         console.only.i=1;
         console.log("==================");
         console.log("==================");
         console.log("==================");
-        gun.get('people').get({'.': {'*': 'a'}, '%': 1000 * 100}).once().map().once(function(d,k){
+        zen.get('people').get({'.': {'*': 'a'}, '%': 1000 * 100}).once().map().once(function(d,k){
             console.log("***********", k,d);
             expect('a' === k[0]).to.be.ok();
             check[k] = d;
@@ -819,10 +819,10 @@ var Gun;
 
       it("small range once", function (done) {
         var check = {};
-        gun.get("people").get("alice").put({ cool: "beans" });
-        gun.get("people").get("alexander").put({ nice: "beans" });
-        gun.get("people").get("bob").put({ lol: "beans" });
-        gun
+        zen.get("people").get("alice").put({ cool: "beans" });
+        zen.get("people").get("alexander").put({ nice: "beans" });
+        zen.get("people").get("bob").put({ lol: "beans" });
+        zen
           .get("people")
           .get({ ".": { "*": "a" }, "%": 1000 * 100 })
           .once()
@@ -842,11 +842,11 @@ var Gun;
 
       it("small range twice", function (done) {
         var check = {};
-        var gun = Gun();
-        gun.get("peoplez").get("alice").put({ cool: "beans" });
-        gun.get("peoplez").get("alexander").put({ nice: "beans" });
-        gun.get("peoplez").get("bob").put({ lol: "beans" });
-        gun
+        var zen = Zen();
+        zen.get("peoplez").get("alice").put({ cool: "beans" });
+        zen.get("peoplez").get("alexander").put({ nice: "beans" });
+        zen.get("peoplez").get("bob").put({ lol: "beans" });
+        zen
           .get("peoplez")
           .get({ ".": { "*": "a" }, "%": 1000 * 100 })
           .once()
@@ -865,7 +865,7 @@ var Gun;
           });
         function next() {
           var neck = {};
-          gun
+          zen
             .get("peoplez")
             .get({ ".": { "*": "a" }, "%": 1000 * 100 })
             .once()
@@ -894,7 +894,7 @@ var Gun;
             all[v] = true;
           }
         });
-        gun
+        zen
           .get("names")
           .get({ ".": { "*": find }, "%": 1000 * 100 })
           .once()
@@ -922,7 +922,7 @@ var Gun;
             all[v] = true;
           }
         });
-        gun
+        zen
           .get("names")
           .get({ ".": { "*": find }, "%": 1000 * 100 })
           .once()
@@ -941,7 +941,7 @@ var Gun;
       });
 
       it("read contacts fresh", function (done) {
-        var gun = Gun({ chunk: ochunk });
+        var zen = Zen({ chunk: ochunk });
         var all = {},
           find = "b",
           to;
@@ -951,7 +951,7 @@ var Gun;
             all[v] = true;
           }
         });
-        gun
+        zen
           .get("names")
           .map()
           .once(function (data, key) {
@@ -970,7 +970,7 @@ var Gun;
               expect(Object.empty(all)).to.be.ok();
               done();
               setTimeout(function () {
-                gun
+                zen
                   .get("names")
                   .get({ ".": { "*": find }, "%": 1000 * 100 })
                   .once()
@@ -995,7 +995,7 @@ var Gun;
             all[v] = true;
           }
         });
-        gun
+        zen
           .get("names")
           .get({ ".": { "<": cursor }, "%": 1000 * 100 })
           .once()
@@ -1021,7 +1021,7 @@ var Gun;
         names.forEach(function (v) {
           all[v] = true;
         });
-        gun
+        zen
           .get("names")
           .get({ ".": { "-": 1 }, "%": 1000 * 100, "-": 1 })
           .once()

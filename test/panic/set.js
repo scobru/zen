@@ -20,7 +20,7 @@ var config = {
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
     "/cryptomodules.js": __dirname + "/../../lib/cryptomodules.js",
-    "/sea.js": __dirname + "/../../zen.js",
+    "/zen.js": __dirname + "/../../zen.js",
   },
 };
 
@@ -55,7 +55,7 @@ var alice = browsers.pluck(1);
 var bob = browsers.excluding(alice).pluck(1);
 var again = {};
 
-describe("Make sure SEA syncs correctly", function () {
+describe("Make sure ZEN syncs correctly", function () {
   //this.timeout(5 * 60 * 1000);
   this.timeout(10 * 60 * 1000);
 
@@ -63,7 +63,7 @@ describe("Make sure SEA syncs correctly", function () {
     return servers.atLeast(config.servers);
   });
 
-  it("GUN started!", function () {
+  it("ZEN started!", function () {
     return server.run(
       function (test) {
         var env = test.props;
@@ -78,8 +78,8 @@ describe("Make sure SEA syncs correctly", function () {
         var server = __http.createServer(function (req, res) {
           res.end("I am " + env.i + "!");
         });
-        var Gun = __index;
-        var gun = Gun({ file: env.i + "data", web: server });
+        var Zen = __index;
+        var zen = Zen({ file: env.i + "data", web: server });
         server.listen(port, function () {
           test.done();
         });
@@ -93,7 +93,7 @@ describe("Make sure SEA syncs correctly", function () {
     return browsers.atLeast(config.browsers);
   });
 
-  it("Browsers load SEA!", function () {
+  it("Browsers load ZEN!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -109,7 +109,7 @@ describe("Make sure SEA syncs correctly", function () {
               document.head.appendChild(script);
             }
             /*load('cryptomodules.js', function(){
-					load('sea.js', function(){
+					load('zen.js', function(){
 						test.done();
 					});
 				});*/
@@ -122,7 +122,7 @@ describe("Make sure SEA syncs correctly", function () {
     return Promise.all(tests);
   });
 
-  it("Browsers initialized gun!", function () {
+  it("Browsers initialized zen!", function () {
     var tests = [],
       i = 0;
     browsers.each(function (client, id) {
@@ -131,11 +131,11 @@ describe("Make sure SEA syncs correctly", function () {
           function (test) {
             localStorage.clear();
             var env = test.props;
-            var gun = Gun(
-              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+            var zen = Zen(
+              "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
             );
-            window.gun = gun;
-            var user = (window.user = gun.get("pub/alice"));
+            window.zen = zen;
+            var user = (window.user = zen.get("pub/alice"));
           },
           { i: (i += 1), config: config },
         ),
@@ -207,11 +207,11 @@ describe("Make sure SEA syncs correctly", function () {
     return again.alice.run(
       function (test) {
         var env = test.props;
-        var gun = Gun(
-          "http://" + env.config.IP + ":" + (env.config.port + 1) + "/gun",
+        var zen = Zen(
+          "http://" + env.config.IP + ":" + (env.config.port + 1) + "/zen",
         );
-        window.gun = gun;
-        var user = (window.user = gun.get("pub/alice"));
+        window.zen = zen;
+        var user = (window.user = zen.get("pub/alice"));
       },
       { i: 1, config: config },
     );

@@ -16,15 +16,15 @@ try {
 
 var opt = { localStorage: false };
 //opt.chunk = 1024;
-opt.store = (Gun.window && window.RindexedDB(opt)) || __rfs(opt);
+opt.store = (Zen.window && window.RindexedDB(opt)) || __rfs(opt);
 var rad = Radisk(opt);
-var gun = Gun("http://localhost:8765/gun");
+var zen = Zen("http://localhost:8765/zen");
 
-Gun.window &&
+Zen.window &&
   (wait.onchange = function () {
     spam.wait = this.value;
   });
-Gun.window &&
+Zen.window &&
   (burst.onchange = function () {
     spam.burst = this.value;
   });
@@ -69,7 +69,7 @@ function spam() {
       //loc.put(i, {test: i}, function(err, ok){ var ack = {err: err, ok: ok};
       //ind.put(i, {test: i}, function(err, ok){ var ack = {err: err, ok: ok};
       //rad(i, {test: i}, function(err, ok){ var ack = {err: err, ok: ok};
-      var ref = gun.get(i).put({ test: i }, function (ack) {
+      var ref = zen.get(i).put({ test: i }, function (ack) {
         var t = (+new Date() - s) / 1000;
         if (1 < t) {
           ++slow;
@@ -93,7 +93,7 @@ function spam() {
           Math.round(spam.max / (spam.end / 1000)),
           "per second. Slow:" + slow,
         );
-        Gun.window && (document.body.style.backgroundColor = "lime");
+        Zen.window && (document.body.style.backgroundColor = "lime");
       });
     }
   }, spam.wait);
@@ -115,14 +115,14 @@ function spam() {
       " seconds\n" +
       Math.round(tmp / sec) +
       " per second";
-    (Gun.window && (debugs.innerText = status)) ||
+    (Zen.window && (debugs.innerText = status)) ||
       console.log(status.replace(/\n/gi, " "));
   }, 500);
 }
-!Gun.window && setTimeout(spam, 1);
+!Zen.window && setTimeout(spam, 1);
 
 {
-  if (!Gun.window) {
+  if (!Zen.window) {
     return;
   }
   {

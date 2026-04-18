@@ -1,10 +1,10 @@
 import __index from "./index.js";
 define(function (require, exports, module) {
-  var Gun = __index;
+  var Zen = __index;
 
-  var gun = new ZEN();
+  var zen = new ZEN();
 
-  gun
+  zen
     .get("hello")
     .get("world")
     .put("from zen")
