@@ -68,7 +68,7 @@
         // fetch the data from server
         var S = +new Date();
         var data = await (
-          await fetch(url.value || location.origin + "/gun/stats.radata", {
+          await fetch(url.value || location.origin + "/zen/stats.radata", {
             method: "GET",
             mode: "cors",
           })
@@ -92,7 +92,7 @@
             Stats("cpu%");
             tmp = await (
               await fetch(
-                new Request(location.origin + "/gun/stats.top.radata"),
+                new Request(location.origin + "/zen/stats.top.radata"),
                 { method: "GET", mode: "cors" },
               )
             ).text();
@@ -221,7 +221,7 @@
           $("body").append("<input id='email' placeholder='email'/>");
           $("#https").on("click", function () {
             $(this).text("look at console.log for errors, if none, try https");
-            var gun = ZEN(location.origin + "/zen");
+            var zen = ZEN(location.origin + "/zen");
             if (!$("#email").val()) {
               $(this).text(
                 "email necessary for certs! Type it in & click here again.",
@@ -229,14 +229,14 @@
               return;
             }
             setTimeout(function () {
-              gun._.opt.mesh.say({
+              zen._.opt.mesh.say({
                 dam: "service",
                 try: "https",
                 email: $("#email").val(),
                 domain: location.hostname,
               });
               setTimeout(function () {
-                if (gun._.opt.mesh.near) {
+                if (zen._.opt.mesh.near) {
                   return;
                 }
                 $("#https").text("It might have worked! try HTTPS!");

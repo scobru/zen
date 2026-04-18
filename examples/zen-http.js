@@ -24,7 +24,7 @@ if (isMain && cluster.isPrimary) {
 } else if (isMain) {
   const env = process.env;
   const opt = {
-    port: env.PORT || process.argv[2] || 8765,
+    port: env.PORT || process.argv[2] || 8420,
     peers: (env.PEERS && env.PEERS.split(",")) || [],
   };
 

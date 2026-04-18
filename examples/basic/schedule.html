@@ -71,14 +71,14 @@
 
     <script src="../jquery.js"></script>
     <script src="/zen.js"></script>
-    <script src="../../../gun/nts.js"></script>
-    <script src="../../../gun/lib/webrtc.js"></script>
+    <script src="../../../zen/nts.js"></script>
+    <script src="../../../zen/lib/webrtc.js"></script>
 
     <script>
       var name = "schedule/" + location.hash.slice(1);
-      var gun = ZEN(location.origin + "/zen");
-      //var gun = Gun('http://localhost:8765/zen');
-      //var gun = Gun();
+      var zen = ZEN(location.origin + "/zen");
+      //var zen = Zen('http://localhost:8420/zen');
+      //var zen = Zen();
 
       $("#add").on("submit", function (event) {
         event.preventDefault();
@@ -99,7 +99,7 @@
         if (!(event.where = where.value)) {
           return (err.innerText = "No location!");
         }
-        var day = gun.get(name + now(event.when));
+        var day = zen.get(name + now(event.when));
         day.get(id.value || String.random(9)).put(event);
         what.value = where.value = id.value = err.innerText = "";
         go.value = "add";
@@ -122,7 +122,7 @@
             " " +
             day.getDate(),
         );
-        day = gun.get(name + now(ms));
+        day = zen.get(name + now(ms));
         $("ul").empty();
         day.map().on(UI);
       }
@@ -192,7 +192,7 @@
       });
 
       function now(t) {
-        return new Date(t || Gun.state())
+        return new Date(t || Zen.state())
           .toLocaleDateString()
           .split("/")
           .reverse()

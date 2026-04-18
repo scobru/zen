@@ -124,7 +124,7 @@ Zen.on("create", function lg(root) {
         );
         root.on("localStorage:error", { err: err, get: opt.prefix, put: disk });
       }
-      size = tmp.length;
+      size = (tmp || "").length;
 
       //if(!err && !Object.empty(opt.peers)){ return } // only ack if there are no peers. // Switch this to probabilistic mode
       setTimeout.each(

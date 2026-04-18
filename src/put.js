@@ -7,7 +7,8 @@ Zen.chain.put = function (data, cb, opt, as) {
   var zen = this,
     at = zen._,
     root = at.root;
-  as = as || context(zen, data, cb, opt);
+  opt = options(opt);
+  as = as || context(zen, data, cb);
   as.root = at.root;
   as.run || (as.run = root.once);
   stun(as, at.id); // set a flag for reads to check if this chain is writing.
@@ -24,12 +25,12 @@ Zen.chain.put = function (data, cb, opt, as) {
     return zen;
   }
   if (!as.soul) {
-    return (get(as), zen);
+    return (get(as, opt), zen);
   }
   as.$ = root.$.get(as.soul); // TODO: This may not allow user chaining and similar?
   as.todo = [{ it: as.data, ref: as.$ }];
   as.turn = as.turn || turn;
-  as.ran = as.ran || ran;
+  as.ran = as.ran || function (a) { ran(a, opt); };
   //var path = []; as.via.back(at => { at.get && path.push(at.get.slice(0,9)) }); path = path.reverse().join('.');
   // TODO: Perf! We only need to stun chains that are being modified, not necessarily written to.
   function walk() {
@@ -166,25 +167,12 @@ Zen.chain.put = function (data, cb, opt, as) {
   return zen;
 };
 
-function context(zen, data, cb, opt) {
+function context(zen, data, cb) {
   var ctx = {};
   ctx[PUT_CONTEXT] = 1;
-  ctx.opt = options(opt);
   ctx.data = data;
   ctx.ack = cb;
   ctx.via = zen;
-  if (u !== ctx.opt.state) {
-    ctx.state = ctx.opt.state;
-  }
-  if (u !== ctx.opt.soul) {
-    ctx.soul = ctx.opt.soul;
-  }
-  if (u !== ctx.opt.ok) {
-    ctx.ok = ctx.opt.ok;
-  }
-  if (u !== ctx.opt.acks) {
-    ctx.acks = ctx.opt.acks;
-  }
   return ctx;
 }
 
@@ -227,7 +215,7 @@ function stun(as, id) {
   });
 }
 
-function ran(as) {
+function ran(as, opt) {
   if (as.err) {
     ran.end(as.stun, as.root);
     return;
@@ -251,7 +239,7 @@ function ran(as) {
         return;
       }
       as.ack(ack, this);
-    }, as.opt),
+    }, opt),
     acks = 0,
     stun = as.stun,
     tmp;
@@ -274,7 +262,7 @@ function ran(as) {
   as.via._.on("out", {
     put: (as.out = as.graph),
     ok: as.ok && { "@": as.ok + 1 },
-    opt: as.opt,
+    opt: opt,
     "#": ask,
     _: tmp,
   });
@@ -292,7 +280,7 @@ ran.err = function (as, err) {
   as.ran(as);
 };
 
-function get(as) {
+function get(as, opt) {
   var at = as.via._,
     tmp;
   as.via = as.via.back(function (at) {
@@ -307,16 +295,7 @@ function get(as) {
       ((as.data || "")._ || "")["#"] || at.$.back("opt.uuid")(),
     );
   }
-  as.via.put(as.data, as.ack, as.opt, as);
-
-  return;
-  if (at.get && at.back.soul) {
-    tmp = as.data;
-    as.via = at.back.$;
-    (as.data = {})[at.get] = tmp;
-    as.via.put(as.data, as.ack, as.opt, as);
-    return;
-  }
+  as.via.put(as.data, as.ack, opt, as);
 }
 function check(d, tmp) {
   return (d && (tmp = d.constructor) && tmp.name) || typeof d;

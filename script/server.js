@@ -112,7 +112,7 @@ if (isMain && cluster.isPrimary) {
   let peers;
 
   try {
-    port = validatePort(env.PORT || process.argv[2] || 8765);
+    port = validatePort(env.PORT || process.argv[2] || 8420);
     httpsPort = env.HTTPS_PORT ? validatePort(env.HTTPS_PORT) : null;
     peers = validatePeers(env.PEERS);
   } catch (err) {

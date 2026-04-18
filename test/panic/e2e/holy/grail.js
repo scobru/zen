@@ -42,7 +42,7 @@ var alice = browsers.pluck(1);
 var bob = browsers.excluding(alice).pluck(1);
 var serverPath = path.join(__dirname, "zen-server.js");
 
-// start the server on :8765
+// start the server on :8420
 spawn("node", [serverPath]);
 
 function waitFor(num, list) {

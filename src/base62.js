@@ -1,5 +1,5 @@
 import shim from "./shim.js";
-import bridge from "./crypto_wasm_bridge.js";
+import bridge from "./crypto.js";
 
 let _wasmReady = false;
 bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});

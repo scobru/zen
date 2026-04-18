@@ -13,13 +13,13 @@
   ></p>
   <script src="../jquery.js"></script>
   <script src="/zen.js"></script>
-  <!-- script src="../../../gun/nts.js"></script -->
-  <script src="../../../gun/lib/webrtc.js"></script>
+  <!-- script src="../../../zen/nts.js"></script -->
+  <script src="../../../zen/lib/webrtc.js"></script>
   <script>
     // Thanks to https://github.com/dmcinnes/HTML5-Asteroids
-    //var gun = Gun();
-    var gun = ZEN(location.origin + "/zen");
-    var game = { gun: gun.get("example/game/space"), area: {}, ships: {} };
+    //var zen = Zen();
+    var zen = ZEN(location.origin + "/zen");
+    var game = { zen: zen.get("example/game/space"), area: {}, ships: {} };
     game.keys = { 38: "up", 37: "left", 39: "right", 40: "down", 32: "space" };
     $(document).on("keydown", function (e) {
       //e.preventDefault();
@@ -43,7 +43,7 @@
       if (!ship || ship.l) {
         return;
       }
-      if (!when && ship.gun && ship.data) {
+      if (!when && ship.zen && ship.data) {
         ship.data.l = game.now;
         game.sync(true);
         return;
@@ -68,7 +68,7 @@
         // spawn our ship
         var id = String.random(1, "abcdefghijklmno");
         game.me = game.ships[id] = { data: (d = { id: id, t: game.now }) };
-        game.me.gun = game.gun.get("players").get(d.id).put(d);
+        game.me.zen = game.zen.get("players").get(d.id).put(d);
         return;
       }
       if (!d.id) {
@@ -91,7 +91,7 @@
       s.data = d;
       s.$ =
         s.$ ||
-        (s.gun
+        (s.zen
           ? $("#me")
           : $("#me").clone(true).attr("id", d.id).appendTo("#area"));
       if (!s.l) {
@@ -100,7 +100,7 @@
       s.frame =
         s.frame ||
         function (t, now) {
-          if (s.gun) {
+          if (s.zen) {
             s.fly(t, now);
           }
           if (s.calc(t, now)) {
@@ -129,7 +129,7 @@
 
           Object.keys(game.ships).forEach(function (key, ship) {
             ship = game.ships[key];
-            if (ship.gun) {
+            if (ship.zen) {
               return;
             }
             if (!ship.l) {
@@ -217,7 +217,7 @@
         }); // 1 layer clone.
         data.x = data.x / game.area.x;
         data.y = data.y / game.area.y;
-        me.gun.put(data);
+        me.zen.put(data);
       }
     };
     game.frame = window.requestAnimationFrame || setTimeout;
@@ -227,10 +227,10 @@
     };
     $(window).on("resize", game.resize);
     game.start = function () {
-      game.now = Gun.state();
+      game.now = Zen.state();
       game.resize();
       game.ship();
-      game.gun
+      game.zen
         .get("players")
         .map()
         .on(function (data, id) {
@@ -249,7 +249,7 @@
       setInterval(game.sync, 99);
       frame(function next(t) {
         frame(next, 1000 / 60);
-        now = game.now = Gun.state();
+        now = game.now = Zen.state();
         diff = now - last;
         last = now;
         Object.keys(ships).forEach(function (key, ship) {
@@ -266,12 +266,12 @@
     });
 
     // test WebRTC
-    gun.on("hi", function (peer) {
+    zen.on("hi", function (peer) {
       console.log("hi!", peer);
       if (peer.url) {
         return;
       }
-      var peers = gun.back("opt.peers");
+      var peers = zen.back("opt.peers");
       Object.keys(peers).forEach(function (id, peer) {
         peer = peers[id];
         if (!peer.url || !peer.wire) {

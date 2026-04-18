@@ -21,7 +21,7 @@ __events.EventEmitter.defaultMaxListeners = Infinity;
 
 const config = {
   ip: __ip.address(),
-  port: 8765,
+  port: 8420,
   servers: 3,
   route: {
     "/": __dirname + "/index.html",

@@ -308,7 +308,7 @@ function initLocalStorageRADPlugin() {
 // 		cb(401)
 // 	}
 // 	RAD.get = async function(file, cb, opt){ get && get(file, cb, opt);
-// 		var t = (await (await fetch('http://localhost:8765/zen/authorsData/'+file)).text());
+// 		var t = (await (await fetch('http://localhost:8420/zen/authorsData/'+file)).text());
 // 		if('404' == t){ cb(); return }
 // 		cb(null, t);
 // 	}

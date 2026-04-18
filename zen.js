@@ -1363,11 +1363,11 @@ __def('./src/root.js', function(module, __exp){
   __exp.default = __defaultExport;
 });
 
-__def('./src/crypto_wasm_bridge.js', function(module, __exp){
-  // src/crypto_wasm_bridge.js — Lazy loader and JS bridge for crypto.wasm.
+__def('./src/crypto.js', function(module, __exp){
+  // src/crypto.js — Lazy loader and JS bridge for crypto.wasm.
   //
   // Usage:
-  //   import bridge from "./crypto_wasm_bridge.js";
+  //   import bridge from "./crypto.js";
   //   await bridge.ready;
   //   const hash = bridge.keccak256(bytes);  // synchronous once ready
   //
@@ -1630,7 +1630,7 @@ __def('./src/crypto_wasm_bridge.js', function(module, __exp){
 
 __def('./src/base62.js', function(module, __exp){
   var shim = __req('./src/shim.js').default;
-  var bridge = __req('./src/crypto_wasm_bridge.js').default;
+  var bridge = __req('./src/crypto.js').default;
   let _wasmReady = false;
   bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});
 
@@ -1883,7 +1883,7 @@ __def('./src/aeskey.js', function(module, __exp){
 
 __def('./src/keccak256.js', function(module, __exp){
   var shim = __req('./src/shim.js').default;
-  var bridge = __req('./src/crypto_wasm_bridge.js').default;
+  var bridge = __req('./src/crypto.js').default;
   function toBytes(data) {
     if (typeof data === "string") {
       return new shim.TextEncoder().encode(data);
@@ -2870,11 +2870,7 @@ __def('./src/security.js', function(module, __exp){
     };
     var pipeline = [check.pipe.forget];
 
-    if ("~@" === soul) {
-      pipeline.push(check.pipe.alias);
-    } else if ("~@" === soul.slice(0, 2)) {
-      pipeline.push(check.pipe.pubs);
-    } else if ("~" === soul || "~/" === soul.slice(0, 2)) {
+    if ("~" === soul || "~/" === soul.slice(0, 2)) {
       pipeline.push(check.pipe.shard);
     } else if ((tmp = settings.pub(soul))) {
       ctx.pub = tmp;
@@ -2944,12 +2940,6 @@ __def('./src/security.js', function(module, __exp){
         }
       }
       next();
-    },
-    alias: function (ctx, next, reject) {
-      check.alias(ctx.eve, ctx.msg, ctx.val, ctx.key, ctx.soul, ctx.at, reject);
-    },
-    pubs: function (ctx, next, reject) {
-      check.pubs(ctx.eve, ctx.msg, ctx.val, ctx.key, ctx.soul, ctx.at, reject);
     },
     shard: function (ctx, next, reject) {
       check.shard(
@@ -3226,26 +3216,6 @@ __def('./src/security.js', function(module, __exp){
       },
       { name: "SHA-256" },
     );
-  };
-
-  check.alias = function (eve, msg, val, key, soul, at, no) {
-    if (!val) {
-      return no("Data must exist!");
-    }
-    if ("~@" + key === link_is(val)) {
-      return eve.to.next(msg);
-    }
-    no("Alias not same!");
-  };
-
-  check.pubs = function (eve, msg, val, key, soul, at, no) {
-    if (!val) {
-      return no("Alias must exist!");
-    }
-    if (key === link_is(val)) {
-      return eve.to.next(msg);
-    }
-    no("Alias not same!");
   };
 
   check.$sh = {
@@ -4541,7 +4511,7 @@ __def('./src/pen.js', function(module, __exp){
 __def('./src/ripemd160.js', function(module, __exp){
   // Pure RIPEMD-160 implementation — no dependencies, no WebCrypto.
   // Spec: https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
-  var bridge = __req('./src/crypto_wasm_bridge.js').default;
+  var bridge = __req('./src/crypto.js').default;
   let _wasmReady = false;
   bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});
 
@@ -6285,7 +6255,8 @@ __def('./src/put.js', function(module, __exp){
     var zen = this,
       at = zen._,
       root = at.root;
-    as = as || context(zen, data, cb, opt);
+    opt = options(opt);
+    as = as || context(zen, data, cb);
     as.root = at.root;
     as.run || (as.run = root.once);
     stun(as, at.id); // set a flag for reads to check if this chain is writing.
@@ -6302,12 +6273,12 @@ __def('./src/put.js', function(module, __exp){
       return zen;
     }
     if (!as.soul) {
-      return (get(as), zen);
+      return (get(as, opt), zen);
     }
     as.$ = root.$.get(as.soul); // TODO: This may not allow user chaining and similar?
     as.todo = [{ it: as.data, ref: as.$ }];
     as.turn = as.turn || turn;
-    as.ran = as.ran || ran;
+    as.ran = as.ran || function (a) { ran(a, opt); };
     //var path = []; as.via.back(at => { at.get && path.push(at.get.slice(0,9)) }); path = path.reverse().join('.');
     // TODO: Perf! We only need to stun chains that are being modified, not necessarily written to.
     function walk() {
@@ -6444,25 +6415,12 @@ __def('./src/put.js', function(module, __exp){
     return zen;
   };
 
-  function context(zen, data, cb, opt) {
+  function context(zen, data, cb) {
     var ctx = {};
     ctx[PUT_CONTEXT] = 1;
-    ctx.opt = options(opt);
     ctx.data = data;
     ctx.ack = cb;
     ctx.via = zen;
-    if (u !== ctx.opt.state) {
-      ctx.state = ctx.opt.state;
-    }
-    if (u !== ctx.opt.soul) {
-      ctx.soul = ctx.opt.soul;
-    }
-    if (u !== ctx.opt.ok) {
-      ctx.ok = ctx.opt.ok;
-    }
-    if (u !== ctx.opt.acks) {
-      ctx.acks = ctx.opt.acks;
-    }
     return ctx;
   }
 
@@ -6505,7 +6463,7 @@ __def('./src/put.js', function(module, __exp){
     });
   }
 
-  function ran(as) {
+  function ran(as, opt) {
     if (as.err) {
       ran.end(as.stun, as.root);
       return;
@@ -6529,7 +6487,7 @@ __def('./src/put.js', function(module, __exp){
           return;
         }
         as.ack(ack, this);
-      }, as.opt),
+      }, opt),
       acks = 0,
       stun = as.stun,
       tmp;
@@ -6552,7 +6510,7 @@ __def('./src/put.js', function(module, __exp){
     as.via._.on("out", {
       put: (as.out = as.graph),
       ok: as.ok && { "@": as.ok + 1 },
-      opt: as.opt,
+      opt: opt,
       "#": ask,
       _: tmp,
     });
@@ -6570,7 +6528,7 @@ __def('./src/put.js', function(module, __exp){
     as.ran(as);
   };
 
-  function get(as) {
+  function get(as, opt) {
     var at = as.via._,
       tmp;
     as.via = as.via.back(function (at) {
@@ -6585,16 +6543,7 @@ __def('./src/put.js', function(module, __exp){
         ((as.data || "")._ || "")["#"] || at.$.back("opt.uuid")(),
       );
     }
-    as.via.put(as.data, as.ack, as.opt, as);
-
-    return;
-    if (at.get && at.back.soul) {
-      tmp = as.data;
-      as.via = at.back.$;
-      (as.data = {})[at.get] = tmp;
-      as.via.put(as.data, as.ack, as.opt, as);
-      return;
-    }
+    as.via.put(as.data, as.ack, opt, as);
   }
   function check(d, tmp) {
     return (d && (tmp = d.constructor) && tmp.name) || typeof d;
@@ -8071,7 +8020,7 @@ __def('./src/locstore.js', function(module, __exp){
           );
           root.on("localStorage:error", { err: err, get: opt.prefix, put: disk });
         }
-        size = tmp.length;
+        size = (tmp || "").length;
 
         //if(!err && !Object.empty(opt.peers)){ return } // only ack if there are no peers. // Switch this to probabilistic mode
         setTimeout.each(

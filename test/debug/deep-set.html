@@ -3,8 +3,8 @@
   (function () {
     //localStorage.clear();
 
-    var gun = (window.gun = Gun("http://localhost:8765/gun"));
-    var user = (window.user = gun.get("pub/alice"));
+    var zen = (window.zen = Zen("http://localhost:8420/zen"));
+    var user = (window.user = zen.get("pub/alice"));
     return;
     user.put({ pub: "alice" }, write);
 
@@ -15,7 +15,7 @@
         .get("said")
         .set(
           {
-            what: "Hello world! " + Gun.text.random(3),
+            what: "Hello world! " + Zen.text.random(3),
           },
           get,
         );

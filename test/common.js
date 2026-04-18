@@ -1349,17 +1349,17 @@ describe("ZEN", function () {
     };
     if (((Zen.globalThis || {}).location || {}).search) {
       /*console.log("LOCALHOST PEER MUST BE ON!");
-			var peer = {url: 'http://localhost:8765/zen'};
+			var peer = {url: 'http://localhost:8420/zen'};
 			Zen.on('opt', function(root){
 				if(root.opt.test_no_peer){ return this.to.next(root) }
 				root.opt.peers = root.opt.peers || {};
-				root.opt.peers['http://localhost:8765/zen'] = peer;
+				root.opt.peers['http://localhost:8420/zen'] = peer;
 				this.to.next(root);
 			});*/
     }
     var goff = Zen();
     Zen.statedisk = function (o, s, cb) {
-      goff.get(s).put(o, cb, {
+      goff.get(s).put(o, cb, null, {
         turn: function (fn) {
           fn();
         },
@@ -5020,7 +5020,7 @@ describe("ZEN", function () {
 
     it("Deep puts with peer should work", function (done) {
       // tests in async mode now automatically connect to localhost peer.
-      //var zen = Zen('http://localhost:8765/zen');
+      //var zen = Zen('http://localhost:8420/zen');
       var zen = Zen();
       //var user = zen.user();
       //user.create('alice', 'password', function(){

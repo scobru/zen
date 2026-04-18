@@ -17,7 +17,7 @@ try {
 
 var config = {
   IP: ip || "localhost",
-  port: 8765,
+  port: 8420,
   relays: 1,
   browsers: 2, //3,
   each: 100000,

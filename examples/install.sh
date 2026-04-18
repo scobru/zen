@@ -10,8 +10,8 @@
 # Copy paste and run each line into your terminal.
 # If you are on Windows, http://nodejs.org/download/ has
 # an installer that will automatically do it for you.
-# curl -o- https://raw.githubusercontent.com/akaoio/gun/master/examples/install.sh | bash
-# wget -O - https://raw.githubusercontent.com/akaoio/gun/master/examples/install.sh | bash
+# curl -o- https://raw.githubusercontent.com/akaoio/zen/master/examples/install.sh | bash
+# wget -O - https://raw.githubusercontent.com/akaoio/zen/master/examples/install.sh | bash
 
 #debian/ubuntu
 cd ~
@@ -32,10 +32,10 @@ git clone https://github.com/isaacs/nave.git
 
 # If you just want nodejs and npm but not gun, stop here.
 #npm install gun@latest
-#cd ./node_modules/gun
+#cd ./node_modules/zen
 mkdir node_modules
-git clone https://github.com/akaoio/gun.git
-cd gun
+git clone https://github.com/akaoio/zen.git
+cd zen
 git checkout .
 git pull
 git checkout master

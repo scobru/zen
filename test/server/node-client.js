@@ -2,7 +2,7 @@ import Zen from "../../index.js";
 var location = { host: "localhost" };
 var zen = Zen({
   file: "read.json",
-  peers: ["http://" + location.host + ":8765/zen"],
+  peers: ["http://" + location.host + ":8420/zen"],
 });
 
 zen

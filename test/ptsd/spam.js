@@ -31,7 +31,7 @@
   };
 }
 
-var zen = Zen({ localStorage: false, peers: "http://localhost:8765/zen" });
+var zen = Zen({ localStorage: false, peers: "http://localhost:8420/zen" });
 var g = zen.get("test");
 var room = Zen.text.random(100);
 var pub = Zen.text.random(1000);

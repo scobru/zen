@@ -199,7 +199,7 @@
     <script>
       (function () {
         // the actual GPS tracking app!
-        var gun = ZEN(location.origin + "/zen");
+        var zen = ZEN(location.origin + "/zen");
         var gps = {};
         gps.opt = {
           continuous: true, // get location just once uses `getCurrentPosition()` while continuously uses `watchPosition()`
@@ -212,7 +212,7 @@
           gps.follow = (window.location.hash || "").slice(1);
           if (gps.follow) {
             gps.where = gps.where || Where(gps.opt);
-            gps.ref = gun.get("gps/" + gps.follow);
+            gps.ref = zen.get("gps/" + gps.follow);
             gps.ref.on(function (latlng) {
               //$('#debug').value = 'track ' + JSON.stringify(latlng);
               gps.where.update(latlng);
@@ -224,17 +224,17 @@
               (gps.track =
                 (document.cookie.match(/gps\=(.*?)(\&|$|\;)/i) || [])[1] ||
                 String.random(5)); // trick with cookies!
-            gps.ref = gun.get("gps/" + gps.track);
+            gps.ref = zen.get("gps/" + gps.track);
             gps.opt.track = function (pos) {
               pos = pos.latlng;
               if (
                 gps.follow ||
-                Gun.state() - gps.when < 1000 ||
+                Zen.state() - gps.when < 1000 ||
                 (gps.last && gps.last.lat == pos.lat && gps.last.lng == pos.lng)
               ) {
                 return; // throttle!
               }
-              gps.when = Gun.state();
+              gps.when = Zen.state();
               gps.ref.put((gps.last = pos));
               //$('#debug').value = JSON.stringify(gps.last);
             };

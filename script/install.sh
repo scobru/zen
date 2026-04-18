@@ -8,13 +8,13 @@ set -e
 
 # Default values
 VERSION="master"
-PORT="8765"
+PORT="8420"
 PEERS=""
 RAD="true"
 HTTPS_KEY=""
 HTTPS_CERT=""
 SERVICE_NAME="relay"
-INSTALL_DIR="$HOME/gun"
+INSTALL_DIR="$HOME/zen"
 SKIP_DEPS=false
 SKIP_SERVICE=false
 DRY_RUN=false
@@ -35,9 +35,9 @@ USAGE:
 
 OPTIONS:
     -v, --version VERSION       Git branch/tag to checkout (default: master)
-    -p, --port PORT            Port number for the server (default: 8765)
+    -p, --port PORT            Port number for the server (default: 8420)
     -P, --peers PEERS          Comma-separated list of peer URLs
-    -d, --dir DIRECTORY        Installation directory (default: ~/gun)
+    -d, --dir DIRECTORY        Installation directory (default: ~/zen)
     -s, --service NAME         Systemd service name (default: relay)
     --rad BOOL                 Enable/disable RAD storage (default: true)
     --https-key PATH           Path to HTTPS key file
@@ -58,7 +58,7 @@ EXAMPLES:
     $0 --version v0.2020.1241 --port 3000
 
     # Install with HTTPS and peers
-    $0 --https-key /path/to/key.pem --https-cert /path/to/cert.pem --peers "http://peer1.com/gun,http://peer2.com/gun"
+    $0 --https-key /path/to/key.pem --https-cert /path/to/cert.pem --peers "http://peer1.com/zen,http://peer2.com/zen"
 
     # Install without systemd service
     $0 --skip-service
@@ -166,13 +166,13 @@ validate_service_name() {
 
 # Use environment variables if not set by flags (with validation)
 VERSION="${VERSION:-master}"
-PORT="${PORT:-8765}"
+PORT="${PORT:-8420}"
 PEERS="${PEERS:-}"
 RAD="${RAD:-true}"
 HTTPS_KEY="${HTTPS_KEY:-}"
 HTTPS_CERT="${HTTPS_CERT:-}"
 SERVICE_NAME="${SERVICE_NAME:-relay}"
-INSTALL_DIR="${INSTALL_DIR:-$HOME/gun}"
+INSTALL_DIR="${INSTALL_DIR:-$HOME/zen}"
 
 # Validate inputs
 validate_port "$PORT"
@@ -291,7 +291,7 @@ install_gun() {
         execute git checkout "$VERSION"
         execute git pull origin "$VERSION" || true
     else
-        execute git clone https://github.com/akaoio/gun.git "$INSTALL_DIR"
+        execute git clone https://github.com/akaoio/zen.git "$INSTALL_DIR"
         execute cd "$INSTALL_DIR"
         execute git checkout "$VERSION"
     fi

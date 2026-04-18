@@ -8,7 +8,7 @@ let gunClient, server;
 
 describe("ZEN node client auth", () => {
   it("should  start server", (done) => {
-    server = http.createServer().listen(8765, done);
+    server = http.createServer().listen(8420, done);
 
     let gunConfig = {
       web: server,
@@ -17,7 +17,7 @@ describe("ZEN node client auth", () => {
     Zen(gunConfig);
     gunClient = Zen({
       file: "radataclient",
-      peers: ["http://localhost:8765/zen"],
+      peers: ["http://localhost:8420/zen"],
     });
   });
 
@@ -32,7 +32,7 @@ describe("ZEN node client auth", () => {
   it("should not create new user when exists", (done) => {
     gunClient2 = Zen({
       file: "radataclient2",
-      peers: ["http://localhost:8765/zen"],
+      peers: ["http://localhost:8420/zen"],
     });
     gunClient2.user().create("zen", "password", (res) => {
       expect(res.err).to.equal("User already created!");

@@ -49,7 +49,7 @@ function start(root) {
   tmp = peers[(id = loc.origin + "/zen")] = peers[id] || {};
   tmp.id = tmp.url = id;
   tmp.retry = tmp.retry || 0;
-  tmp = peers[(id = "http://localhost:8765/zen")] = peers[id] || {};
+  tmp = peers[(id = "http://localhost:8420/zen")] = peers[id] || {};
   tmp.id = tmp.url = id;
   tmp.retry = tmp.retry || 0;
   Zen.log.once(

@@ -16,7 +16,7 @@ ARG VCS_URL
 ARG VERSION
 LABEL org.label-schema.build-date=$BUILD_DATE \
   org.label-schema.name="Gun - Offline First, Javascript Graph Database" \
-  org.label-schema.url="http://gun.js.org" \
+  org.label-schema.url="http://zen.js.org" \
   org.label-schema.vcs-ref=$VCS_REF \
   org.label-schema.vcs-url=$VCS_URL \
   org.label-schema.vendor="The Gun Database Team" \
@@ -31,5 +31,5 @@ ADD . .
 RUN echo "{ \"sha\": \"$SHA\" }" > version.json
 RUN cat version.json
 EXPOSE 8080
-EXPOSE 8765
+EXPOSE 8420
 CMD ["npm","start"]

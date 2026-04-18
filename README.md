@@ -1,20 +1,43 @@
 ﻿# ZEN — Zen Entropy Network
 
-**ZEN** is an offline-first, decentralized graph database with a built-in cryptographic runtime.
+**A realtime, decentralized, offline-first graph database with a built-in cryptographic runtime and policy VM.**
 
-It is the production successor to the `amark/gun → akaoio/gun → ZEN` lineage, now consolidated around a single ZEN-first identity, build target, and runtime architecture.
+```js
+import ZEN from "@akaoio/zen";
+
+const zen = new ZEN({ file: "data" });
+zen.get("user").put({ name: "Alice" });
+zen.get("user").once(console.log);  // { name: "Alice" }
+```
 
 ---
 
-## What it does
+## The Book
 
-- **Graph database** — realtime, decentralized, offline-first, CRDT-based conflict resolution
-- **Crypto runtime** — key pairs, signing, verification, encryption, shared secrets, hashing
-- **Multi-curve** — secp256k1 and P-256 / secp256r1 support
-- **Key formats** — native base62, EVM (0x checksummed), BTC (P2PKH / WIF)
-- **Policy VM** — PEN: a bytecode policy engine compiled from Zig to WASM
-- **Storage adapters** — RAD/Radisk, filesystem, IndexedDB, OPFS, S3
-- **Transport** — WebSocket (internal, no `ws` dependency)
+This repository is documented as a structured book. Read it in order or jump to the chapter you need.
+
+| Chapter | Topic |
+|---------|-------|
+| [Ch 1 — Getting Started](docs/ch01-getting-started.md) | Install, Hello ZEN!, first graph, first crypto call |
+| [Ch 2 — Graph Model](docs/ch02-graph-model.md) | Nodes, souls, HAM/CRDT, state timestamps, `get`, `put`, `on`, `map` |
+| [Ch 3 — Cryptography](docs/ch03-crypto.md) | `pair`, `sign`, `verify`, `encrypt`, `decrypt`, `secret`, `hash`, `certify` |
+| [Ch 4 — Authenticated Data](docs/ch04-authenticated-data.md) | Owned namespaces, signing writes, certificates, security pipeline |
+| [Ch 5 — Storage Adapters](docs/ch05-storage.md) | Radisk, filesystem, IndexedDB, OPFS, S3, writing your own |
+| [Ch 6 — Networking](docs/ch06-networking.md) | Mesh, peers, WebSocket, WebRTC, message protocol |
+| [Ch 7 — PEN Policy VM](docs/ch07-pen.md) | WASM bytecode engine, opcodes, `ZEN.pen()`, `ZEN.run()` |
+| [Ch 8 — Contributing](docs/ch08-contributing.md) | Build system, test suite, adding chain methods, adding adapters |
+
+---
+
+## What ZEN does differently
+
+- **Offline-first CRDT** — every write is a HAM (Hypothetical Amnesia Machine) state vector; peers converge without coordination
+- **No central server** — peers are symmetric; any node can relay
+- **Graph, not table** — arbitrary node relationships, circular references native
+- **Crypto built in** — secp256k1 keys, AES-GCM encryption, ECDH shared secrets, deterministic certifications
+- **Policy VM** — PEN is a Zig-compiled WASM bytecode engine for write-access policies
+- **Multi-curve** — secp256k1 (default), P-256/secp256r1, EVM (0x), Bitcoin P2PKH
+- **Zero dependencies in browser** — bundled `zen.js` has no npm runtime dependencies
 
 ---
 
@@ -24,58 +47,70 @@ It is the production successor to the `amark/gun → akaoio/gun → ZEN` lineage
 npm install @akaoio/zen
 ```
 
-Development requires [Zig](https://ziglang.org/) on your `PATH` (for the WASM build pipelines):
-
-```bash
-npm install
-zig version
-npm run build
-```
+Node.js ≥ 0.8.4 is required. The bundled `zen.js` runs in any modern browser with no build step.
 
 ---
 
-## Quick start
+## Quick examples
+
+### Graph
 
 ```js
 import ZEN from "@akaoio/zen";
 
-const zen = new ZEN({ file: "data" });
+const zen = new ZEN({ file: "data" });  // persists to disk
 
-zen.get("user").put({ name: "Alice" });
-zen.get("user").once(console.log);
+// Write
+zen.get("profile").put({ name: "Alice", age: 30 });
+
+// Read once
+zen.get("profile").get("name").once(function(data) {
+  console.log(data);  // "Alice"
+});
+
+// Subscribe to changes
+zen.get("profile").get("age").on(function(data) {
+  console.log("age changed:", data);
+});
 ```
 
 ### Key pairs and crypto
 
 ```js
-// Default: secp256k1
-const pair = await ZEN.pair();
-const signed = await ZEN.sign("hello", pair);
-const ok = await ZEN.verify(signed, pair.pub);
+const pair = await ZEN.pair();                       // secp256k1
 
-// Encrypt / decrypt
+const signed  = await ZEN.sign("hello", pair);
+const ok      = await ZEN.verify(signed, pair.pub);  // "hello"
+
 const enc = await ZEN.encrypt("secret", pair);
-const dec = await ZEN.decrypt(enc, pair);
+const dec = await ZEN.decrypt(enc, pair);            // "secret"
 
-// Shared secret (ECDH)
-const alicePair = await ZEN.pair();
-const secret = await ZEN.secret(alicePair.epub, pair);
+const bob    = await ZEN.pair();
+const shared = await ZEN.secret(bob.epub, pair);     // ECDH
 ```
 
 ### Multi-curve
 
 ```js
 const secp = await ZEN.pair();                        // secp256k1 (default)
-const p256 = await ZEN.pair(null, { curve: "p256" }); // P-256 / secp256r1
+const p256 = await ZEN.pair(null, { curve: "p256" }); // P-256
 const evm  = await ZEN.pair(null, { format: "evm" }); // 0x EVM address
 const btc  = await ZEN.pair(null, { format: "btc" }); // P2PKH mainnet
 ```
 
-### Hashing
+### Collections
 
 ```js
-const sha     = await ZEN.hash("hello");                        // SHA-256
-const keccak  = await ZEN.hash("hello", { name: "keccak256" }); // Keccak-256
+const list = zen.get("todos");
+
+// Add items
+list.set({ text: "buy milk" });
+list.set({ text: "learn ZEN" });
+
+// Iterate over all items in realtime
+list.map().on(function(item, id) {
+  console.log(id, item);
+});
 ```
 
 ### Seed-based deterministic keys
@@ -180,7 +215,7 @@ The principle: **use whatever is fastest**. Measure at the micro level, then dec
 | **base62** encode/decode | **WASM** (`crypto.wasm`) | Faster than BigInt for encoding |
 
 ```bash
-npm run buildCrypto  # rebuild crypto.wasm from src/crypto_wasm.zig
+npm run buildCrypto  # rebuild crypto.wasm from src/crypto.zig
 ```
 
 ---
@@ -282,8 +317,8 @@ src/                  — runtime source (source of truth)
   sha256.js           — SHA-256 wrapper
   sha256.zig          — Zig implementation
   hmac_sha256.zig     — HMAC-SHA-256 implementation
-  crypto_wasm_bridge.js — lazy WASM loader + typed wrappers
-  crypto_wasm.zig     — WASM crypto module source
+  crypto.js — lazy WASM loader + typed wrappers
+  crypto.zig     — WASM crypto module source
   wasm.zig            — WASM utilities
   
   # Policy engine
@@ -309,9 +344,9 @@ pen.wasm             — ~27KB WASM policy engine
 
 lib/                 — storage adapters, extensions, build scripts
   server.js          — ZEN relay / server identity
-  build-zen.js       — bundle script
-  build-pen.js       — PEN WASM build
-  build-crypto.js    — crypto WASM build
+  builder/zen.js       — bundle script
+  builder/pen.js       — PEN WASM build
+  builder/crypto.js    — crypto WASM build
   
   # Storage adapters
   store.js           — storage abstraction
@@ -330,7 +365,6 @@ lib/                 — storage adapters, extensions, build scripts
   then.js            — Promise chaining
   yson.js            — YSON parser
   verify.js          — verification utilities
-  cryptomodules.js   — crypto module loader
   and 100+ other adapters, utilities, middleware...
 
 test/
@@ -347,8 +381,9 @@ test/
 
 ```
 amark/gun
-  → akaoio/gun
-    → ZEN (Zen Entropy Network)
+  → mimiza/gun
+    → akaoio/gun
+      → ZEN (Zen Entropy Network)
 ```
 
 ZEN keeps the graph and sync inheritance but has a separate runtime identity, build system, and architectural direction. It is not a thin rebrand — the source has been materially rewritten.

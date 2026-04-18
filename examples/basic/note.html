@@ -12,8 +12,8 @@
 <textarea id="view" placeholder="write here..."></textarea>
 <script src="/zen.js"></script>
 <script>
-  gun = ZEN(location.origin + "/zen");
-  note = gun.get("note").get(location.hash.replace("#", "") || 1);
+  zen = ZEN(location.origin + "/zen");
+  note = zen.get("note").get(location.hash.replace("#", "") || 1);
   view.oninput = () => {
     note.put(view.value);
   };

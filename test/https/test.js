@@ -14,7 +14,7 @@ export default function (port, file, cb, inject) {
     process.env.VCAP_APP_PORT ||
     process.env.PORT ||
     process.argv[2] ||
-    8765;
+    8420;
 
   var fs = __fs;
   var Zen = __index;

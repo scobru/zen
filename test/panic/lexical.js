@@ -11,7 +11,7 @@ const __dirname = __dirnameOf(__filename);
 
 var config = {
   IP: __ip.address(),
-  port: process.env.PORT ? parseInt(process.env.PORT) : 8765,
+  port: process.env.PORT ? parseInt(process.env.PORT) : 8420,
   servers: 1,
   browsers: 1,
   route: {

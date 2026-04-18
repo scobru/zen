@@ -12,7 +12,7 @@ const __dirname = __dirnameOf(__filename);
 
 var config = {
   IP: __ip.address(),
-  port: 8765,
+  port: 8420,
   relays: 1,
   browsers: 4,
   each: 1500,

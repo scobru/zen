@@ -1,5 +1,5 @@
 import shim from "./shim.js";
-import bridge from "./crypto_wasm_bridge.js";
+import bridge from "./crypto.js";
 
 function toBytes(data) {
   if (typeof data === "string") {

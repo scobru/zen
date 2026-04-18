@@ -37,7 +37,7 @@ describe("PANIC!", function () {
   });
 
   panic.server(server);
-  server.listen(8765);
+  server.listen(8420);
 
   var clients = panic.clients;
 
@@ -45,11 +45,11 @@ describe("PANIC!", function () {
   var ff1 = new wd.Builder()
     .forBrowser("firefox")
     .build()
-    .get("http://localhost:8765/panic.html");
+    .get("http://localhost:8420/panic.html");
   var ff2 = new wd.Builder()
     .forBrowser("firefox")
     .build()
-    .get("http://localhost:8765/panic.html");
+    .get("http://localhost:8420/panic.html");
 
   function min(n, done, list) {
     list = list || clients;

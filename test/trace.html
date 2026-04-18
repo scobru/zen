@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Gun Msg Trace</title>
+    <title>Zen Msg Trace</title>
     <style>
       html,
       body {
@@ -82,7 +82,7 @@
   </head>
   <body>
     <div id="trace">
-      <h1>Gun Msg Trace</h1>
+      <h1>Zen Msg Trace</h1>
       <h2></h2>
       <div id="diagram"></div>
     </div>
@@ -97,36 +97,36 @@
     <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams/dist/sequence-diagram-min.js"></script>
     <script>
       (function () {
-        // OVERLOAD GUN FUNCTIONS THAT WE WANT TO TRACE:
+        // OVERLOAD ZEN FUNCTIONS THAT WE WANT TO TRACE:
 
-        /// GUN protocolo
-        var _get = Gun.on._get;
-        Gun.on._get = function (a, b, c, d, e) {
+        /// ZEN protocolo
+        var _get = Zen.on._get;
+        Zen.on._get = function (a, b, c, d, e) {
           Trace.log("GET", a);
           _get.call(this, a, b, c, d, e);
         }; /// PROTOCOL
-        var _put = Gun.on.put;
-        Gun.on.put = function (a, b, c, d, e) {
+        var _put = Zen.on.put;
+        Zen.on.put = function (a, b, c, d, e) {
           Trace.log("PUT", a);
           _put.call(this, a, b, c, d, e);
         }; /// PROTOCOL
 
-        /// GUN chain
-        //   var get = Gun.chain.get; Gun.chain.get = function(a,b,c,d,e){ Trace.log('.get', a); return get.call(this, a,b,c,d,e) } /// chain
-        //   var put = Gun.chain.put; Gun.chain.put = function(a,b,c,d,e){ Trace.log('.put', a); return put.call(this, a,b,c,d,e) } /// chain
-        //   var map = Gun.chain.map; Gun.chain.map = function(a,b,c,d,e){ Trace.log('.map', a); return map.call(this, a,b,c,d,e) } /// chain
-        //   var once = Gun.chain.once; Gun.chain.once = function(a,b,c,d,e){ Trace.log('.once', a); return once.call(this, a,b,c,d,e) } /// chain
-        //   var on = Gun.chain.on; Gun.chain.on = function(a,b,c,d,e){ Trace.log('.on', a); return on.call(this, a,b,c,d,e) } /// chain
+        /// ZEN chain
+        //   var get = Zen.chain.get; Zen.chain.get = function(a,b,c,d,e){ Trace.log('.get', a); return get.call(this, a,b,c,d,e) } /// chain
+        //   var put = Zen.chain.put; Zen.chain.put = function(a,b,c,d,e){ Trace.log('.put', a); return put.call(this, a,b,c,d,e) } /// chain
+        //   var map = Zen.chain.map; Zen.chain.map = function(a,b,c,d,e){ Trace.log('.map', a); return map.call(this, a,b,c,d,e) } /// chain
+        //   var once = Zen.chain.once; Zen.chain.once = function(a,b,c,d,e){ Trace.log('.once', a); return once.call(this, a,b,c,d,e) } /// chain
+        //   var on = Zen.chain.on; Zen.chain.on = function(a,b,c,d,e){ Trace.log('.on', a); return on.call(this, a,b,c,d,e) } /// chain
 
-        /// GUN events
-        var input = Gun.on.in;
-        Gun.on.in = function (a, b, c, d, e) {
+        /// ZEN events
+        var input = Zen.on.in;
+        Zen.on.in = function (a, b, c, d, e) {
           Trace.log("in", a);
           input.call(this, a, b, c, d, e);
         }; /// EVENT
 
-        var output = Gun.on.out;
-        Gun.on.out = function (a, b, c, d, e) {
+        var output = Zen.on.out;
+        Zen.on.out = function (a, b, c, d, e) {
           Trace.log("out", a);
           output.call(this, a, b, c, d, e);
         }; /// EVENT
@@ -143,38 +143,38 @@
       (function () {
         // PASTE YOUR UNIT TEST INTO HERE TO TRACE IT!
         // if (typeof localStorage!=='undefined') { localStorage.clear(); }
-        // var goff = Gun();
-        // Gun.statedisk = function(o,s,cb){ goff.get(s).put(o, cb, {turn: function(fn){fn()}}); };
+        // var goff = Zen();
+        // Zen.statedisk = function(o,s,cb){ goff.get(s).put(o, cb, {turn: function(fn){fn()}}); };
 
-        var gun = Gun();
+        var zen = Zen();
         var bob = { age: 29, name: "Bob!" };
         var cat = { name: "Fluffy", species: "kitty" };
         var user = { bob: bob };
         bob.pet = cat;
         cat.slave = bob;
         Trace.log("START");
-        // Gun.statedisk(user, 'nodecircle', function(){
+        // Zen.statedisk(user, 'nodecircle', function(){
         console.only.i = 1;
-        console.log("=============", gun);
+        console.log("=============", zen);
 
-        // gun.get('nodecircle').put(user, function(ack) { Trace.log('ACK', ack); });
-        // gun.get('nodecircle').on(function(ack) { Trace.log('END', ack); });
-        gun.get("nodecircle").once(function (ack) {
+        // zen.get('nodecircle').put(user, function(ack) { Trace.log('ACK', ack); });
+        // zen.get('nodecircle').on(function(ack) { Trace.log('END', ack); });
+        zen.get("nodecircle").once(function (ack) {
           Trace.log("END", ack);
         });
-        //       gun.get('nodecircle').get('a').get('b').get('c').on(function(v,k){
-        //       gun.get('nodecircle').get('bob').on(function(v,k){
-        //       gun.get('nodecircle').get('bob').get('pet').get('slave').once(function(v,k){
+        //       zen.get('nodecircle').get('a').get('b').get('c').on(function(v,k){
+        //       zen.get('nodecircle').get('bob').on(function(v,k){
+        //       zen.get('nodecircle').get('bob').get('pet').get('slave').once(function(v,k){
         // });
       })();
 
-      // Gun.on('trace.end', function(msg){
+      // Zen.on('trace.end', function(msg){
       setTimeout(function () {
         console.log("_____TOTAL LOGS: ", Trace.traces.length, new Date());
         var id,
           code = Trace.traces.join("\n");
         $("h2:first").text(`Total of steps: ${Trace.traces.length}`);
-        $("title:first").text(`(${Trace.traces.length}) steps | Gun Msg Trace`);
+        $("title:first").text(`(${Trace.traces.length}) steps | Zen Msg Trace`);
         var diagram = Diagram.parse(code);
         diagram.drawSVG(id || "diagram", { theme: "simple" });
         setTimeout(function () {

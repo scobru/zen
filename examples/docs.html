@@ -61,30 +61,30 @@
     </div>
 
     <script src="/zen.js"></script>
-    <script src="../../gun/lib/monotype.js"></script>
-    <script src="../../gun/lib/meta.js"></script>
-    <script src="../../gun/lib/normalize.js"></script>
-    <script async src="../../gun/lib/fun.js"></script>
+    <script src="../../zen/lib/monotype.js"></script>
+    <script src="../../zen/lib/meta.js"></script>
+    <script src="../../zen/lib/normalize.js"></script>
+    <script async src="../../zen/lib/fun.js"></script>
 
-    <script async src="../../gun/lib/wave.js"></script>
+    <script async src="../../zen/lib/wave.js"></script>
     <!-- script async src="https://edide.io/music.lib"></script -->
 
     <script>
-      var gun = Gun();
+      var zen = Zen();
       var page = {};
-      //var gun = Gun(['https://guntest.herokuapp.com/gun', 'http://localhost:8765/zen']);
+      //var zen = Zen(['https://guntest.herokuapp.com/zen', 'http://localhost:8420/zen']);
 
       (window.onhashchange = function () {
         var file = (location.hash || "").slice(1);
         var S = +new Date();
         $("#page").empty().attr("contenteditable", "false");
-        gun
-          .get("test/gun/docs/" + file)
+        zen
+          .get("test/zen/docs/" + file)
           .get("what")
           .map()
           .on(function render(data, i, msg, eve) {
             var tmp = page[i] || "";
-            var last = Gun.state.is(gun._.root.graph[msg.put["#"]], i);
+            var last = Zen.state.is(zen._.root.graph[msg.put["#"]], i);
             if (last < tmp.last) {
               return;
             }
@@ -217,8 +217,8 @@
           var data = (p.get(0) || {}).outerHTML || "";
           //data = $.normalize(data); // GOOD TO DO SECURITY ON SENDING SIDE TOO!!!
           window.LOCK = true;
-          gun
-            .get("test/gun/docs/" + file)
+          zen
+            .get("test/zen/docs/" + file)
             .get("what")
             .get(i)
             .put(data);

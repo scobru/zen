@@ -18,7 +18,7 @@ var opt = { localStorage: false };
 //opt.chunk = 1024;
 opt.store = (Zen.window && window.RindexedDB(opt)) || __rfs(opt);
 var rad = Radisk(opt);
-var zen = Zen("http://localhost:8765/zen");
+var zen = Zen("http://localhost:8420/zen");
 
 Zen.window &&
   (wait.onchange = function () {

@@ -33,8 +33,8 @@
       }
     </script>
     <script>
-      var gun = ZEN(location.origin + "/zen");
-      var ref = gun.get("example/json/data");
+      var zen = ZEN(location.origin + "/zen");
+      var ref = zen.get("example/json/data");
       $("#form").onsubmit = function (e) {
         return (ref.path(clean($("#field").value)).put("value"), false); // add a new field, and cancel the form submit.
       };
@@ -56,7 +56,7 @@
           .put(clean(e.target.innerHTML)); // insert the value of the text in the current element.
       };
       ref.on(function (json) {
-        var data = Gun.obj.copy(json); // make a snapshot!
+        var data = Zen.obj.copy(json); // make a snapshot!
         delete data._; // skip meta data!
         for (var field in data) {
           var val = String(data[field]),

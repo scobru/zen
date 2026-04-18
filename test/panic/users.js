@@ -12,14 +12,13 @@ const __dirname = __dirnameOf(__filename);
 
 var config = {
   IP: __ip.address(),
-  port: 8765,
+  port: 8420,
   servers: 2,
   browsers: 2,
   route: {
     "/": __dirname + "/index.html",
     "/zen.js": __dirname + "/../../zen.js",
     "/jquery.js": __dirname + "/../../examples/jquery.js",
-    "/cryptomodules.js": __dirname + "/../../lib/cryptomodules.js",
     "/zen.js": __dirname + "/../../zen.js",
   },
 };
@@ -108,10 +107,8 @@ describe("End-to-End Encryption on User Accounts", function () {
               script.src = src;
               document.head.appendChild(script);
             }
-            load("cryptomodules.js", function () {
-              load("zen.js", function () {
-                test.done();
-              });
+            load("zen.js", function () {
+              test.done();
             });
           },
           { i: (i += 1), config: config },

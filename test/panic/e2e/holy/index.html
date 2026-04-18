@@ -6,7 +6,7 @@
   </head>
   <body>
     <script src="panic.js"></script>
-    <script src="http://localhost:8765/zen.js"></script>
+    <script src="http://localhost:8420/zen.js"></script>
 
     <script>
       (function () {
@@ -15,8 +15,8 @@
         req.open("GET", "ports.json");
         req.addEventListener("load", function () {
           var ports = JSON.parse(req.responseText);
-          var server = "http://localhost:" + ports.gun + "/zen";
-          window.gun = new Gun(server);
+          var server = "http://localhost:" + ports.zen + "/zen";
+          window.zen = new Zen(server);
           panic.server("http://localhost:" + ports.panic);
         });
         req.send();
