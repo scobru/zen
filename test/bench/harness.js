@@ -91,9 +91,6 @@ export async function run(opts = {}) {
     results.push({ suite, name, ...r });
   }
 
-  console.log(`\n${DIM}JSON results:${RESET}`);
-  console.log(JSON.stringify(results, null, 2));
-
   return results;
 }
 

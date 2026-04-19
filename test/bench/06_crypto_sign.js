@@ -20,8 +20,8 @@ import { suite, bench, run } from "./harness.js";
 import ZEN from "../../zen.js";
 
 // ── Generate keypairs for testing ─────────────────────────────────────────────
-const K1_PAIR = await ZEN.pair({ curve: "secp256k1" });
-const P2_PAIR = await ZEN.pair({ curve: "p256" });
+const K1_PAIR = await ZEN.pair(null, { curve: "secp256k1" });
+const P2_PAIR = await ZEN.pair(null, { curve: "p256" });
 const DEFAULT_PAIR = await ZEN.pair(); // default curve
 
 const SHORT_MSG = "hello";
@@ -29,8 +29,8 @@ const MEDIUM_MSG = "x".repeat(256);
 
 suite("ZEN.pair() key generation", () => {
   bench("pair() default curve", () => ZEN.pair());
-  bench("pair() secp256k1", () => ZEN.pair({ curve: "secp256k1" }));
-  bench("pair() p256", () => ZEN.pair({ curve: "p256" }));
+  bench("pair() secp256k1", () => ZEN.pair(null, { curve: "secp256k1" }));
+  bench("pair() p256", () => ZEN.pair(null, { curve: "p256" }));
 });
 
 suite("ZEN.sign() + verify()", () => {
