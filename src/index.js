@@ -11,6 +11,7 @@ import shim from "./shim.js";
 import hash from "./hash.js";
 import certify from "./certify.js";
 import keyid from "./keyid.js";
+import recover from "./recover.js";
 import security from "./runtime.js";
 import graph from "./graph.js";
 
@@ -201,6 +202,9 @@ class ZEN {
   static certify(...args) {
     return certify(...args);
   }
+  static recover(...args) {
+    return recover(...args);
+  }
 
   get _graph() {
     if (!this._graphInstance) {
@@ -253,6 +257,9 @@ class ZEN {
   }
   certify(...args) {
     return this.constructor.certify(...args);
+  }
+  recover(...args) {
+    return this.constructor.recover(...args);
   }
 
   get(...args) {

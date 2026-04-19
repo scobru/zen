@@ -360,16 +360,20 @@ const unpacked = ZEN.unpack(str);        // → Uint8Array
 
 ## 3.9 Public key format
 
-All public keys in ZEN use **base62 encoding** — only alphanumeric characters, no `_`, `-`, `.` separators.
+All public keys in ZEN use **base62 encoding** — only alphanumeric characters (`0-9A-Za-z`), no `+`, `/`, `=`, `_`, `-`, `.` separators. **ZEN does NOT use base64 or base64url.**
 
-| Field | Length | Alphabet |
-|-------|--------|---------|
-| `pub` / `epub` | 88 chars | `[A-Za-z0-9]` |
-| `priv` / `epriv` | 44 chars | `[A-Za-z0-9]` |
+| Field | Length | Format | Notes |
+|-------|--------|--------|---------|
+| `pub` / `epub` | **45 chars** | 44-char base62 x + `"0"`/`"1"` parity | Compressed EC point |
+| `priv` / `epriv` | 44 chars | base62 scalar | secp256k1 scalar |
 
-This is a deliberate change from the original GUN base64url format. It enables keys to be used as URL path segments and graph souls without escaping.
+Public keys are **compressed**: only the x-coordinate (44 chars base62) plus 1 parity character (`"0"` = y even, `"1"` = y odd) are stored. The y-coordinate is recovered on-the-fly via modular square root. This is the same concept as Bitcoin compressed pubkey (33 bytes), expressed in base62 instead of bytes.
 
-ZEN automatically accepts old-format (base64url, 43/87-char) keys for backward compatibility.
+This is a deliberate change from the original GUN database which used base64url. Base62 enables keys to be used as URL path segments and graph souls without any escaping.
+
+ZEN automatically accepts legacy formats for backward compatibility:
+- Old ZEN uncompressed (88-char, `[A-Za-z0-9]{88}`) — base62 x + base62 y
+- Legacy GUN base64url (87-char, `base64url.base64url`) — original GUN format
 
 ---
 

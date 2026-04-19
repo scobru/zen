@@ -89,6 +89,17 @@ const bob    = await ZEN.pair();
 const shared = await ZEN.secret(bob.epub, pair);     // ECDH
 ```
 
+A pair object has four fields — all base62 (`0-9A-Za-z`), no `+`, `/`, or `=`:
+
+| Field | Length | Description |
+|-------|--------|-------------|
+| `pub`   | 45 chars | Compressed EC public key — 44-char base62 x-coord + `"0"`/`"1"` parity |
+| `priv`  | 44 chars | Signing private key scalar |
+| `epub`  | 45 chars | Encryption public key (same format as `pub`) |
+| `epriv` | 44 chars | Encryption private key scalar |
+
+The 45-char compressed format (`x || parity`) saves space versus the legacy 88-char uncompressed form. Legacy keys are still accepted for backward compatibility.
+
 ### Multi-curve
 
 ```js

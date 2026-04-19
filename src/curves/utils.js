@@ -221,6 +221,21 @@ function createCurveCore(config) {
     return y;
   }
 
+  // Recover public key point from ECDSA (v, r, s) + hash bytes
+  // pub = u1*G + u2*R  where u1 = -z*r^-1, u2 = s*r^-1 mod N
+  function recoverPub(v, r, s, hashBytes) {
+    const z = mod(bytesToBigInt(hashBytes), N);
+    const ry = liftX(r, BigInt(v) & 1n);
+    const R = { x: r, y: ry };
+    if (!isOnCurve(R)) throw new Error("Recovery: R not on curve");
+    const rinv = modInv(r, N);
+    const u1 = mod((N - mod(z, N)) * rinv, N);
+    const u2 = mod(s * rinv, N);
+    const point = pointAdd(pointMultiply(u1, G), pointMultiply(u2, R));
+    if (!point || !isOnCurve(point)) throw new Error("Recovery failed");
+    return point;
+  }
+
   function pointToPub(point) {
     if (!isOnCurve(point)) {
       throw new Error("Invalid public point");
@@ -373,6 +388,8 @@ function createCurveCore(config) {
       parseScalar,
       assertScalar,
       scalarToString,
+      liftX,
+      recoverPub,
       pointToPub,
       parsePub,
       publicFromPrivate,

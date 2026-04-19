@@ -2320,6 +2320,21 @@ defmod('./src/curves/utils.js', function(module, exp){
       return y;
     }
 
+    // Recover public key point from ECDSA (v, r, s) + hash bytes
+    // pub = u1*G + u2*R  where u1 = -z*r^-1, u2 = s*r^-1 mod N
+    function recoverPub(v, r, s, hashBytes) {
+      const z = mod(bytesToBigInt(hashBytes), N);
+      const ry = liftX(r, BigInt(v) & 1n);
+      const R = { x: r, y: ry };
+      if (!isOnCurve(R)) throw new Error("Recovery: R not on curve");
+      const rinv = modInv(r, N);
+      const u1 = mod((N - mod(z, N)) * rinv, N);
+      const u2 = mod(s * rinv, N);
+      const point = pointAdd(pointMultiply(u1, G), pointMultiply(u2, R));
+      if (!point || !isOnCurve(point)) throw new Error("Recovery failed");
+      return point;
+    }
+
     function pointToPub(point) {
       if (!isOnCurve(point)) {
         throw new Error("Invalid public point");
@@ -2472,6 +2487,8 @@ defmod('./src/curves/utils.js', function(module, exp){
         parseScalar,
         assertScalar,
         scalarToString,
+        liftX,
+        recoverPub,
         pointToPub,
         parsePub,
         publicFromPrivate,
@@ -2759,11 +2776,13 @@ defmod('./src/sign.js', function(module, exp){
         if (!s) {
           continue;
         }
+        let v = Number(pt.y & 1n);
         if (s > c.HALF_N) {
           s = c.N - s;
+          v ^= 1;
         }
         const sig = c.concatBytes(c.bigIntToBytes(r, 32), c.bigIntToBytes(s, 32));
-        const out = { m: msg, s: c.encodeBase64(sig, opt.encode || "base64") };
+        const out = { m: msg, s: c.encodeBase64(sig, opt.encode || "base64"), v };
         if (c.curve !== "secp256k1") {
           out.c = c.curve;
         }
@@ -5301,6 +5320,58 @@ defmod('./src/keyid.js', function(module, exp){
   }
 
   exp.default = keyid;
+});
+
+defmod('./src/recover.js', function(module, exp){
+  var crv = reqmod('./src/curves.js').default;
+  async function recover(data, cb, opt) {
+    try {
+      opt = opt || {};
+      const c0 = crv();
+      const msg = await c0.settings.parse(data);
+      if (!msg || msg.v === undefined || msg.v === null) {
+        throw new Error("No recovery bit (v) in signature");
+      }
+      const c = crv((msg && msg.c) || opt.curve);
+      const h = await c.shaBytes(msg.m);
+      const sig = new Uint8Array(
+        c.shim.Buffer.from(msg.s || "", opt.encode || "base64"),
+      );
+      if (sig.length !== 64) {
+        throw new Error("Invalid signature length");
+      }
+      const r = c.bytesToBigInt(sig.slice(0, 32));
+      const s = c.bytesToBigInt(sig.slice(32));
+      if (r <= 0n || r >= c.N || s <= 0n || s >= c.N) {
+        throw new Error("Signature out of range");
+      }
+      const point = c.recoverPub(msg.v, r, s, h);
+      const pub = c.pointToPub(point);
+      if (cb) {
+        try {
+          cb(pub);
+        } catch (e) {
+          console.log(e);
+        }
+      }
+      return pub;
+    } catch (e) {
+      if (cb) {
+        try {
+          cb();
+        } catch (x) {
+          console.log(x);
+        }
+        return;
+      }
+      throw e;
+    }
+  }
+
+
+  exp.default = recover;
+
+  exp.recover = recover;
 });
 
 defmod('./src/runtime.js', function(module, exp){
@@ -8091,6 +8162,7 @@ defmod('./src/index.js', function(module, exp){
   var hash = reqmod('./src/hash.js').default;
   var certify = reqmod('./src/certify.js').default;
   var keyid = reqmod('./src/keyid.js').default;
+  var recover = reqmod('./src/recover.js').default;
   var security = reqmod('./src/runtime.js').default;
   var graph = reqmod('./src/graph.js').default;
   var hasOwn = Object.prototype.hasOwnProperty;
@@ -8280,6 +8352,9 @@ defmod('./src/index.js', function(module, exp){
     static certify(...args) {
       return certify(...args);
     }
+    static recover(...args) {
+      return recover(...args);
+    }
 
     get _graph() {
       if (!this._graphInstance) {
@@ -8332,6 +8407,9 @@ defmod('./src/index.js', function(module, exp){
     }
     certify(...args) {
       return this.constructor.certify(...args);
+    }
+    recover(...args) {
+      return this.constructor.recover(...args);
     }
 
     get(...args) {
