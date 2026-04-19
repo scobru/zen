@@ -161,11 +161,36 @@ ZEN.verify(data, pub)            // verify signature
 ZEN.encrypt(data, pair)          // encrypt
 ZEN.decrypt(data, pair)          // decrypt
 ZEN.secret(pub, pair)            // ECDH shared secret
-ZEN.hash(data, opt)              // hash (SHA-256 or keccak256)
+ZEN.hash(data, pair, cb, opt)    // hash (SHA-256, keccak256, or PBKDF2)
 ZEN.certify(certs, policy, pair) // create a certificate
 ```
 
 All static methods are also available as instance methods: `zen.pair()`, `zen.sign()`, etc.
+
+### Hash mining (Proof-of-Work)
+
+Pass `opt.pow` to mine: the function loops with base62 nonces until the hash starts with the required prefix.
+
+```js
+// string data — nonce appended as "data:nonce"
+const { hash, nonce, proof } = await ZEN.hash("mykey", null, null, {
+  name: "SHA-256",
+  encode: "hex",
+  pow: { unit: "0", difficulty: 2 },   // hash must start with "00"
+});
+
+// function data — full control over nonce placement
+const result = await ZEN.hash(
+  (nonce) => `prefix:${nonce}:suffix`,
+  null, null,
+  { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 1 } },
+);
+// result.proof  — the winning value (what gets written to the graph)
+// result.hash   — its SHA-256 hex hash (starts with the required prefix)
+// result.nonce  — the base62 nonce that produced the win
+```
+
+The `proof` value is compatible with PEN's PoW policy: when pen verifies a write it calls `SHA-256(field)` directly, which matches `ZEN.hash(proof, null, null, { name: "SHA-256", encode: "hex" })`.
 
 ---
 
