@@ -173,7 +173,7 @@ ZEN.recover(sig)                 // recover signer pub from signature (no pub ne
 ZEN.encrypt(data, pair)          // encrypt
 ZEN.decrypt(data, pair)          // decrypt
 ZEN.secret(pub, pair)            // ECDH shared secret
-ZEN.hash(data, pair, cb, opt)    // hash (SHA-256, keccak256, or PBKDF2)
+ZEN.hash(data, pair, cb, opt)    // hash (SHA-256, HKDF, keccak256, or PBKDF2)
 ZEN.certify(certs, policy, pair) // create a certificate
 ```
 
@@ -218,6 +218,32 @@ const result = await ZEN.hash(
 ```
 
 The `proof` value is compatible with PEN's PoW policy: when pen verifies a write it calls `SHA-256(field)` directly, which matches `ZEN.hash(proof, null, null, { name: "SHA-256", encode: "hex" })`.
+
+### Hash modes
+
+`opt.name` selects the algorithm. Each mode is optimised for a different use case:
+
+| `opt.name` | Algorithm | Salt used? | When to use |
+|------------|-----------|------------|-------------|
+| `"SHA-256"` | WebCrypto SHA-256 | **No** | Content-addressing, PoW mining, fast fingerprints |
+| `"HKDF"` | WebCrypto HKDF | **Yes** | Deriving keys from a high-entropy seed (WebAuthn, keypair) |
+| `"keccak256"` | WASM Keccak-256 | No | EVM address derivation, Ethereum-compatible hashes |
+| _(default)_ | PBKDF2 100k iter | Yes | Password hashing — slow by design to stretch low-entropy secrets |
+
+```js
+// Fast content hash (salt argument ignored by SHA-256 path)
+const h = await ZEN.hash("data", null, null, { name: "SHA-256", encode: "hex" });
+
+// Key derivation from a strong seed — HKDF is ~200× faster than PBKDF2
+// and correctly uses the second argument as salt
+const walletKey = await ZEN.hash(seed, "wallet", null, { name: "HKDF" });
+const avatarKey = await ZEN.hash(seed, "avatar", null, { name: "HKDF" });
+
+// Default — PBKDF2, correct for passwords
+const stretched = await ZEN.hash(password, salt);
+```
+
+> **Important**: The SHA-256 path ignores the `pair`/salt argument. Two calls with different salts but the same data return the same hash. Use HKDF when salt separation is required.
 
 ---
 
@@ -274,7 +300,7 @@ npm run buildCrypto  # rebuild crypto.wasm from src/crypto.zig
 
 ## Benchmarks
 
-ZEN ships a micro-benchmark harness in `test/bench/` for data-driven optimization. Each benchmark suite runs with configurable warmup and iteration counts and outputs both human-readable color output and machine-readable JSON.
+ZEN ships a micro-benchmark harness in `test/bench/` for data-driven optimization. Each benchmark suite runs with configurable warmup and iteration counts and outputs human-readable color output.
 
 ```bash
 npm run bench          # run all suites
@@ -343,7 +369,7 @@ src/                  — runtime source (source of truth)
   encrypt.js          — encryption
   decrypt.js          — decryption
   secret.js           — ECDH shared secrets
-  hash.js             — hashing (SHA-256, Keccak-256)
+  hash.js             — hashing (SHA-256, HKDF, keccak256, PBKDF2)
   certify.js          — certificates
   recover.js          — recover signer pub from signature (no pub input needed)
   aeskey.js           — AES key derivation

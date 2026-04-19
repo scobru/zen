@@ -139,6 +139,41 @@ export default async function hash(data, pair, cb, opt) {
     }
     salt = salt || shim.random(9);
 
+    // HKDF: fast key derivation for already-high-entropy key material.
+    // Use when input is a strong seed (e.g. WebAuthn-derived), NOT a password.
+    // ~1000x faster than PBKDF2 because there are no iterations.
+    if ((opt.name || "").toUpperCase() === "HKDF") {
+      const te = new shim.TextEncoder();
+      const hkdfKey = await (shim.ossl || shim.subtle).importKey(
+        "raw",
+        te.encode(data),
+        "HKDF",
+        false,
+        ["deriveBits"],
+      );
+      const hkdfBits = await (shim.ossl || shim.subtle).deriveBits(
+        {
+          name: "HKDF",
+          hash: opt.hash || settings.pbkdf2.hash,
+          salt: te.encode(opt.salt || salt),
+          info: te.encode(opt.info || ""),
+        },
+        hkdfKey,
+        opt.length || settings.pbkdf2.ks * 8,
+      );
+      data = shim.random(data.length);
+      let hkdfOut = shim.Buffer.from(hkdfBits, "binary");
+      hkdfOut = encbuf(hkdfOut, enc);
+      if (cb) {
+        try {
+          cb(hkdfOut);
+        } catch (e) {
+          console.log(e);
+        }
+      }
+      return hkdfOut;
+    }
+
     const key = await (shim.ossl || shim.subtle).importKey(
       "raw",
       new shim.TextEncoder().encode(data),

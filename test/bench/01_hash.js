@@ -65,10 +65,25 @@ suite("ripemd160.js (WASM)", () => {
   bench("64 KB", () => ripemd160(BYTES_64K));
 });
 
-// ── ZEN.hash (full pipeline: sha256 + base62 encode) ─────────────────────────
-suite("ZEN.hash (full pipeline)", () => {
+// ── ZEN.hash SHA-256 path (name: "SHA-256" skips PBKDF2) ─────────────────────
+const SHA256_OPT = { name: "SHA-256", encode: "hex" };
+suite("ZEN.hash SHA-256 path", () => {
+  bench("short string", () => ZEN.hash("hello world", null, null, SHA256_OPT));
+  bench("medium string", () => ZEN.hash(STR_MEDIUM, null, null, SHA256_OPT));
+});
+
+// ── ZEN.hash HKDF path (strong seed → derived key, no iterations) ─────────────
+// Use when input is already high-entropy (e.g. WebAuthn seed, keypair priv).
+// ~1000x faster than PBKDF2. NOT suitable for passwords.
+const HKDF_OPT = { name: "HKDF" };
+suite("ZEN.hash HKDF (strong seed, no iter)", () => {
+  bench("short string", () => ZEN.hash("hello world", "salt", null, HKDF_OPT));
+  bench("with seed", () => ZEN.hash(STR_MEDIUM, "wallet", null, HKDF_OPT));
+});
+
+// ── ZEN.hash PBKDF2 path (default — intentionally slow: 100k iterations) ─────
+suite("ZEN.hash PBKDF2 (default, 100k iter)", () => {
   bench("short string", () => ZEN.hash("hello world"));
-  bench("medium string", () => ZEN.hash(STR_MEDIUM));
   bench("with salt", () => ZEN.hash("hello", "salt"));
 });
 
@@ -79,4 +94,7 @@ suite("String.hash DJB2 (sync, shim.js)", () => {
   bench("64-char soul key", () => String.hash("a".repeat(64)));
 });
 
-await run({ warmup: 300, iters: 2000 });
+// PBKDF2 benches take ~27ms each — use reduced iters to keep total time sane.
+// SHA-256 / WASM benches are fast enough that 2000 iters is fine but PBKDF2
+// at 2000 iters × 27ms = ~54s just for that suite.
+await run({ warmup: 20, iters: 100 });
