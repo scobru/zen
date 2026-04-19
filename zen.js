@@ -2310,11 +2310,22 @@ defmod('./src/curves/utils.js', function(module, exp){
       return base62.biToB62(assertScalar(value));
     }
 
+    // Recover y from x and parity bit (works for any curve where p ≡ 3 mod 4)
+    function liftX(x, parity) {
+      const rhs = mod(x * x * x + A * x + B, P);
+      let y = modPow(rhs, (P + 1n) >> 2n, P);
+      if ((y & 1n) !== parity) {
+        y = P - y;
+      }
+      return y;
+    }
+
     function pointToPub(point) {
       if (!isOnCurve(point)) {
         throw new Error("Invalid public point");
       }
-      return base62.biToB62(point.x) + base62.biToB62(point.y);
+      // Compressed: 44-char base62 x + "0"/"1" parity of y  →  45 chars total
+      return base62.biToB62(point.x) + (point.y & 1n ? "1" : "0");
     }
 
     function parsePub(pub) {
@@ -2322,12 +2333,20 @@ defmod('./src/curves/utils.js', function(module, exp){
         throw new Error("Public key must be a string");
       }
       let point;
-      if (pub.length === 88 && /^[A-Za-z0-9]{88}$/.test(pub)) {
+      if (pub.length === 45 && /^[A-Za-z0-9]{44}[01]$/.test(pub)) {
+        // Current compressed format: 44-char base62 x + "0"/"1" parity
+        const x = base62.b62ToBI(pub.slice(0, 44));
+        const parity = BigInt(pub[44]);
+        const y = liftX(x, parity);
+        point = { x, y };
+      } else if (pub.length === 88 && /^[A-Za-z0-9]{88}$/.test(pub)) {
+        // Legacy uncompressed format (backward compat)
         point = {
           x: base62.b62ToBI(pub.slice(0, 44)),
           y: base62.b62ToBI(pub.slice(44)),
         };
       } else if (pub.length === 87 && pub[43] === ".") {
+        // Legacy GUN base64url format (backward compat)
         const parts = pub.split(".");
         point = {
           x: bytesToBigInt(decodeBase64Url(parts[0])),
@@ -2862,8 +2881,8 @@ defmod('./src/security.js', function(module, exp){
     if ("@" === (s[0] || "")[0]) {
       return;
     }
-    if (/^[A-Za-z0-9]{88}/.test(s)) {
-      return s.slice(0, 88);
+    if (/^[A-Za-z0-9]{44}[01]/.test(s)) {
+      return s.slice(0, 45);
     }
     var parts = s.split(/[^\w_-]/).slice(0, 2);
     if (!parts || 2 !== parts.length) {
@@ -3269,7 +3288,7 @@ defmod('./src/security.js', function(module, exp){
   };
 
   check.$sh = {
-    pub: 88,
+    pub: 45,
     cut: 2,
     min: 1,
     root: "~",

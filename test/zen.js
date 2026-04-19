@@ -58,7 +58,7 @@ describe('ZEN', function() {
     assert.strictEqual(ZEN.opt.pub('~' + pair.pub + '/profile'), pair.pub);
     assert.strictEqual(pair.curve, 'secp256k1');
     assert.strictEqual(typeof pair.pub, 'string');
-    assert.strictEqual(pair.pub.length, 88);
+    assert.strictEqual(pair.pub.length, 45);
   });
 
   it('loads security runtime through ZEN', function() {

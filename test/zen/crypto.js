@@ -303,7 +303,7 @@ describe("ZEN crypto — double sign", function () {
 describe("ZEN crypto — pair() key format", function () {
   this.timeout(10 * 1000);
 
-  var B62 = /^[A-Za-z0-9]{88}$/;
+  var B62 = /^[A-Za-z0-9]{44}[01]$/;
   var B62_44 = /^[A-Za-z0-9]{44}$/;
 
   it("curve is secp256k1", async function () {
@@ -311,12 +311,12 @@ describe("ZEN crypto — pair() key format", function () {
     assert.strictEqual(p.curve, "secp256k1");
   });
 
-  it("pub is 88-char base62", async function () {
+  it("pub is 45-char base62 compressed", async function () {
     var p = await ZEN.pair();
     assert.match(p.pub, B62);
   });
 
-  it("epub is 88-char base62", async function () {
+  it("epub is 45-char base62 compressed", async function () {
     var p = await ZEN.pair();
     assert.match(p.epub, B62);
   });
