@@ -89,6 +89,17 @@ const bob    = await ZEN.pair();
 const shared = await ZEN.secret(bob.epub, pair);     // ECDH
 ```
 
+A pair object has four fields — all base62 (`0-9A-Za-z`), no `+`, `/`, or `=`:
+
+| Field | Length | Description |
+|-------|--------|-------------|
+| `pub`   | 45 chars | Compressed EC public key — 44-char base62 x-coord + `"0"`/`"1"` parity |
+| `priv`  | 44 chars | Signing private key scalar |
+| `epub`  | 45 chars | Encryption public key (same format as `pub`) |
+| `epriv` | 44 chars | Encryption private key scalar |
+
+The 45-char compressed format (`x || parity`) saves space versus the legacy 88-char uncompressed form. Legacy keys are still accepted for backward compatibility.
+
 ### Multi-curve
 
 ```js
@@ -156,16 +167,57 @@ zen.back(n)         // navigate up the chain
 
 ```js
 ZEN.pair(cb, opt)                // generate key pair
-ZEN.sign(data, pair)             // sign data
+ZEN.sign(data, pair)             // sign data → { m, s, v } (v = recovery bit)
 ZEN.verify(data, pub)            // verify signature
+ZEN.recover(sig)                 // recover signer pub from signature (no pub needed)
 ZEN.encrypt(data, pair)          // encrypt
 ZEN.decrypt(data, pair)          // decrypt
 ZEN.secret(pub, pair)            // ECDH shared secret
-ZEN.hash(data, opt)              // hash (SHA-256 or keccak256)
+ZEN.hash(data, pair, cb, opt)    // hash (SHA-256, keccak256, or PBKDF2)
 ZEN.certify(certs, policy, pair) // create a certificate
 ```
 
-All static methods are also available as instance methods: `zen.pair()`, `zen.sign()`, etc.
+All static methods are also available as instance methods: `zen.pair()`, `zen.sign()`, `zen.recover()`, etc.
+
+### Recoverable signatures
+
+Every `ZEN.sign()` output now includes `v` — a recovery bit (0 or 1). This allows `ZEN.recover()` to reconstruct the signer's public key from the signature alone, without needing the pub key as input:
+
+```js
+const pair = await ZEN.pair();
+const sig  = await ZEN.sign("hello", pair);
+// sig is a JSON string: { m, s, v }  (v is new)
+
+const pub = await ZEN.recover(sig);
+console.log(pub === pair.pub);  // true
+```
+
+Works for both secp256k1 (default) and P-256. Cross-curve recovery (e.g. P-256 sig forced into secp256k1) does not throw — it silently returns a different (wrong) public key. Security depends on the `c` field in the signature being intact.
+
+### Hash mining (Proof-of-Work)
+
+Pass `opt.pow` to mine: the function loops with base62 nonces until the hash starts with the required prefix.
+
+```js
+// string data — nonce appended as "data:nonce"
+const { hash, nonce, proof } = await ZEN.hash("mykey", null, null, {
+  name: "SHA-256",
+  encode: "hex",
+  pow: { unit: "0", difficulty: 2 },   // hash must start with "00"
+});
+
+// function data — full control over nonce placement
+const result = await ZEN.hash(
+  (nonce) => `prefix:${nonce}:suffix`,
+  null, null,
+  { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 1 } },
+);
+// result.proof  — the winning value (what gets written to the graph)
+// result.hash   — its SHA-256 hex hash (starts with the required prefix)
+// result.nonce  — the base62 nonce that produced the win
+```
+
+The `proof` value is compatible with PEN's PoW policy: when pen verifies a write it calls `SHA-256(field)` directly, which matches `ZEN.hash(proof, null, null, { name: "SHA-256", encode: "hex" })`.
 
 ---
 
@@ -258,7 +310,7 @@ npm run buildRelease # buildZEN + uglify all lib adapters
 npm start            # start example relay (examples/zen-http.js)
 ```
 
-Current baseline: **171 passing**.
+Current baseline: **422 passing, 10 pending** (across PEN unit + ZEN unit + core suites).
 
 ---
 
@@ -293,6 +345,7 @@ src/                  — runtime source (source of truth)
   secret.js           — ECDH shared secrets
   hash.js             — hashing (SHA-256, Keccak-256)
   certify.js          — certificates
+  recover.js          — recover signer pub from signature (no pub input needed)
   aeskey.js           — AES key derivation
   
   # Curves & formats

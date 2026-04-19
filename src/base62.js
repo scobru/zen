@@ -135,6 +135,7 @@ function bufToB62(buf) {
 }
 
 const base62 = {
+  ALPHA,
   biToB62,
   b62ToBI,
   b64ToB62,

@@ -177,20 +177,21 @@ const dec = await ZEN.decrypt(enc, { ...bob, priv: sharedByBob });
 
 ## 3.5 Hashing
 
-### `ZEN.hash(data, key, cb, opt)`
+### `ZEN.hash(data, pair, cb, opt)`
 
 Produces a deterministic hash of `data`.
 
 ```js
-// SHA-256 (default)
-const sha = await ZEN.hash("hello");
-// base64url string, no "/" characters
+// SHA-256 (default, PBKDF2-derived, base62 output)
+const h = await ZEN.hash("hello");
+
+// SHA-256 direct digest, hex output
+const sha = await ZEN.hash("hello", null, null, { name: "SHA-256", encode: "hex" });
 
 // Keccak-256
 const keccak = await ZEN.hash("hello", null, null, { name: "keccak256", encode: "hex" });
 
 // keccak256 of empty string
-ZEN.hash("", null, null, { name: "keccak256", encode: "hex" });
 // "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
 
 // ArrayBuffer input
@@ -205,6 +206,85 @@ ZEN.hash("hello", null, function(result) {
   console.log(result);
 });
 ```
+
+---
+
+### 3.5.1 Mining — `opt.pow`
+
+When `opt.pow` is set, `hash()` enters **mining mode**: it loops with base62-encoded nonces until the hash output starts with the required prefix, then returns `{ hash, nonce, proof }`.
+
+```js
+const result = await ZEN.hash(
+  nonce => `order:${candle}:${nonce}`,   // nonce is a base62 string
+  null, null,
+  { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 2 } }
+);
+// result.hash  — winning SHA-256 hex hash (starts with "00")
+// result.nonce — base62-encoded nonce string, e.g. "G" or "1z"
+// result.proof — the full data string that was hashed, e.g. "order:1712000000:G"
+```
+
+`opt.pow` fields mirror the pen soul `pow` policy:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `unit` | `string` | Prefix character(s) each hash must start with (default `"0"`) |
+| `difficulty` | `number` | How many times `unit` is repeated (default `1`) |
+
+**Nonce encoding:** nonces are base62 (`0-9A-Za-z`) so they stay short as the search space grows.
+
+**Separator:** when `data` is a plain string, the nonce is appended with `:` as separator:
+```js
+// data = "work", nonce = "G" → proof = "work:G"
+const result = await ZEN.hash("work", null, null,
+  { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 1 } });
+```
+
+**Function form** (full nonce control — nonce in any position):
+```js
+const result = await ZEN.hash(
+  nonce => `${candle}:${nonce}`,  // nonce anywhere in the string
+  null, null,
+  { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 2 } }
+);
+```
+
+---
+
+### 3.5.2 Pen PoW compatibility
+
+ZEN's pen policy engine verifies PoW with:
+
+```js
+// pen.js internals — how the verifier checks PoW:
+hash(fieldValue, null, cb, { name: "SHA-256", encode: "hex" })
+// passes if hash starts with pow.unit.repeat(pow.difficulty)
+```
+
+Mining is compatible because:
+1. The `proof` IS the literal field value (key/val/soul/etc.) written to the graph.
+2. Both the miner and the verifier hash that same string via `SHA-256/hex`.
+3. Same input → same hash → same prefix check → **passes automatically**.
+
+```js
+// Mine a key for a pen soul with pow: { unit: "0", difficulty: 2 }
+const { proof } = await ZEN.hash(
+  nonce => `${candle}:${nonce}`,
+  null, null,
+  { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 2 } }
+);
+
+// Write using `proof` as the key — pen will accept it
+zen.get(penSoul).get(proof).put(data, cb, { authenticator: pair });
+```
+
+> **Why not `opt.salt` as nonce?**
+>
+> When `opt.name` is `"SHA-256"` (or any direct hash), the code takes the `ishash()` path
+> and calls `sha256(data)` directly. `opt.salt` is **never read** in that path — it only
+> exists in the PBKDF2 branch. Therefore, changing `opt.salt` has zero effect on the
+> SHA-256 output, and cannot be used as a nonce for pen-compatible PoW mining.
+> The nonce **must** be embedded in the data itself.
 
 ---
 
@@ -280,16 +360,20 @@ const unpacked = ZEN.unpack(str);        // → Uint8Array
 
 ## 3.9 Public key format
 
-All public keys in ZEN use **base62 encoding** — only alphanumeric characters, no `_`, `-`, `.` separators.
+All public keys in ZEN use **base62 encoding** — only alphanumeric characters (`0-9A-Za-z`), no `+`, `/`, `=`, `_`, `-`, `.` separators. **ZEN does NOT use base64 or base64url.**
 
-| Field | Length | Alphabet |
-|-------|--------|---------|
-| `pub` / `epub` | 88 chars | `[A-Za-z0-9]` |
-| `priv` / `epriv` | 44 chars | `[A-Za-z0-9]` |
+| Field | Length | Format | Notes |
+|-------|--------|--------|---------|
+| `pub` / `epub` | **45 chars** | 44-char base62 x + `"0"`/`"1"` parity | Compressed EC point |
+| `priv` / `epriv` | 44 chars | base62 scalar | secp256k1 scalar |
 
-This is a deliberate change from the original GUN base64url format. It enables keys to be used as URL path segments and graph souls without escaping.
+Public keys are **compressed**: only the x-coordinate (44 chars base62) plus 1 parity character (`"0"` = y even, `"1"` = y odd) are stored. The y-coordinate is recovered on-the-fly via modular square root. This is the same concept as Bitcoin compressed pubkey (33 bytes), expressed in base62 instead of bytes.
 
-ZEN automatically accepts old-format (base64url, 43/87-char) keys for backward compatibility.
+This is a deliberate change from the original GUN database which used base64url. Base62 enables keys to be used as URL path segments and graph souls without any escaping.
+
+ZEN automatically accepts legacy formats for backward compatibility:
+- Old ZEN uncompressed (88-char, `[A-Za-z0-9]{88}`) — base62 x + base62 y
+- Legacy GUN base64url (87-char, `base64url.base64url`) — original GUN format
 
 ---
 

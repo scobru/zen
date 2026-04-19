@@ -532,48 +532,6 @@ describe("ZEN.pen()", function () {
     assert.strictEqual(p.pow.difficulty, 2);
   });
 
-  it("{ params } salts soul identity and round-trips through scanpolicy", function () {
-    var soul = ZEN.pen({
-      val: { type: "string" },
-      params: { item: "organic-green-tea", type: "buy", candle: 5820000 },
-    });
-    var bc = pen.unpack(soul.slice(1));
-    var p = pen.scanpolicy(bc);
-    assert.deepStrictEqual(p.params, {
-      candle: 5820000,
-      item: "organic-green-tea",
-      type: "buy",
-    });
-    assert.strictEqual(
-      pen.run(bc, ["k", "hello", soul, 0, Date.now(), ""]),
-      true,
-    );
-  });
-
-  it("{ params } canonicalizes object key order before salting soul", function () {
-    var a = ZEN.pen({
-      key: { type: "string" },
-      params: { item: "tea", type: "buy", candle: 1 },
-    });
-    var b = ZEN.pen({
-      key: { type: "string" },
-      params: { type: "buy", candle: 1, item: "tea" },
-    });
-    assert.strictEqual(a, b);
-  });
-
-  it("different params produce different souls even when validator is identical", function () {
-    var a = ZEN.pen({
-      key: { type: "string" },
-      params: { item: "tea", type: "buy", candle: 1 },
-    });
-    var b = ZEN.pen({
-      key: { type: "string" },
-      params: { item: "tea", type: "buy", candle: 2 },
-    });
-    assert.notStrictEqual(a, b);
-  });
-
   it("sign + predicate: policy detected without polluting tree", function () {
     // A predicate with integer constants including values near 0xC0 range
     // Use a candle-like predicate with large integer: ensure no false positive
@@ -693,7 +651,6 @@ describe("pen.scanpolicy()", function () {
     assert.strictEqual(p.cert, null);
     assert.strictEqual(p.open, false);
     assert.strictEqual(p.pow, null);
-    assert.strictEqual(p.params, null);
   });
 
   it("detects multiple policies simultaneously", function () {
@@ -1357,7 +1314,6 @@ describe("ZEN + PEN integration", function () {
       },
       val: { type: "string" },
       sign: true,
-      params: { item: "tea", type: "buy", candle: candle },
     });
     var zen = Zen({ radisk: false, peers: [], localStorage: false });
     var key = now + ":" + pair.pub + ":nonce1";

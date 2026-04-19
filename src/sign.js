@@ -30,11 +30,13 @@ async function sign(data, pair, cb, opt) {
       if (!s) {
         continue;
       }
+      let v = Number(pt.y & 1n);
       if (s > c.HALF_N) {
         s = c.N - s;
+        v ^= 1;
       }
       const sig = c.concatBytes(c.bigIntToBytes(r, 32), c.bigIntToBytes(s, 32));
-      const out = { m: msg, s: c.encodeBase64(sig, opt.encode || "base64") };
+      const out = { m: msg, s: c.encodeBase64(sig, opt.encode || "base64"), v };
       if (c.curve !== "secp256k1") {
         out.c = c.curve;
       }

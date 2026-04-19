@@ -211,11 +211,37 @@ function createCurveCore(config) {
     return base62.biToB62(assertScalar(value));
   }
 
+  // Recover y from x and parity bit (works for any curve where p ≡ 3 mod 4)
+  function liftX(x, parity) {
+    const rhs = mod(x * x * x + A * x + B, P);
+    let y = modPow(rhs, (P + 1n) >> 2n, P);
+    if ((y & 1n) !== parity) {
+      y = P - y;
+    }
+    return y;
+  }
+
+  // Recover public key point from ECDSA (v, r, s) + hash bytes
+  // pub = u1*G + u2*R  where u1 = -z*r^-1, u2 = s*r^-1 mod N
+  function recoverPub(v, r, s, hashBytes) {
+    const z = mod(bytesToBigInt(hashBytes), N);
+    const ry = liftX(r, BigInt(v) & 1n);
+    const R = { x: r, y: ry };
+    if (!isOnCurve(R)) throw new Error("Recovery: R not on curve");
+    const rinv = modInv(r, N);
+    const u1 = mod((N - mod(z, N)) * rinv, N);
+    const u2 = mod(s * rinv, N);
+    const point = pointAdd(pointMultiply(u1, G), pointMultiply(u2, R));
+    if (!point || !isOnCurve(point)) throw new Error("Recovery failed");
+    return point;
+  }
+
   function pointToPub(point) {
     if (!isOnCurve(point)) {
       throw new Error("Invalid public point");
     }
-    return base62.biToB62(point.x) + base62.biToB62(point.y);
+    // Compressed: 44-char base62 x + "0"/"1" parity of y  →  45 chars total
+    return base62.biToB62(point.x) + (point.y & 1n ? "1" : "0");
   }
 
   function parsePub(pub) {
@@ -223,12 +249,20 @@ function createCurveCore(config) {
       throw new Error("Public key must be a string");
     }
     let point;
-    if (pub.length === 88 && /^[A-Za-z0-9]{88}$/.test(pub)) {
+    if (pub.length === 45 && /^[A-Za-z0-9]{44}[01]$/.test(pub)) {
+      // Current compressed format: 44-char base62 x + "0"/"1" parity
+      const x = base62.b62ToBI(pub.slice(0, 44));
+      const parity = BigInt(pub[44]);
+      const y = liftX(x, parity);
+      point = { x, y };
+    } else if (pub.length === 88 && /^[A-Za-z0-9]{88}$/.test(pub)) {
+      // Legacy uncompressed format (backward compat)
       point = {
         x: base62.b62ToBI(pub.slice(0, 44)),
         y: base62.b62ToBI(pub.slice(44)),
       };
     } else if (pub.length === 87 && pub[43] === ".") {
+      // Legacy GUN base64url format (backward compat)
       const parts = pub.split(".");
       point = {
         x: bytesToBigInt(decodeBase64Url(parts[0])),
@@ -354,6 +388,8 @@ function createCurveCore(config) {
       parseScalar,
       assertScalar,
       scalarToString,
+      liftX,
+      recoverPub,
       pointToPub,
       parsePub,
       publicFromPrivate,

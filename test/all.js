@@ -12,7 +12,7 @@ var totalFailing = 0;
 
 function runsuite(suite) {
   return new Promise(function (resolve) {
-    var proc = spawn("npm", suite.args, { shell: true, stdio: ["inherit", "pipe", "inherit"] });
+    var proc = spawn("npm", suite.args, { shell: true, stdio: ["inherit", "pipe", "inherit"], env: Object.assign({}, process.env, { FORCE_COLOR: "1" }) });
     var output = "";
     proc.stdout.on("data", function (chunk) {
       process.stdout.write(chunk);

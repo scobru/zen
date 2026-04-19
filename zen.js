@@ -1765,6 +1765,7 @@ defmod('./src/base62.js', function(module, exp){
   }
 
   const base62 = {
+    ALPHA,
     biToB62,
     b62ToBI,
     b64ToB62,
@@ -1964,6 +1965,17 @@ defmod('./src/hash.js', function(module, exp){
 
 
 
+  function intToB62(n) {
+    const A = base62.ALPHA;
+    if (n === 0) return A[0];
+    let s = "";
+    while (n > 0) {
+      s = A[n % 62] + s;
+      n = Math.floor(n / 62);
+    }
+    return s;
+  }
+
   async function hash(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -1974,6 +1986,44 @@ defmod('./src/hash.js', function(module, exp){
         cb = salt;
         salt = undefined;
       }
+
+      // Mining mode: loop with base62-encoded nonces until the hash meets pow requirements.
+      // The nonce is embedded in the data (not opt.salt) so the proof is self-contained
+      // and compatible with pen.js PoW verification, which hashes the field value directly
+      // via SHA-256 with no salt.
+      if (opt.pow) {
+        const pow = opt.pow;
+        const prefix = (pow.unit || "0").repeat(
+          pow.difficulty != null ? pow.difficulty : 1,
+        );
+        const subOpt = Object.assign({}, opt);
+        delete subOpt.pow;
+        let counter = 0;
+        while (true) {
+          const nonce = intToB62(counter);
+          const proof =
+            typeof data === "function"
+              ? String(data(nonce))
+              : String(data) + ":" + nonce;
+          const h = await hash(proof, salt, null, subOpt);
+          if ((h || "").indexOf(prefix) === 0) {
+            const result = { hash: h, nonce, proof };
+            if (cb) {
+              try {
+                cb(result);
+              } catch (e) {
+                console.log(e);
+              }
+            }
+            return result;
+          }
+          counter++;
+          if (counter % 1000 === 0) {
+            await new Promise((r) => setTimeout.turn(r));
+          }
+        }
+      }
+
       if (data instanceof ArrayBuffer) {
         data = new Uint8Array(data);
         data = new shim.TextDecoder("utf-8").decode(data);
@@ -2260,11 +2310,37 @@ defmod('./src/curves/utils.js', function(module, exp){
       return base62.biToB62(assertScalar(value));
     }
 
+    // Recover y from x and parity bit (works for any curve where p ≡ 3 mod 4)
+    function liftX(x, parity) {
+      const rhs = mod(x * x * x + A * x + B, P);
+      let y = modPow(rhs, (P + 1n) >> 2n, P);
+      if ((y & 1n) !== parity) {
+        y = P - y;
+      }
+      return y;
+    }
+
+    // Recover public key point from ECDSA (v, r, s) + hash bytes
+    // pub = u1*G + u2*R  where u1 = -z*r^-1, u2 = s*r^-1 mod N
+    function recoverPub(v, r, s, hashBytes) {
+      const z = mod(bytesToBigInt(hashBytes), N);
+      const ry = liftX(r, BigInt(v) & 1n);
+      const R = { x: r, y: ry };
+      if (!isOnCurve(R)) throw new Error("Recovery: R not on curve");
+      const rinv = modInv(r, N);
+      const u1 = mod((N - mod(z, N)) * rinv, N);
+      const u2 = mod(s * rinv, N);
+      const point = pointAdd(pointMultiply(u1, G), pointMultiply(u2, R));
+      if (!point || !isOnCurve(point)) throw new Error("Recovery failed");
+      return point;
+    }
+
     function pointToPub(point) {
       if (!isOnCurve(point)) {
         throw new Error("Invalid public point");
       }
-      return base62.biToB62(point.x) + base62.biToB62(point.y);
+      // Compressed: 44-char base62 x + "0"/"1" parity of y  →  45 chars total
+      return base62.biToB62(point.x) + (point.y & 1n ? "1" : "0");
     }
 
     function parsePub(pub) {
@@ -2272,12 +2348,20 @@ defmod('./src/curves/utils.js', function(module, exp){
         throw new Error("Public key must be a string");
       }
       let point;
-      if (pub.length === 88 && /^[A-Za-z0-9]{88}$/.test(pub)) {
+      if (pub.length === 45 && /^[A-Za-z0-9]{44}[01]$/.test(pub)) {
+        // Current compressed format: 44-char base62 x + "0"/"1" parity
+        const x = base62.b62ToBI(pub.slice(0, 44));
+        const parity = BigInt(pub[44]);
+        const y = liftX(x, parity);
+        point = { x, y };
+      } else if (pub.length === 88 && /^[A-Za-z0-9]{88}$/.test(pub)) {
+        // Legacy uncompressed format (backward compat)
         point = {
           x: base62.b62ToBI(pub.slice(0, 44)),
           y: base62.b62ToBI(pub.slice(44)),
         };
       } else if (pub.length === 87 && pub[43] === ".") {
+        // Legacy GUN base64url format (backward compat)
         const parts = pub.split(".");
         point = {
           x: bytesToBigInt(decodeBase64Url(parts[0])),
@@ -2403,6 +2487,8 @@ defmod('./src/curves/utils.js', function(module, exp){
         parseScalar,
         assertScalar,
         scalarToString,
+        liftX,
+        recoverPub,
         pointToPub,
         parsePub,
         publicFromPrivate,
@@ -2690,11 +2776,13 @@ defmod('./src/sign.js', function(module, exp){
         if (!s) {
           continue;
         }
+        let v = Number(pt.y & 1n);
         if (s > c.HALF_N) {
           s = c.N - s;
+          v ^= 1;
         }
         const sig = c.concatBytes(c.bigIntToBytes(r, 32), c.bigIntToBytes(s, 32));
-        const out = { m: msg, s: c.encodeBase64(sig, opt.encode || "base64") };
+        const out = { m: msg, s: c.encodeBase64(sig, opt.encode || "base64"), v };
         if (c.curve !== "secp256k1") {
           out.c = c.curve;
         }
@@ -2812,8 +2900,8 @@ defmod('./src/security.js', function(module, exp){
     if ("@" === (s[0] || "")[0]) {
       return;
     }
-    if (/^[A-Za-z0-9]{88}/.test(s)) {
-      return s.slice(0, 88);
+    if (/^[A-Za-z0-9]{44}[01]/.test(s)) {
+      return s.slice(0, 45);
     }
     var parts = s.split(/[^\w_-]/).slice(0, 2);
     if (!parts || 2 !== parts.length) {
@@ -3219,7 +3307,7 @@ defmod('./src/security.js', function(module, exp){
   };
 
   check.$sh = {
-    pub: 88,
+    pub: 45,
     cut: 2,
     min: 1,
     root: "~",
@@ -4033,56 +4121,13 @@ defmod('./src/pen.js', function(module, exp){
       return { value: value >>> 0, next: pos };
     }
 
-    function stableparams(value) {
-      var seen = [];
-
-      function normalize(v) {
-        if (v === null) return null;
-
-        var t = typeof v;
-        if (t === "string" || t === "boolean") return v;
-        if (t === "number") {
-          if (!isFinite(v)) throw new Error("PEN: params numbers must be finite");
-          return v;
-        }
-        if (t === "undefined") return undefined;
-        if (t === "function" || t === "symbol" || t === "bigint") {
-          throw new Error("PEN: params must be JSON-serializable");
-        }
-        if (Array.isArray(v)) {
-          return v.map(function (item) {
-            var normalized = normalize(item);
-            return normalized === undefined ? null : normalized;
-          });
-        }
-        if (t === "object") {
-          if (seen.indexOf(v) >= 0)
-            throw new Error("PEN: params must not be circular");
-          seen.push(v);
-          var out = {};
-          Object.keys(v)
-            .sort()
-            .forEach(function (key) {
-              var normalized = normalize(v[key]);
-              if (normalized !== undefined) out[key] = normalized;
-            });
-          seen.pop();
-          return out;
-        }
-
-        throw new Error("PEN: params must be JSON-serializable");
-      }
-
-      return JSON.stringify(normalize(value));
-    }
-
     // ── scanpolicy: extract tail opcodes appended after expression root ───────────
     // Tail bytes (0xC0..) are appended AFTER the complete expression tree.
     // We use treeskip() to find where the tree ends, avoiding false positives from
     // integer/string byte values within the expression that happen to overlap tail opcodes.
 
     function scanpolicy(bytecode) {
-      var p = { sign: false, cert: null, open: false, pow: null, params: null };
+      var p = { sign: false, cert: null, open: false, pow: null };
       if (!bytecode || bytecode.length < 2) return p;
       var pos = treeskip(bytecode, 1); // skip version byte + root expression
       for (var i = pos; i < bytecode.length; ) {
@@ -4113,21 +4158,6 @@ defmod('./src/pen.js', function(module, exp){
           for (var ui = 0; ui < ulen; ui++)
             unit += String.fromCharCode(bytecode[i++]);
           p.pow = { field: pfield, difficulty: pdiff, unit: unit || "0" };
-          continue;
-        }
-        if (op === 0xc5) {
-          var metaLen = readuleb(bytecode, i);
-          if (!metaLen) return p;
-          i = metaLen.next;
-          if (i + metaLen.value > bytecode.length) return p;
-          var meta = "";
-          for (var mi = 0; mi < metaLen.value; mi++)
-            meta += String.fromCharCode(bytecode[i++]);
-          try {
-            p.params = JSON.parse(meta);
-          } catch (e) {
-            p.params = meta;
-          }
           continue;
         }
         break;
@@ -4275,8 +4305,6 @@ defmod('./src/pen.js', function(module, exp){
     // spec.state — expr to validate ctx.state (R[3])
     // spec.path  — expr to validate path after pencode/ in soul (R[6])
     //              e.g. soul '$abc/foo/bar' → path 'foo/bar'
-    // spec.params — JSON-serializable compile-time parameters that change soul
-    //               identity without changing runtime validation semantics
     //
     // expr formats:
     //   "string"                      → EQ(field, str)
@@ -4451,14 +4479,6 @@ defmod('./src/pen.js', function(module, exp){
         pred.push(0xc4, powfield, powdiff, powubytes.length);
         for (var pi = 0; pi < powubytes.length; pi++) pred.push(powubytes[pi]);
       }
-      if (spec.params !== undefined) {
-        var params = stableparams(spec.params);
-        var pbytes = Array.from(_enc.encode(params));
-        pred.push(0xc5);
-        Array.prototype.push.apply(pred, bc.uleb(pbytes.length));
-        for (var qi = 0; qi < pbytes.length; qi++) pred.push(pbytes[qi]);
-      }
-
       return "$" + pen.pack(new Uint8Array(pred));
     };
 
@@ -5300,6 +5320,58 @@ defmod('./src/keyid.js', function(module, exp){
   }
 
   exp.default = keyid;
+});
+
+defmod('./src/recover.js', function(module, exp){
+  var crv = reqmod('./src/curves.js').default;
+  async function recover(data, cb, opt) {
+    try {
+      opt = opt || {};
+      const c0 = crv();
+      const msg = await c0.settings.parse(data);
+      if (!msg || msg.v === undefined || msg.v === null) {
+        throw new Error("No recovery bit (v) in signature");
+      }
+      const c = crv((msg && msg.c) || opt.curve);
+      const h = await c.shaBytes(msg.m);
+      const sig = new Uint8Array(
+        c.shim.Buffer.from(msg.s || "", opt.encode || "base64"),
+      );
+      if (sig.length !== 64) {
+        throw new Error("Invalid signature length");
+      }
+      const r = c.bytesToBigInt(sig.slice(0, 32));
+      const s = c.bytesToBigInt(sig.slice(32));
+      if (r <= 0n || r >= c.N || s <= 0n || s >= c.N) {
+        throw new Error("Signature out of range");
+      }
+      const point = c.recoverPub(msg.v, r, s, h);
+      const pub = c.pointToPub(point);
+      if (cb) {
+        try {
+          cb(pub);
+        } catch (e) {
+          console.log(e);
+        }
+      }
+      return pub;
+    } catch (e) {
+      if (cb) {
+        try {
+          cb();
+        } catch (x) {
+          console.log(x);
+        }
+        return;
+      }
+      throw e;
+    }
+  }
+
+
+  exp.default = recover;
+
+  exp.recover = recover;
 });
 
 defmod('./src/runtime.js', function(module, exp){
@@ -8090,6 +8162,7 @@ defmod('./src/index.js', function(module, exp){
   var hash = reqmod('./src/hash.js').default;
   var certify = reqmod('./src/certify.js').default;
   var keyid = reqmod('./src/keyid.js').default;
+  var recover = reqmod('./src/recover.js').default;
   var security = reqmod('./src/runtime.js').default;
   var graph = reqmod('./src/graph.js').default;
   var hasOwn = Object.prototype.hasOwnProperty;
@@ -8279,6 +8352,9 @@ defmod('./src/index.js', function(module, exp){
     static certify(...args) {
       return certify(...args);
     }
+    static recover(...args) {
+      return recover(...args);
+    }
 
     get _graph() {
       if (!this._graphInstance) {
@@ -8331,6 +8407,9 @@ defmod('./src/index.js', function(module, exp){
     }
     certify(...args) {
       return this.constructor.certify(...args);
+    }
+    recover(...args) {
+      return this.constructor.recover(...args);
     }
 
     get(...args) {

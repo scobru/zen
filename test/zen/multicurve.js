@@ -45,10 +45,10 @@ describe("zen.pair() — secp256k1 backward compatibility", function () {
     assert.strictEqual(p1.epriv, p2.epriv);
   });
 
-  it("secp256k1 pub is 88-char base62", async function () {
+  it("secp256k1 pub is 45-char base62 compressed", async function () {
     const p = await ZEN.pair(null, { seed: "secp-base62-check" });
-    assert.match(p.pub, /^[A-Za-z0-9]{88}$/, "pub should be 88-char base62");
-    assert.match(p.epub, /^[A-Za-z0-9]{88}$/, "epub should be 88-char base62");
+    assert.match(p.pub, /^[A-Za-z0-9]{44}[01]$/, "pub should be 45-char base62 compressed");
+    assert.match(p.epub, /^[A-Za-z0-9]{44}[01]$/, "epub should be 45-char base62 compressed");
   });
 
   it("secp256k1 additive derivation still works", async function () {
@@ -60,8 +60,8 @@ describe("zen.pair() — secp256k1 backward compatibility", function () {
     );
     assert.match(
       derived.pub,
-      /^[A-Za-z0-9]{88}$/,
-      "derived pub should be 88-char base62",
+      /^[A-Za-z0-9]{44}[01]$/,
+      "derived pub should be 45-char base62 compressed",
     );
   });
 });
@@ -91,10 +91,10 @@ describe("zen.pair() — P-256 / secp256r1", function () {
     assert.ok(p.epriv, "epriv present");
   });
 
-  it("p256 pub is 88-char base62 (zen format default)", async function () {
+  it("p256 pub is 45-char base62 compressed (zen format default)", async function () {
     const p = await ZEN.pair(null, { curve: "p256" });
-    assert.match(p.pub, /^[A-Za-z0-9]{88}$/, "pub 88-char base62");
-    assert.match(p.epub, /^[A-Za-z0-9]{88}$/, "epub 88-char base62");
+    assert.match(p.pub, /^[A-Za-z0-9]{44}[01]$/, "pub 45-char base62 compressed");
+    assert.match(p.epub, /^[A-Za-z0-9]{44}[01]$/, "epub 45-char base62 compressed");
   });
 
   it("p256 seed deterministic", async function () {

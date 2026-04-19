@@ -90,8 +90,8 @@ settings.pub = function (s) {
   if ("@" === (s[0] || "")[0]) {
     return;
   }
-  if (/^[A-Za-z0-9]{88}/.test(s)) {
-    return s.slice(0, 88);
+  if (/^[A-Za-z0-9]{44}[01]/.test(s)) {
+    return s.slice(0, 45);
   }
   var parts = s.split(/[^\w_-]/).slice(0, 2);
   if (!parts || 2 !== parts.length) {
@@ -497,7 +497,7 @@ check.hash = function (eve, msg, val, key, soul, at, no, yes) {
 };
 
 check.$sh = {
-  pub: 88,
+  pub: 45,
   cut: 2,
   min: 1,
   root: "~",

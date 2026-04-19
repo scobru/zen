@@ -164,6 +164,94 @@ describe("ZEN crypto — hash", function () {
     var h2 = await ZEN.hash("hello", pair);
     assert.strictEqual(h1, h2);
   });
+
+  it("hash() mine: function data — nonce is base62, no underscore", async function () {
+    var result = await ZEN.hash(
+      function (nonce) { return "order:" + nonce; },
+      null, null,
+      { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 1 } },
+    );
+    assert.ok(result && typeof result === "object", "returns object");
+    assert.ok(typeof result.hash === "string", "hash is string");
+    assert.ok(typeof result.nonce === "string", "nonce is string");
+    assert.ok(typeof result.proof === "string", "proof is string");
+    assert.ok(/^[0-9A-Za-z]+$/.test(result.nonce), "nonce is base62 (no underscore)");
+    assert.ok(result.hash.indexOf("0") === 0, "hash starts with unit");
+    assert.strictEqual(result.proof, "order:" + result.nonce, "proof embeds nonce");
+  });
+
+  it("hash() mine: string data — colon separator, nonce appended", async function () {
+    var result = await ZEN.hash(
+      "work",
+      null, null,
+      { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 1 } },
+    );
+    assert.ok(result.proof.startsWith("work:"), "colon separator used");
+    assert.ok(result.hash.indexOf("0") === 0, "hash meets difficulty");
+  });
+
+  it("hash() mine: nonce in middle of key", async function () {
+    var result = await ZEN.hash(
+      function (nonce) { return "pre:" + nonce + ":suf"; },
+      null, null,
+      { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 1 } },
+    );
+    assert.ok(/^pre:[0-9A-Za-z]+:suf$/.test(result.proof), "nonce in middle");
+    assert.ok(result.hash.indexOf("0") === 0, "hash meets difficulty");
+  });
+
+  it("hash() mine: difficulty 2 requires two-char prefix", async function () {
+    this.timeout(60 * 1000);
+    var result = await ZEN.hash(
+      function (nonce) { return "d2:" + nonce; },
+      null, null,
+      { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 2 } },
+    );
+    assert.ok(result.hash.indexOf("00") === 0, "hash starts with 00");
+  });
+
+  it("hash() mine: proof hashes to same result independently (pen PoW compatible)", async function () {
+    var result = await ZEN.hash(
+      function (nonce) { return "penkey:" + nonce; },
+      null, null,
+      { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 1 } },
+    );
+    // pen.js verifies by calling hash(field, null, cb, { name: "SHA-256", encode: "hex" })
+    var verify = await ZEN.hash(result.proof, null, null, { name: "SHA-256", encode: "hex" });
+    assert.strictEqual(verify, result.hash, "independent hash matches mined hash");
+    assert.ok(verify.indexOf("0") === 0, "verification passes pen PoW prefix check");
+  });
+
+  it("hash() mine: callback form delivers { hash, nonce, proof }", function (done) {
+    ZEN.hash(
+      function (nonce) { return "cb:" + nonce; },
+      null,
+      function (result) {
+        assert.ok(result && typeof result === "object");
+        assert.ok(result.hash.indexOf("0") === 0);
+        done();
+      },
+      { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 1 } },
+    );
+  });
+
+  it("hash() mine: pair-as-cb shorthand fires callback exactly once", function (done) {
+    // pair param is a function → treated as cb (shorthand). Must NOT fire on every
+    // mining attempt, only when the winning hash is found.
+    var callCount = 0;
+    ZEN.hash(
+      "shorthand",
+      function (result) {
+        callCount++;
+        assert.strictEqual(callCount, 1, "callback fires exactly once");
+        assert.ok(result && typeof result === "object", "result is object");
+        assert.ok(result.hash.indexOf("0") === 0, "hash meets pow requirement");
+        done();
+      },
+      null,
+      { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 1 } },
+    );
+  });
 });
 
 describe("ZEN crypto — btoa/atob utf8 roundtrip", function () {
@@ -215,7 +303,7 @@ describe("ZEN crypto — double sign", function () {
 describe("ZEN crypto — pair() key format", function () {
   this.timeout(10 * 1000);
 
-  var B62 = /^[A-Za-z0-9]{88}$/;
+  var B62 = /^[A-Za-z0-9]{44}[01]$/;
   var B62_44 = /^[A-Za-z0-9]{44}$/;
 
   it("curve is secp256k1", async function () {
@@ -223,12 +311,12 @@ describe("ZEN crypto — pair() key format", function () {
     assert.strictEqual(p.curve, "secp256k1");
   });
 
-  it("pub is 88-char base62", async function () {
+  it("pub is 45-char base62 compressed", async function () {
     var p = await ZEN.pair();
     assert.match(p.pub, B62);
   });
 
-  it("epub is 88-char base62", async function () {
+  it("epub is 45-char base62 compressed", async function () {
     var p = await ZEN.pair();
     assert.match(p.epub, B62);
   });
