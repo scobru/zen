@@ -551,31 +551,24 @@ describe("ZEN user graph — authenticator", function () {
     (async function () {
       var bob = await ZEN.pair();
       var enc = await ZEN.encrypt("secret", bob);
-      zen
-        .get("~" + bob.pub)
-        .get("a")
-        .get("b")
-        .put(
-          enc,
-          function (ack) {
-            if (ack && ack.err) {
-              return done(new Error("put failed: " + ack.err));
+      var ref = zen.get("~" + bob.pub).get("a").get("b");
+      ref.put(
+        enc,
+        function (ack) {
+          if (ack && ack.err) {
+            return done(new Error("put failed: " + ack.err));
+          }
+          ref.once(function (data) {
+            try {
+              assert.strictEqual(data, enc);
+              done();
+            } catch (e) {
+              done(e);
             }
-            zen
-              .get("~" + bob.pub)
-              .get("a")
-              .get("b")
-              .once(function (data) {
-                try {
-                  assert.strictEqual(data, enc);
-                  done();
-                } catch (e) {
-                  done(e);
-                }
-              });
-          },
-          { authenticator: bob },
-        );
+          });
+        },
+        { authenticator: bob },
+      );
     })().catch(done);
   });
 
