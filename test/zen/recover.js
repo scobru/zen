@@ -7,34 +7,32 @@ import ZEN from "../../zen.js";
 describe("ZEN.recover — basic", function () {
   this.timeout(20 * 1000);
 
+  var pair, sig;
+  before(async function () {
+    pair = await ZEN.pair();
+    sig = await ZEN.sign("hello", pair);
+  });
+
   it("ZEN.recover is a function", function () {
     assert.strictEqual(typeof ZEN.recover, "function");
   });
 
   it("recover returns the signer pub", async function () {
-    const pair = await ZEN.pair();
-    const sig = await ZEN.sign("hello", pair);
     const pub = await ZEN.recover(sig);
     assert.strictEqual(pub, pair.pub);
   });
 
   it("recovered pub is 45-char base62 compressed", async function () {
-    const pair = await ZEN.pair();
-    const sig = await ZEN.sign("test", pair);
     const pub = await ZEN.recover(sig);
     assert.match(pub, /^[A-Za-z0-9]{44}[01]$/, "pub must be 45-char compressed");
   });
 
-  it("sign output now includes v field (0 or 1)", async function () {
-    const pair = await ZEN.pair();
-    const sig = await ZEN.sign("data", pair);
+  it("sign output now includes v field (0 or 1)", function () {
     const parsed = JSON.parse(sig);
     assert.ok(parsed.v === 0 || parsed.v === 1, "v must be 0 or 1");
   });
 
   it("recover is deterministic — same sig same pub", async function () {
-    const pair = await ZEN.pair();
-    const sig = await ZEN.sign("stable", pair);
     const pub1 = await ZEN.recover(sig);
     const pub2 = await ZEN.recover(sig);
     assert.strictEqual(pub1, pub2);
@@ -44,17 +42,19 @@ describe("ZEN.recover — basic", function () {
 describe("ZEN.recover — cross-check with verify", function () {
   this.timeout(20 * 1000);
 
+  var alice, bob;
+  before(async function () {
+    [alice, bob] = await Promise.all([ZEN.pair(), ZEN.pair()]);
+  });
+
   it("verify still works alongside recover (backward compat)", async function () {
-    const pair = await ZEN.pair();
-    const sig = await ZEN.sign("cross check", pair);
+    const sig = await ZEN.sign("cross check", alice);
     const recovered = await ZEN.recover(sig);
     const verified = await ZEN.verify(sig, recovered);
     assert.strictEqual(verified, "cross check");
   });
 
   it("alice and bob produce different recovered pubs", async function () {
-    const alice = await ZEN.pair();
-    const bob = await ZEN.pair();
     const sigA = await ZEN.sign("msg", alice);
     const sigB = await ZEN.sign("msg", bob);
     const pubA = await ZEN.recover(sigA);
@@ -68,11 +68,15 @@ describe("ZEN.recover — cross-check with verify", function () {
 describe("ZEN.recover — JS types", function () {
   this.timeout(20 * 1000);
 
+  var pair;
+  before(async function () {
+    pair = await ZEN.pair();
+  });
+
   var cases = [null, true, false, 0, 1, "hello", { a: 1 }, [1, 2]];
 
   cases.forEach(function (val) {
     it("recover works for " + JSON.stringify(val), async function () {
-      const pair = await ZEN.pair();
       const sig = await ZEN.sign(val, pair);
       const pub = await ZEN.recover(sig);
       assert.strictEqual(pub, pair.pub);
@@ -83,9 +87,13 @@ describe("ZEN.recover — JS types", function () {
 describe("ZEN.recover — error cases", function () {
   this.timeout(10 * 1000);
 
+  var pair, sig;
+  before(async function () {
+    pair = await ZEN.pair();
+    sig = await ZEN.sign("data", pair);
+  });
+
   it("throws (or returns undefined via cb) when v is missing", async function () {
-    const pair = await ZEN.pair();
-    const sig = await ZEN.sign("data", pair);
     const parsed = JSON.parse(sig);
     delete parsed.v;
     const stripped = JSON.stringify(parsed);
@@ -96,8 +104,6 @@ describe("ZEN.recover — error cases", function () {
   });
 
   it("tampered sig recovers a different (wrong) pub", async function () {
-    const pair = await ZEN.pair();
-    const sig = await ZEN.sign("original", pair);
     const parsed = JSON.parse(sig);
     // Flip one byte in the base64 sig
     const bytes = Buffer.from(parsed.s, "base64");

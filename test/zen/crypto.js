@@ -35,9 +35,12 @@ describe("ZEN crypto — quickstart", function () {
 describe("ZEN crypto — tamper / wrong key", function () {
   this.timeout(20 * 1000);
 
+  var alice, bob;
+  before(async function () {
+    [alice, bob] = await Promise.all([ZEN.pair(), ZEN.pair()]);
+  });
+
   it("verifying with wrong pub returns undefined", async function () {
-    var alice = await ZEN.pair();
-    var bob = await ZEN.pair();
     var sig = await ZEN.sign("asdf", alice);
     var bad = await ZEN.verify(sig, bob.pub).catch(function () {
       return undefined;
@@ -46,16 +49,13 @@ describe("ZEN crypto — tamper / wrong key", function () {
   });
 
   it("verifying tampered payload rejects", async function () {
-    var pair = await ZEN.pair();
-    var sig = await ZEN.sign("original", pair);
+    var sig = await ZEN.sign("original", alice);
     var tampered = JSON.parse(sig);
     tampered.m = "tampered";
-    await assert.rejects(ZEN.verify(JSON.stringify(tampered), pair.pub));
+    await assert.rejects(ZEN.verify(JSON.stringify(tampered), alice.pub));
   });
 
   it("decrypting with wrong pair returns undefined", async function () {
-    var alice = await ZEN.pair();
-    var bob = await ZEN.pair();
     var enc = await ZEN.encrypt("secret", alice);
     var bad = await ZEN.decrypt(enc, bob).catch(function () {
       return undefined;
@@ -67,11 +67,15 @@ describe("ZEN crypto — tamper / wrong key", function () {
 describe("ZEN crypto — sign/verify JS types", function () {
   this.timeout(20 * 1000);
 
+  var pair;
+  before(async function () {
+    pair = await ZEN.pair();
+  });
+
   var cases = [null, true, false, 0, 1, 1.01, "", "a", [], [1], {}, { a: 1 }];
 
   cases.forEach(function (val) {
     it("roundtrips " + JSON.stringify(val), async function () {
-      var pair = await ZEN.pair();
       var sig = await ZEN.sign(val, pair);
       var out = await ZEN.verify(sig, pair.pub);
       assert.deepStrictEqual(out, val);
@@ -79,7 +83,6 @@ describe("ZEN crypto — sign/verify JS types", function () {
   });
 
   it("roundtrips stringified JSON back to object", async function () {
-    var pair = await ZEN.pair();
     var sig = await ZEN.sign(JSON.stringify({ a: 1 }), pair);
     var out = await ZEN.verify(sig, pair.pub);
     assert.deepStrictEqual(out, { a: 1 });
@@ -89,11 +92,15 @@ describe("ZEN crypto — sign/verify JS types", function () {
 describe("ZEN crypto — encrypt/decrypt JS types", function () {
   this.timeout(20 * 1000);
 
+  var pair;
+  before(async function () {
+    pair = await ZEN.pair();
+  });
+
   var cases = [null, true, false, 0, 1, 1.01, "", "a", [], [1], {}, { a: 1 }];
 
   cases.forEach(function (val) {
     it("roundtrips " + JSON.stringify(val), async function () {
-      var pair = await ZEN.pair();
       var enc = await ZEN.encrypt(val, pair);
       var dec = await ZEN.decrypt(enc, pair);
       assert.deepStrictEqual(dec, val);
@@ -101,7 +108,6 @@ describe("ZEN crypto — encrypt/decrypt JS types", function () {
   });
 
   it("roundtrips stringified JSON back to object", async function () {
-    var pair = await ZEN.pair();
     var enc = await ZEN.encrypt(JSON.stringify({ a: 1 }), pair);
     var dec = await ZEN.decrypt(enc, pair);
     assert.deepStrictEqual(dec, { a: 1 });
@@ -110,6 +116,11 @@ describe("ZEN crypto — encrypt/decrypt JS types", function () {
 
 describe("ZEN crypto — hash", function () {
   this.timeout(20 * 1000);
+
+  var hashPair;
+  before(async function () {
+    hashPair = await ZEN.pair();
+  });
 
   it('hash() output contains no "/" (base64url)', async function () {
     function hashAsync(data) {
@@ -159,9 +170,8 @@ describe("ZEN crypto — hash", function () {
   });
 
   it("hash() is deterministic for same input", async function () {
-    var pair = await ZEN.pair();
-    var h1 = await ZEN.hash("hello", pair);
-    var h2 = await ZEN.hash("hello", pair);
+    var h1 = await ZEN.hash("hello", hashPair);
+    var h2 = await ZEN.hash("hello", hashPair);
     assert.strictEqual(h1, h2);
   });
 
@@ -284,16 +294,18 @@ describe("ZEN crypto — btoa/atob utf8 roundtrip", function () {
 describe("ZEN crypto — double sign", function () {
   this.timeout(10 * 1000);
 
+  var alice, bob;
+  before(async function () {
+    [alice, bob] = await Promise.all([ZEN.pair(), ZEN.pair()]);
+  });
+
   it("signing an already-signed value is idempotent", async function () {
-    var pair = await ZEN.pair();
-    var sig = await ZEN.sign("hello world", pair);
-    var dup = await ZEN.sign(sig, pair);
+    var sig = await ZEN.sign("hello world", alice);
+    var dup = await ZEN.sign(sig, alice);
     assert.strictEqual(dup, sig);
   });
 
   it("different pair produces different signature", async function () {
-    var alice = await ZEN.pair();
-    var bob = await ZEN.pair();
     var sig = await ZEN.sign("hello", alice);
     var dup = await ZEN.sign(sig, bob);
     assert.notStrictEqual(dup, sig);
@@ -305,34 +317,32 @@ describe("ZEN crypto — pair() key format", function () {
 
   var B62 = /^[A-Za-z0-9]{44}[01]$/;
   var B62_44 = /^[A-Za-z0-9]{44}$/;
+  var p;
+  before(async function () {
+    p = await ZEN.pair();
+  });
 
-  it("curve is secp256k1", async function () {
-    var p = await ZEN.pair();
+  it("curve is secp256k1", function () {
     assert.strictEqual(p.curve, "secp256k1");
   });
 
-  it("pub is 45-char base62 compressed", async function () {
-    var p = await ZEN.pair();
+  it("pub is 45-char base62 compressed", function () {
     assert.match(p.pub, B62);
   });
 
-  it("epub is 45-char base62 compressed", async function () {
-    var p = await ZEN.pair();
+  it("epub is 45-char base62 compressed", function () {
     assert.match(p.epub, B62);
   });
 
-  it("priv is 44-char base62", async function () {
-    var p = await ZEN.pair();
+  it("priv is 44-char base62", function () {
     assert.match(p.priv, B62_44);
   });
 
-  it("epriv is 44-char base62", async function () {
-    var p = await ZEN.pair();
+  it("epriv is 44-char base62", function () {
     assert.match(p.epriv, B62_44);
   });
 
-  it("pub and epub differ (ECDSA vs ECDH)", async function () {
-    var p = await ZEN.pair();
+  it("pub and epub differ (ECDSA vs ECDH)", function () {
     assert.notStrictEqual(p.pub, p.epub);
   });
 
@@ -444,8 +454,12 @@ describe("ZEN crypto — seed-based key generation", function () {
 describe("ZEN crypto — derive (additive)", function () {
   this.timeout(10 * 1000);
 
+  var base;
+  before(async function () {
+    base = await ZEN.pair();
+  });
+
   it("deterministic for same priv + seed", async function () {
-    var base = await ZEN.pair();
     var d1 = await ZEN.pair(null, { priv: base.priv, seed: "derive-det" });
     var d2 = await ZEN.pair(null, { priv: base.priv, seed: "derive-det" });
     assert.strictEqual(d1.priv, d2.priv);
@@ -453,21 +467,18 @@ describe("ZEN crypto — derive (additive)", function () {
   });
 
   it("Bob (priv+seed) and Alice (pub+seed) produce same derived pub", async function () {
-    var base = await ZEN.pair();
     var bob = await ZEN.pair(null, { priv: base.priv, seed: "derive-sign" });
     var alice = await ZEN.pair(null, { pub: base.pub, seed: "derive-sign" });
     assert.strictEqual(bob.pub, alice.pub);
   });
 
   it("Bob (epriv+seed) and Alice (epub+seed) produce same derived epub", async function () {
-    var base = await ZEN.pair();
     var bob = await ZEN.pair(null, { epriv: base.epriv, seed: "derive-enc" });
     var alice = await ZEN.pair(null, { epub: base.epub, seed: "derive-enc" });
     assert.strictEqual(bob.epub, alice.epub);
   });
 
   it("partial output: priv+seed gives priv+pub only (no epub)", async function () {
-    var base = await ZEN.pair();
     var d = await ZEN.pair(null, { priv: base.priv, seed: "derive-partial" });
     assert.ok(d.priv);
     assert.ok(d.pub);
@@ -476,7 +487,6 @@ describe("ZEN crypto — derive (additive)", function () {
   });
 
   it("partial output: pub+seed gives pub only", async function () {
-    var base = await ZEN.pair();
     var d = await ZEN.pair(null, { pub: base.pub, seed: "derive-pub-partial" });
     assert.ok(d.pub);
     assert.ok(!d.priv);

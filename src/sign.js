@@ -15,7 +15,7 @@ async function sign(data, pair, cb, opt) {
     const priv = c.parseScalar(pair.priv, "Signing key");
     for (let i = 0; i < 16; i++) {
       const k = await c.deterministicK(priv, h, i);
-      const pt = c.pointMultiply(k, c.G);
+      const pt = c.pointMultiplyG(k);
       if (!pt) {
         continue;
       }

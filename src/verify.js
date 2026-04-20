@@ -36,7 +36,7 @@ async function verify(data, pair, cb, opt) {
     const w = c.modInv(s, c.N);
     const u1 = c.mod(z * w, c.N);
     const u2 = c.mod(r * w, c.N);
-    const res = c.pointAdd(c.pointMultiply(u1, c.G), c.pointMultiply(u2, pt));
+    const res = c.pointAdd(c.pointMultiplyG(u1), c.pointMultiply(u2, pt));
     if (!res || c.mod(res.x, c.N) !== r) {
       throw new Error("Signature did not match");
     }
