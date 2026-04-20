@@ -307,10 +307,10 @@ describe("pen.run — ISA", function () {
 // ── ZEN.pen compiler ──────────────────────────────────────────────────────────
 
 describe("ZEN.pen()", function () {
-  it("returns a string starting with $", function () {
+  it("returns a string starting with !", function () {
     var soul = ZEN.pen({});
     assert.ok(typeof soul === "string");
-    assert.strictEqual(soul[0], "$");
+    assert.strictEqual(soul[0], "!");
   });
 
   it("empty spec → PASS predicate", function () {
@@ -723,7 +723,7 @@ describe("penStage (mocked pipeline)", function () {
 
   it("rejects when bytecode is empty / too short", function (done) {
     // Create a soul with invalid (too-short) content
-    var soul = "$0"; // '0' in base62 decodes to empty
+    var soul = "!0"; // '0' in base62 decodes to empty
     var r = mockCtx(soul, "k", "v");
     var rejected = null;
     ZEN.check &&
@@ -733,7 +733,7 @@ describe("penStage (mocked pipeline)", function () {
       });
     // Simulate what penStage would do directly
     pen.unpack("0"); // should not throw, but length check rejects
-    // Test via run: soul '$0' → unpack('0') → empty → should reject
+    // Test via run: soul '!0' → unpack('0') → empty → should reject
     done(); // tested indirectly; WASM rejects unknown/empty bytecode
   });
 
@@ -764,7 +764,7 @@ describe("penStage (mocked pipeline)", function () {
 
   it("soul with path: penStage extracts path after first / into R[6]", function (done) {
     var soul = ZEN.pen({ path: { pre: "usr/" } });
-    // Simulate soul with path: '$pencode/usr/alice'
+    // Simulate soul with path: '!pencode/usr/alice'
     var soulWithPath = soul + "/usr/alice";
     var slashIdx = soulWithPath.indexOf("/");
     var pencode = soulWithPath.slice(1, slashIdx);

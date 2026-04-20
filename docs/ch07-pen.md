@@ -46,7 +46,7 @@ npm run buildPEN
 
 ```js
 const bytecode = ZEN.pen({ key: "fixed" });
-// "$..." — a short base62 string starting with "$"
+// "!..." — a short base62 string starting with "!"
 ```
 
 The spec is a plain object describing what the policy should enforce. The compiled string can be stored in the graph and evaluated later.

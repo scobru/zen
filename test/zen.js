@@ -17,7 +17,7 @@ describe('ZEN', function() {
     var zen = new ZEN();
     var soul = ZEN.pen({ key: 'fixed' });
     assert.strictEqual(typeof soul, 'string');
-    assert.ok(soul.startsWith('$'));
+    assert.ok(soul.startsWith('!'));
     assert.strictEqual(zen.pen({ key: 'fixed' }), soul);
     assert.strictEqual(typeof ZEN.certify, 'function');
     assert.strictEqual(typeof zen.certify, 'function');

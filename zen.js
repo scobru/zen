@@ -4328,7 +4328,7 @@ defmod('./src/pen.js', function(module, exp){
       eve.to.next(msg);
     }
 
-    // ── penStage: pipeline stage for $-soul validation ────────────────────────────
+    // ── penStage: pipeline stage for !-soul validation ────────────────────────────
 
     function penStage(ctx, next, reject) {
       var soul = ctx.soul;
@@ -4393,20 +4393,20 @@ defmod('./src/pen.js', function(module, exp){
 
     if (runtime && runtime.check && runtime.check.use) {
       runtime.check.use(function (ctx, pipeline) {
-        if (!ctx.soul || ctx.soul[0] !== "$") return;
+        if (!ctx.soul || ctx.soul[0] !== "!") return;
         pipeline.splice(1, 0, penStage);
       });
     }
 
     // ── runtime.pen() — bytecode compiler ─────────────────────────────────────────
-    // Compiles a high-level spec to bytecode and returns the soul string '$<base62>'
+    // Compiles a high-level spec to bytecode and returns the soul string '!<base62>'
     //
     // spec.key   — expr to validate ctx.key   (R[0])
     // spec.val   — expr to validate ctx.val   (R[1])
     // spec.soul  — expr to validate ctx.soul  (R[2], full soul string)
     // spec.state — expr to validate ctx.state (R[3])
     // spec.path  — expr to validate path after pencode/ in soul (R[6])
-    //              e.g. soul '$abc/foo/bar' → path 'foo/bar'
+    //              e.g. soul '!abc/foo/bar' → path 'foo/bar'
     //
     // expr formats:
     //   "string"                      → EQ(field, str)
@@ -4581,7 +4581,7 @@ defmod('./src/pen.js', function(module, exp){
         pred.push(0xc4, powfield, powdiff, powubytes.length);
         for (var pi = 0; pi < powubytes.length; pi++) pred.push(powubytes[pi]);
       }
-      return "$" + pen.pack(new Uint8Array(pred));
+      return "!" + pen.pack(new Uint8Array(pred));
     };
 
     // ── runtime.candle() — temporal window helper ─────────────────────────────────

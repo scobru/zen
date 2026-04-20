@@ -159,7 +159,7 @@ describe("testZEN", function () {
     assert.strictEqual(proof1, proof2);
     assert.strictEqual(proof1.includes("/"), false);
     assert.strictEqual(typeof soul, "string");
-    assert.strictEqual(soul.startsWith("$"), true);
+    assert.strictEqual(soul.startsWith("!"), true);
     assert.deepStrictEqual(Array.from(unpacked), Array.from(raw));
   });
 
