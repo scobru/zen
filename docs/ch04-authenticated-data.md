@@ -280,4 +280,5 @@ When any write arrives, the security middleware routes it through one of these h
 | `chat`, `app/data`, ... | `check.any` | Passes unless `opt.secure` is set |
 | `~<pub>`, `~<pub>/path` | `check.pub` | Signature matches `pub` in soul; cert OK if different pub |
 | `~/...` | `check.shard` | Signed pub routing for the shard tree |
+| `!<bytecode>/...` | PEN VM | WASM bytecode policy evaluated against the write |
 | `<soul>#...` | `check.hash` | Content-addressed data |

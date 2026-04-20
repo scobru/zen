@@ -22,15 +22,15 @@ const pair = await ZEN.pair();
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `pub` | string (88 chars) | Public key, base62 encoded |
+| `pub` | string (45 chars) | Public key, base62 compressed (44-char x + 1 parity) |
 | `priv` | string (44 chars) | Private key — **never share or store in the graph** |
-| `epub` | string (88 chars) | Ephemeral public key (for ECDH) |
+| `epub` | string (45 chars) | Ephemeral public key (for ECDH) |
 | `epriv` | string (44 chars) | Ephemeral private key |
 | `curve` | string | `"secp256k1"` by default |
 
 ```js
 console.log(pair.curve);      // "secp256k1"
-console.log(pair.pub.length); // 88
+console.log(pair.pub.length); // 45
 ```
 
 **Options:**
