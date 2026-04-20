@@ -1,5 +1,6 @@
 import ZEN from "./root.js";
 import verify from "./verify.js";
+import recover from "./recover.js";
 import hash from "./hash.js";
 import sign from "./sign.js";
 import settings from "./settings.js";
@@ -387,8 +388,7 @@ check.$vfy = function (
       data.c &&
       data.w &&
       (data.c === certificant ||
-        data.c.indexOf("*") > -1 ||
-        data.c.indexOf(certificant) > -1)
+        (Array.isArray(data.c) && data.c.indexOf(certificant) > -1))
     ) {
       var path =
         soul.indexOf("/") > -1
@@ -571,15 +571,14 @@ check.$tag = async function (msg, cert, upub, $verify, next) {
   if (_cert && _cert.m && _cert.s) {
     $verify(_cert, upub, function (_) {
       msg.put[":"]["+"] = _cert;
-      msg.put[":"]["*"] = upub;
       next();
     });
   }
 };
 
-check.pass = function (eve, msg, raw, data, $verify) {
-  if (raw["+"] && raw["+"]["m"] && raw["+"]["s"] && raw["*"]) {
-    return $verify(raw["+"], raw["*"], function (_) {
+check.pass = function (eve, msg, raw, data, $verify, writerPub) {
+  if (raw["+"] && raw["+"]["m"] && raw["+"]["s"] && writerPub) {
+    return $verify(raw["+"], writerPub, function (_) {
       msg.put["="] = data;
       return eve.to.next(msg);
     });
@@ -635,8 +634,7 @@ check.pub = async function (eve, msg, val, key, soul, at, no, user, pub, conf) {
   if (
     ((user && user.is) || authenticator) &&
     upub &&
-    !raw["*"] &&
-    !raw["+"] &&
+    !raw["~"] &&
     (pub === upub || (pub !== upub && cert))
   ) {
     check.auth(msg, no, authenticator, function (data) {
@@ -654,21 +652,25 @@ check.pub = async function (eve, msg, val, key, soul, at, no, user, pub, conf) {
   }
 
   settings.pack(msg.put, function (packed) {
-    verify(packed, raw["*"] || pub, function (data) {
-      data = settings.unpack(data);
-      if (u === data) {
-        return no("Unverified data.");
-      }
-      if (!$expect(data)) {
-        return;
-      }
-      var lnk = link_is(data);
-      if (lnk && pub === settings.pub(lnk)) {
-        (at.zen.own[lnk] = at.zen.own[lnk] || {})[pub] = 1;
-      }
-      $hash(data, function () {
-        check.pass(eve, msg, raw, data, $verify);
+    recover(packed).then(function (signerPub) {
+      verify(packed, signerPub, function (data) {
+        data = settings.unpack(data);
+        if (u === data) {
+          return no("Unverified data.");
+        }
+        if (!$expect(data)) {
+          return;
+        }
+        var lnk = link_is(data);
+        if (lnk && pub === settings.pub(lnk)) {
+          (at.zen.own[lnk] = at.zen.own[lnk] || {})[pub] = 1;
+        }
+        $hash(data, function () {
+          check.pass(eve, msg, raw, data, $verify, signerPub);
+        });
       });
+    }).catch(function () {
+      no("Cannot recover signer identity.");
     });
   });
 };
@@ -678,8 +680,7 @@ check.shard = async function (eve, msg, val, key, soul, at, no, user) {
     link = link_is(val),
     expected,
     leaf,
-    raw,
-    claim;
+    raw;
   if (!path) {
     return no("Invalid shard soul path.");
   }
@@ -718,8 +719,8 @@ check.shard = async function (eve, msg, val, key, soul, at, no, user) {
   expected = check.$kid(soul, key);
   var prefix = check.$pub(soul, key);
   raw = link ? {} : (await settings.parse(val)) || {};
-  claim = raw && typeof raw === "object" ? raw["*"] : undefined;
-  if (!claim) {
+  var hasSignature = !link && raw && typeof raw === "object" && raw["~"];
+  if (!hasSignature) {
     if (!link) {
       return no("Shard intermediate value must be link.");
     }
@@ -728,24 +729,23 @@ check.shard = async function (eve, msg, val, key, soul, at, no, user) {
     }
     var sec2 = check.$zen(msg, user);
     var authenticator2 = sec2.authenticator;
-    claim = sec2.upub || (authenticator2 || {}).pub;
+    var authPub = sec2.upub || (authenticator2 || {}).pub;
     if (!authenticator2) {
       return no("Shard intermediate requires authenticator.");
     }
-    if ("string" !== typeof claim || claim.length !== check.$sh.pub) {
+    if ("string" !== typeof authPub || authPub.length !== check.$sh.pub) {
       return no("Invalid shard intermediate pub.");
     }
-    if (settings.pub("~" + claim) !== claim) {
+    if (settings.pub("~" + authPub) !== authPub) {
       return no("Invalid shard intermediate pub format.");
     }
-    if (0 !== claim.indexOf(prefix)) {
+    if (0 !== authPub.indexOf(prefix)) {
       return no("Shard pub prefix mismatch.");
     }
     check.auth(msg, no, authenticator2, function (data) {
       if (link_is(data) !== expected) {
         return no("Shard intermediate signed payload mismatch.");
       }
-      msg.put[":"]["*"] = claim;
       msg.put["="] = { "#": expected };
       check.next(eve, msg, no);
     });
@@ -759,29 +759,33 @@ check.shard = async function (eve, msg, val, key, soul, at, no, user) {
       return eve.to.next(msg);
     }
   }
-  if ("string" !== typeof claim || claim.length !== check.$sh.pub) {
-    return no("Invalid shard intermediate pub.");
-  }
-  if (settings.pub("~" + claim) !== claim) {
-    return no("Invalid shard intermediate pub format.");
-  }
-  if (0 !== claim.indexOf(prefix)) {
-    return no("Shard pub prefix mismatch.");
-  }
   if (link_is(raw[":"]) !== expected) {
     return no("Invalid shard link target.");
   }
   settings.pack(msg.put, function (packed) {
-    verify(packed, claim, function (data) {
-      data = settings.unpack(data);
-      if (u === data) {
-        return no("Invalid shard intermediate signature.");
+    recover(packed).then(function (signerPub) {
+      if ("string" !== typeof signerPub || signerPub.length !== check.$sh.pub) {
+        return no("Invalid shard intermediate pub.");
       }
-      if (link_is(data) !== expected) {
-        return no("Shard intermediate payload mismatch.");
+      if (settings.pub("~" + signerPub) !== signerPub) {
+        return no("Invalid shard intermediate pub format.");
       }
-      msg.put["="] = data;
-      eve.to.next(msg);
+      if (0 !== signerPub.indexOf(prefix)) {
+        return no("Shard pub prefix mismatch.");
+      }
+      verify(packed, signerPub, function (data) {
+        data = settings.unpack(data);
+        if (u === data) {
+          return no("Invalid shard intermediate signature.");
+        }
+        if (link_is(data) !== expected) {
+          return no("Shard intermediate payload mismatch.");
+        }
+        msg.put["="] = data;
+        eve.to.next(msg);
+      });
+    }).catch(function () {
+      no("Cannot recover shard signer pub.");
     });
   });
 };
@@ -815,6 +819,7 @@ var security = {
   check: check,
   opt: settings,
   verify: verify,
+  recover: recover,
   hash: hash,
   sign: sign,
 };

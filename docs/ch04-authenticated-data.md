@@ -79,8 +79,8 @@ zen.get("~" + me.pub).put(
 1. `put()` places `{ authenticator: me }` in the outgoing message `opt`
 2. The security middleware receives the write on the `"in"` channel
 3. `check.auth()` calls `ZEN.sign(payload, me)` — signs the data with `me.priv`
-4. The signed value is stored as `{ ":": value, "~": signature }`
-5. On reads, `ZEN.verify(storedValue, me.pub)` confirms the signature matches
+4. The signed value is stored as `{ ":": value, "~": signature, "v": recoveryBit }`
+5. On reads, `ZEN.recover(storedValue)` derives the signer's pub; `ZEN.verify(storedValue, pub)` confirms it
 
 ---
 
@@ -196,20 +196,15 @@ const cert = await ZEN.certify(
 
 ---
 
-## 4.9 Wildcard certificants
+## 4.9 Multi-certificant — array of pub keys
 
-Grant any key pair write access (open to everyone):
-
-```js
-// Anyone can write to alice's "comments" key
-const cert = await ZEN.certify("*", "comments", alice);
-```
-
-Grant multiple specific key pairs at once:
+Grant access to several specific key pairs at once:
 
 ```js
 const cert = await ZEN.certify([bob.pub, carol.pub], "inbox", alice);
 ```
+
+The cert's `c` field will be an array of pub strings. Each holder can use it independently.
 
 ---
 
@@ -220,7 +215,8 @@ A cert is a signed JSON object. After `JSON.parse(cert)`:
 ```js
 {
   m: '{"c":"<bob.pub>","w":"inbox"}',  // message (JSON string)
-  s: "<alice's signature>"              // ECDSA signature by alice.priv
+  s: "<alice's signature>",             // ECDSA signature by alice.priv
+  v: 0                                  // ECDSA recovery bit
 }
 ```
 
@@ -228,7 +224,7 @@ Inside `m` (after parsing):
 
 | Field | Meaning |
 |-------|---------|
-| `c` | Certificant — the pub being granted access (or `"*"`) |
+| `c` | Certificant — the pub being granted access (string or array of strings; wildcard `"*"` is not supported) |
 | `w` | Write policy — key, array of keys, or LEX object |
 | `r` | Read policy (optional) |
 | `e` | Expiry timestamp (optional) |

@@ -2779,6 +2779,58 @@ defmod('./src/verify.js', function(module, exp){
   exp.verify = verify;
 });
 
+defmod('./src/recover.js', function(module, exp){
+  var crv = reqmod('./src/curves.js').default;
+  async function recover(data, cb, opt) {
+    try {
+      opt = opt || {};
+      const c0 = crv();
+      const msg = await c0.settings.parse(data);
+      if (!msg || msg.v === undefined || msg.v === null) {
+        throw new Error("No recovery bit (v) in signature");
+      }
+      const c = crv((msg && msg.c) || opt.curve);
+      const h = await c.shaBytes(msg.m);
+      const sig = new Uint8Array(
+        c.shim.Buffer.from(msg.s || "", opt.encode || "base64"),
+      );
+      if (sig.length !== 64) {
+        throw new Error("Invalid signature length");
+      }
+      const r = c.bytesToBigInt(sig.slice(0, 32));
+      const s = c.bytesToBigInt(sig.slice(32));
+      if (r <= 0n || r >= c.N || s <= 0n || s >= c.N) {
+        throw new Error("Signature out of range");
+      }
+      const point = c.recoverPub(msg.v, r, s, h);
+      const pub = c.pointToPub(point);
+      if (cb) {
+        try {
+          cb(pub);
+        } catch (e) {
+          console.log(e);
+        }
+      }
+      return pub;
+    } catch (e) {
+      if (cb) {
+        try {
+          cb();
+        } catch (x) {
+          console.log(x);
+        }
+        return;
+      }
+      throw e;
+    }
+  }
+
+
+  exp.default = recover;
+
+  exp.recover = recover;
+});
+
 defmod('./src/sign.js', function(module, exp){
   var crv = reqmod('./src/curves.js').default;
   async function sign(data, pair, cb, opt) {
@@ -2846,6 +2898,7 @@ defmod('./src/sign.js', function(module, exp){
 defmod('./src/security.js', function(module, exp){
   var ZEN = reqmod('./src/root.js').default;
   var verify = reqmod('./src/verify.js').default;
+  var recover = reqmod('./src/recover.js').default;
   var hash = reqmod('./src/hash.js').default;
   var sign = reqmod('./src/sign.js').default;
   var settings = reqmod('./src/settings.js').default;
@@ -3232,8 +3285,7 @@ defmod('./src/security.js', function(module, exp){
         data.c &&
         data.w &&
         (data.c === certificant ||
-          data.c.indexOf("*") > -1 ||
-          data.c.indexOf(certificant) > -1)
+          (Array.isArray(data.c) && data.c.indexOf(certificant) > -1))
       ) {
         var path =
           soul.indexOf("/") > -1
@@ -3416,15 +3468,14 @@ defmod('./src/security.js', function(module, exp){
     if (_cert && _cert.m && _cert.s) {
       $verify(_cert, upub, function (_) {
         msg.put[":"]["+"] = _cert;
-        msg.put[":"]["*"] = upub;
         next();
       });
     }
   };
 
-  check.pass = function (eve, msg, raw, data, $verify) {
-    if (raw["+"] && raw["+"]["m"] && raw["+"]["s"] && raw["*"]) {
-      return $verify(raw["+"], raw["*"], function (_) {
+  check.pass = function (eve, msg, raw, data, $verify, writerPub) {
+    if (raw["+"] && raw["+"]["m"] && raw["+"]["s"] && writerPub) {
+      return $verify(raw["+"], writerPub, function (_) {
         msg.put["="] = data;
         return eve.to.next(msg);
       });
@@ -3480,8 +3531,7 @@ defmod('./src/security.js', function(module, exp){
     if (
       ((user && user.is) || authenticator) &&
       upub &&
-      !raw["*"] &&
-      !raw["+"] &&
+      !raw["~"] &&
       (pub === upub || (pub !== upub && cert))
     ) {
       check.auth(msg, no, authenticator, function (data) {
@@ -3499,21 +3549,25 @@ defmod('./src/security.js', function(module, exp){
     }
 
     settings.pack(msg.put, function (packed) {
-      verify(packed, raw["*"] || pub, function (data) {
-        data = settings.unpack(data);
-        if (u === data) {
-          return no("Unverified data.");
-        }
-        if (!$expect(data)) {
-          return;
-        }
-        var lnk = link_is(data);
-        if (lnk && pub === settings.pub(lnk)) {
-          (at.zen.own[lnk] = at.zen.own[lnk] || {})[pub] = 1;
-        }
-        $hash(data, function () {
-          check.pass(eve, msg, raw, data, $verify);
+      recover(packed).then(function (signerPub) {
+        verify(packed, signerPub, function (data) {
+          data = settings.unpack(data);
+          if (u === data) {
+            return no("Unverified data.");
+          }
+          if (!$expect(data)) {
+            return;
+          }
+          var lnk = link_is(data);
+          if (lnk && pub === settings.pub(lnk)) {
+            (at.zen.own[lnk] = at.zen.own[lnk] || {})[pub] = 1;
+          }
+          $hash(data, function () {
+            check.pass(eve, msg, raw, data, $verify, signerPub);
+          });
         });
+      }).catch(function () {
+        no("Cannot recover signer identity.");
       });
     });
   };
@@ -3523,8 +3577,7 @@ defmod('./src/security.js', function(module, exp){
       link = link_is(val),
       expected,
       leaf,
-      raw,
-      claim;
+      raw;
     if (!path) {
       return no("Invalid shard soul path.");
     }
@@ -3563,8 +3616,8 @@ defmod('./src/security.js', function(module, exp){
     expected = check.$kid(soul, key);
     var prefix = check.$pub(soul, key);
     raw = link ? {} : (await settings.parse(val)) || {};
-    claim = raw && typeof raw === "object" ? raw["*"] : undefined;
-    if (!claim) {
+    var hasSignature = !link && raw && typeof raw === "object" && raw["~"];
+    if (!hasSignature) {
       if (!link) {
         return no("Shard intermediate value must be link.");
       }
@@ -3573,24 +3626,23 @@ defmod('./src/security.js', function(module, exp){
       }
       var sec2 = check.$zen(msg, user);
       var authenticator2 = sec2.authenticator;
-      claim = sec2.upub || (authenticator2 || {}).pub;
+      var authPub = sec2.upub || (authenticator2 || {}).pub;
       if (!authenticator2) {
         return no("Shard intermediate requires authenticator.");
       }
-      if ("string" !== typeof claim || claim.length !== check.$sh.pub) {
+      if ("string" !== typeof authPub || authPub.length !== check.$sh.pub) {
         return no("Invalid shard intermediate pub.");
       }
-      if (settings.pub("~" + claim) !== claim) {
+      if (settings.pub("~" + authPub) !== authPub) {
         return no("Invalid shard intermediate pub format.");
       }
-      if (0 !== claim.indexOf(prefix)) {
+      if (0 !== authPub.indexOf(prefix)) {
         return no("Shard pub prefix mismatch.");
       }
       check.auth(msg, no, authenticator2, function (data) {
         if (link_is(data) !== expected) {
           return no("Shard intermediate signed payload mismatch.");
         }
-        msg.put[":"]["*"] = claim;
         msg.put["="] = { "#": expected };
         check.next(eve, msg, no);
       });
@@ -3604,29 +3656,33 @@ defmod('./src/security.js', function(module, exp){
         return eve.to.next(msg);
       }
     }
-    if ("string" !== typeof claim || claim.length !== check.$sh.pub) {
-      return no("Invalid shard intermediate pub.");
-    }
-    if (settings.pub("~" + claim) !== claim) {
-      return no("Invalid shard intermediate pub format.");
-    }
-    if (0 !== claim.indexOf(prefix)) {
-      return no("Shard pub prefix mismatch.");
-    }
     if (link_is(raw[":"]) !== expected) {
       return no("Invalid shard link target.");
     }
     settings.pack(msg.put, function (packed) {
-      verify(packed, claim, function (data) {
-        data = settings.unpack(data);
-        if (u === data) {
-          return no("Invalid shard intermediate signature.");
+      recover(packed).then(function (signerPub) {
+        if ("string" !== typeof signerPub || signerPub.length !== check.$sh.pub) {
+          return no("Invalid shard intermediate pub.");
         }
-        if (link_is(data) !== expected) {
-          return no("Shard intermediate payload mismatch.");
+        if (settings.pub("~" + signerPub) !== signerPub) {
+          return no("Invalid shard intermediate pub format.");
         }
-        msg.put["="] = data;
-        eve.to.next(msg);
+        if (0 !== signerPub.indexOf(prefix)) {
+          return no("Shard pub prefix mismatch.");
+        }
+        verify(packed, signerPub, function (data) {
+          data = settings.unpack(data);
+          if (u === data) {
+            return no("Invalid shard intermediate signature.");
+          }
+          if (link_is(data) !== expected) {
+            return no("Shard intermediate payload mismatch.");
+          }
+          msg.put["="] = data;
+          eve.to.next(msg);
+        });
+      }).catch(function () {
+        no("Cannot recover shard signer pub.");
       });
     });
   };
@@ -3660,6 +3716,7 @@ defmod('./src/security.js', function(module, exp){
     check: check,
     opt: settings,
     verify: verify,
+    recover: recover,
     hash: hash,
     sign: sign,
   };
@@ -4217,20 +4274,26 @@ defmod('./src/pen.js', function(module, exp){
         try {
           raw = JSON.parse(ctx.val) || {};
         } catch (e) {}
-        if (!raw["+"] || !raw["*"]) return reject("PEN: cert required");
-        chk.$vfy(
-          eve,
-          msg,
-          ctx.key,
-          ctx.soul,
-          policy.cert,
-          reject,
-          raw["+"],
-          raw["*"],
-          function () {
-            chk.next(eve, msg, reject);
-          },
-        );
+        if (!raw["+"]) return reject("PEN: cert required");
+        runtime.opt.pack(msg.put, function (packed) {
+          runtime.recover(packed).then(function (signerPub) {
+            chk.$vfy(
+              eve,
+              msg,
+              ctx.key,
+              ctx.soul,
+              policy.cert,
+              reject,
+              raw["+"],
+              signerPub,
+              function () {
+                chk.next(eve, msg, reject);
+              },
+            );
+          }).catch(function () {
+            reject("PEN: cannot recover signer pub for cert verification");
+          });
+        });
         return;
       }
 
@@ -4248,10 +4311,14 @@ defmod('./src/pen.js', function(module, exp){
           raw2 = JSON.parse(ctx.val) || {};
         } catch (e) {}
         runtime.opt.pack(msg.put, function (packed) {
-          runtime.verify(packed, raw2["*"] || sec.upub || null, function (data) {
-            data = runtime.opt.unpack(data);
-            if (data === void 0) return reject("PEN: valid signature required");
-            chk.next(eve, msg, reject);
+          runtime.recover(packed).then(function (signerPub) {
+            runtime.verify(packed, signerPub || raw2["*"] || sec.upub || null, function (data) {
+              data = runtime.opt.unpack(data);
+              if (data === void 0) return reject("PEN: valid signature required");
+              chk.next(eve, msg, reject);
+            });
+          }).catch(function () {
+            reject("PEN: cannot recover signer pub");
           });
         });
         return;
@@ -5209,21 +5276,23 @@ defmod('./src/certify.js', function(module, exp){
     return false;
   }
 
-  // Normalize certificants → '*' | pub_string | [pub_string, ...]
+  // Normalize certificants → pub_string | [pub_string, ...]
+  // Wildcard (*) is not supported and will be rejected.
   function normcerts(raw) {
     if (!raw) {
       return null;
     }
     if (typeof raw === "string") {
-      return raw.indexOf("*") > -1 ? "*" : raw;
+      if (raw.indexOf("*") > -1) {
+        console.log("Wildcard certificant (*) is not supported.");
+        return null;
+      }
+      return raw;
     }
     if (!Array.isArray(raw) && typeof raw === "object" && raw.pub) {
       return raw.pub;
     }
     if (Array.isArray(raw)) {
-      if (raw.indexOf("*") > -1) {
-        return "*";
-      }
       // single element short-circuit
       if (raw.length === 1 && raw[0]) {
         var x = raw[0];
@@ -5236,13 +5305,20 @@ defmod('./src/certify.js', function(module, exp){
         return null;
       }
       var list = [];
+      var hasWildcard = false;
       raw.forEach(function (x) {
-        if (typeof x === "string") {
+        if (typeof x === "string" && x.indexOf("*") > -1) {
+          hasWildcard = true;
+        } else if (typeof x === "string") {
           list.push(x);
         } else if (x && typeof x === "object" && x.pub) {
           list.push(x.pub);
         }
       });
+      if (hasWildcard) {
+        console.log("Wildcard certificant (*) is not supported.");
+        return null;
+      }
       return list.length > 0 ? list : null;
     }
     return null;
@@ -5355,58 +5431,6 @@ defmod('./src/keyid.js', function(module, exp){
   }
 
   exp.default = keyid;
-});
-
-defmod('./src/recover.js', function(module, exp){
-  var crv = reqmod('./src/curves.js').default;
-  async function recover(data, cb, opt) {
-    try {
-      opt = opt || {};
-      const c0 = crv();
-      const msg = await c0.settings.parse(data);
-      if (!msg || msg.v === undefined || msg.v === null) {
-        throw new Error("No recovery bit (v) in signature");
-      }
-      const c = crv((msg && msg.c) || opt.curve);
-      const h = await c.shaBytes(msg.m);
-      const sig = new Uint8Array(
-        c.shim.Buffer.from(msg.s || "", opt.encode || "base64"),
-      );
-      if (sig.length !== 64) {
-        throw new Error("Invalid signature length");
-      }
-      const r = c.bytesToBigInt(sig.slice(0, 32));
-      const s = c.bytesToBigInt(sig.slice(32));
-      if (r <= 0n || r >= c.N || s <= 0n || s >= c.N) {
-        throw new Error("Signature out of range");
-      }
-      const point = c.recoverPub(msg.v, r, s, h);
-      const pub = c.pointToPub(point);
-      if (cb) {
-        try {
-          cb(pub);
-        } catch (e) {
-          console.log(e);
-        }
-      }
-      return pub;
-    } catch (e) {
-      if (cb) {
-        try {
-          cb();
-        } catch (x) {
-          console.log(x);
-        }
-        return;
-      }
-      throw e;
-    }
-  }
-
-
-  exp.default = recover;
-
-  exp.recover = recover;
 });
 
 defmod('./src/runtime.js', function(module, exp){

@@ -59,12 +59,14 @@ const pair = await ZEN.pair("my deterministic seed");
 
 ### `ZEN.sign(data, pair)`
 
-Signs `data` with a private key. Returns a JSON string `{ m, s }` where `m` is the data and `s` is the signature.
+Signs `data` with a private key. Returns a JSON string `{ m, s, v }` where `m` is the data, `s` is the signature, and `v` is the ECDSA recovery bit.
 
 ```js
 const signed = await ZEN.sign("hello", pair);
-// '{"m":"hello","s":"<signature>"}'
+// '{"m":"hello","s":"<signature>","v":0}'
 ```
+
+The `v` bit (0 or 1) enables public-key recovery from the signature — any party can determine who signed the data without being told the public key upfront (see `ZEN.recover`).
 
 **`data` can be any valid JS value:**
 
@@ -106,6 +108,44 @@ If the original data was `JSON.stringify(...)`, the result is automatically pars
 const signed = await ZEN.sign(JSON.stringify({ a: 1 }), pair);
 const data   = await ZEN.verify(signed, pair.pub);
 // { a: 1 }  ← parsed back to object
+```
+
+### `ZEN.recover(signed)`
+
+Recovers the **signer's public key** from a signed value — without knowing the public key in advance. Uses the ECDSA recovery bit `v` embedded in the signature.
+
+```js
+const signed = await ZEN.sign("hello", pair);
+
+const pub = await ZEN.recover(signed);
+// pub === pair.pub  ← same key, derived from the signature alone
+```
+
+Works with any valid JS value as original data:
+
+```js
+const signed = await ZEN.sign({ action: "transfer", amount: 100 }, pair);
+const pub = await ZEN.recover(signed);
+// pub — 45-char base62 public key of the signer
+```
+
+**Returns** the 45-char base62 public key string, or `undefined` if recovery fails (missing `v` bit, tampered signature, wrong curve).
+
+**Cross-curve**: the `v` field includes the curve identifier (`c` field in the sig). Recovery automatically uses the correct curve.
+
+```js
+const p256pair = await ZEN.pair(null, { curve: "p256" });
+const signed   = await ZEN.sign("hello", p256pair);
+const pub      = await ZEN.recover(signed);
+// pub === p256pair.pub
+```
+
+**Use `verify` after `recover` for defense in depth:**
+
+```js
+const pub  = await ZEN.recover(signed);
+const data = await ZEN.verify(signed, pub);
+// data === "hello" — cryptographically confirmed
 ```
 
 ---

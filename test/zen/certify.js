@@ -45,20 +45,16 @@ describe("zen.certify()", function () {
     });
   });
 
-  // ─── Wildcard certificants ─────────────────────────────────────────────────
+  // ─── Wildcard certificants (removed — unsafe with recover-based verification) ─
   describe("wildcard certificants", function () {
-    it('string "*" produces wildcard', async function () {
+    it('string "*" is rejected', async function () {
       const out = await ZEN.certify("*", "messages", alice);
-      const cert = JSON.parse(out);
-      const data = typeof cert.m === "string" ? JSON.parse(cert.m) : cert.m;
-      assert.strictEqual(data.c, "*");
+      assert.strictEqual(out, undefined, 'wildcard "*" must be rejected');
     });
 
-    it('array containing "*" produces wildcard', async function () {
+    it('array containing "*" is rejected', async function () {
       const out = await ZEN.certify([bob.pub, "*"], "messages", alice);
-      const cert = JSON.parse(out);
-      const data = typeof cert.m === "string" ? JSON.parse(cert.m) : cert.m;
-      assert.strictEqual(data.c, "*");
+      assert.strictEqual(out, undefined, 'array with wildcard "*" must be rejected');
     });
   });
 

@@ -548,20 +548,26 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
       try {
         raw = JSON.parse(ctx.val) || {};
       } catch (e) {}
-      if (!raw["+"] || !raw["*"]) return reject("PEN: cert required");
-      chk.$vfy(
-        eve,
-        msg,
-        ctx.key,
-        ctx.soul,
-        policy.cert,
-        reject,
-        raw["+"],
-        raw["*"],
-        function () {
-          chk.next(eve, msg, reject);
-        },
-      );
+      if (!raw["+"]) return reject("PEN: cert required");
+      runtime.opt.pack(msg.put, function (packed) {
+        runtime.recover(packed).then(function (signerPub) {
+          chk.$vfy(
+            eve,
+            msg,
+            ctx.key,
+            ctx.soul,
+            policy.cert,
+            reject,
+            raw["+"],
+            signerPub,
+            function () {
+              chk.next(eve, msg, reject);
+            },
+          );
+        }).catch(function () {
+          reject("PEN: cannot recover signer pub for cert verification");
+        });
+      });
       return;
     }
 
@@ -579,10 +585,14 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
         raw2 = JSON.parse(ctx.val) || {};
       } catch (e) {}
       runtime.opt.pack(msg.put, function (packed) {
-        runtime.verify(packed, raw2["*"] || sec.upub || null, function (data) {
-          data = runtime.opt.unpack(data);
-          if (data === void 0) return reject("PEN: valid signature required");
-          chk.next(eve, msg, reject);
+        runtime.recover(packed).then(function (signerPub) {
+          runtime.verify(packed, signerPub || raw2["*"] || sec.upub || null, function (data) {
+            data = runtime.opt.unpack(data);
+            if (data === void 0) return reject("PEN: valid signature required");
+            chk.next(eve, msg, reject);
+          });
+        }).catch(function () {
+          reject("PEN: cannot recover signer pub");
         });
       });
       return;

@@ -21,21 +21,23 @@ function israd(obj) {
   return false;
 }
 
-// Normalize certificants → '*' | pub_string | [pub_string, ...]
+// Normalize certificants → pub_string | [pub_string, ...]
+// Wildcard (*) is not supported and will be rejected.
 function normcerts(raw) {
   if (!raw) {
     return null;
   }
   if (typeof raw === "string") {
-    return raw.indexOf("*") > -1 ? "*" : raw;
+    if (raw.indexOf("*") > -1) {
+      console.log("Wildcard certificant (*) is not supported.");
+      return null;
+    }
+    return raw;
   }
   if (!Array.isArray(raw) && typeof raw === "object" && raw.pub) {
     return raw.pub;
   }
   if (Array.isArray(raw)) {
-    if (raw.indexOf("*") > -1) {
-      return "*";
-    }
     // single element short-circuit
     if (raw.length === 1 && raw[0]) {
       var x = raw[0];
@@ -48,13 +50,20 @@ function normcerts(raw) {
       return null;
     }
     var list = [];
+    var hasWildcard = false;
     raw.forEach(function (x) {
-      if (typeof x === "string") {
+      if (typeof x === "string" && x.indexOf("*") > -1) {
+        hasWildcard = true;
+      } else if (typeof x === "string") {
         list.push(x);
       } else if (x && typeof x === "object" && x.pub) {
         list.push(x.pub);
       }
     });
+    if (hasWildcard) {
+      console.log("Wildcard certificant (*) is not supported.");
+      return null;
+    }
     return list.length > 0 ? list : null;
   }
   return null;
