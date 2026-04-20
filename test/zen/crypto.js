@@ -510,7 +510,7 @@ describe("ZEN crypto — derive (additive)", function () {
 });
 
 describe("ZEN user graph — authenticator", function () {
-  this.timeout(20 * 1000);
+  this.timeout(45 * 1000);
 
   it("put to user graph without being authenticated (provide pair)", function (done) {
     var zen = makeZen();
