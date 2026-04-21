@@ -17,6 +17,8 @@ Zen.on("opt", function (root) {
     return;
   }
 
+  var mesh = (opt.mesh = opt.mesh || Zen.Mesh(root));
+
   var env = Zen.window || {};
   var websocket =
     opt.WebSocket || env.WebSocket || env.webkitWebSocket || env.mozWebSocket;
@@ -24,8 +26,6 @@ Zen.on("opt", function (root) {
     return;
   }
   opt.WebSocket = websocket;
-
-  var mesh = (opt.mesh = opt.mesh || Zen.Mesh(root));
 
   var wired = mesh.wire || opt.wire;
   mesh.wire = opt.wire = open;

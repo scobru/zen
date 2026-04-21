@@ -9,6 +9,7 @@ Zen.chain.put = function (data, cb, opt, as) {
     root = at.root;
   opt = options(opt);
   as = as || context(zen, data, cb);
+  if (opt.acks != null && as.acks == null) { as.acks = opt.acks; }
   as.root = at.root;
   as.run || (as.run = root.once);
   stun(as, at.id); // set a flag for reads to check if this chain is writing.

@@ -6319,6 +6319,7 @@ defmod('./src/put.js', function(module, exp){
       root = at.root;
     opt = options(opt);
     as = as || context(zen, data, cb);
+    if (opt.acks != null && as.acks == null) { as.acks = opt.acks; }
     as.root = at.root;
     as.run || (as.run = root.once);
     stun(as, at.id); // set a flag for reads to check if this chain is writing.
@@ -7886,6 +7887,8 @@ defmod('./src/websocket.js', function(module, exp){
       return;
     }
 
+    var mesh = (opt.mesh = opt.mesh || Zen.Mesh(root));
+
     var env = Zen.window || {};
     var websocket =
       opt.WebSocket || env.WebSocket || env.webkitWebSocket || env.mozWebSocket;
@@ -7893,8 +7896,6 @@ defmod('./src/websocket.js', function(module, exp){
       return;
     }
     opt.WebSocket = websocket;
-
-    var mesh = (opt.mesh = opt.mesh || Zen.Mesh(root));
 
     var wired = mesh.wire || opt.wire;
     mesh.wire = opt.wire = open;

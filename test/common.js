@@ -5078,100 +5078,45 @@ describe("ZEN", function () {
     });
 
     it("ack aggregation bypass", function (done) {
-      console.log(
-        "WORKS IN BROWSER, NOT SURE WHY NODEJS CONFUSED, CHECK LATER",
+      var alice = new ZEN({ localStorage: false, file: false, rad: false, radisk: false });
+      var carl  = new ZEN({ localStorage: false, file: false, rad: false, radisk: false });
+
+      var amesh = alice._.opt.mesh;
+      var cmesh = carl._.opt.mesh;
+      var croot = carl._;
+
+      // Wire alice <-> carl with proper peer objects so ack routing works
+      var c2a = { wire: { send: function (raw) { amesh.hear(raw, a2c); } } };
+      var a2c = { wire: { send: function (raw) { cmesh.hear(raw, c2a); } } };
+      amesh.hi(a2c);
+      cmesh.hi(c2a);
+
+      // Prepend an "in" listener on carl that intercepts incoming puts and
+      // replies with a custom BANANA ack using the original ask ID
+      var inTag = croot.tag["in"];
+      var interceptor = {
+        next: function (msg) {
+          if (msg.put && msg._.via) {
+            var askId = msg["#"];
+            setTimeout(function () {
+              croot.on("out", { "@": String(askId), ok: { BANANA: 9 } });
+            }, 10);
+          }
+          if (this.to) { this.to.next(msg); }
+        },
+        to: inTag.to, back: inTag, the: inTag, on: croot,
+      };
+      inTag.to = interceptor;
+
+      alice.get("test").put(
+        { a: 1, b: 2, c: 3 },
+        function (ack) {
+          if (ack.ok && ack.ok.BANANA) {
+            done();
+          }
+        },
+        { acks: 99 },
       );
-      done();
-      return;
-      var alice = Zen({
-        localStorage: false,
-        file: false,
-        rad: false,
-        radisk: false,
-      });
-      var bob = Zen({
-        localStorage: false,
-        file: false,
-        rad: false,
-        radisk: false,
-      });
-      var carl = Zen({
-        localStorage: false,
-        file: false,
-        rad: false,
-        radisk: false,
-      });
-
-      var adam = alice.back("opt.mesh");
-      var asay = adam.say;
-
-      var bdam = bob.back("opt.mesh");
-      var bsay = bdam.say;
-
-      var cdam = carl.back("opt.mesh");
-      var csay = cdam.say;
-
-      //console.only.i = 1;
-      adam.say = function (raw, peer) {
-        console.only(2, "adam says:", raw);
-        console.only(1, "...");
-        bdam.hear((raw.length && raw) || JSON.stringify(raw), {});
-        asay(raw, peer);
-      };
-      bdam.say = function (raw, peer) {
-        console.only(7, "bob the relay is like YO", raw);
-        adam.hear((raw.length && raw) || JSON.stringify(raw), {});
-        cdam.hear((raw.length && raw) || JSON.stringify(raw), {});
-        bsay(raw, peer);
-      };
-      cdam.say = function (raw, peer) {
-        console.only(4, "carl speaks out:", raw);
-        console.only(3, "...");
-        bdam.hear((raw.length && raw) || JSON.stringify(raw), {});
-        csay(raw, peer);
-      };
-
-      carl.on("put", async function (msg) {
-        this.to.next(msg);
-
-        var tmp = msg.put;
-
-        //if(Math.random() > 0.5){ return; }
-        //console.log(msg.put);
-
-        //localStorage[tmp['#']+tmp['.']] = tmp[':'];
-
-        setTimeout(function () {
-          carl.on("out", { "@": msg["#"] + "", ok: { BANANA: 9 } });
-        }, 10);
-      });
-
-      alice.on("get", function (msg) {
-        setTimeout(function () {
-          Zen.on.get.ack(msg);
-        }, 9);
-      });
-
-      setTimeout(async function () {
-        var pair = await ZEN.pair();
-        var user = alice.user();
-        setTimeout(function () {
-          var c = 0;
-          //alice.on('auth', function(){
-          alice.get("test").put(
-            { a: 1, b: 2, c: 3 },
-            function (ack) {
-              //console.log("my data got saved?", ack);
-
-              if (ack.ok.BANANA && ++c === c) {
-                done();
-              }
-            },
-            { acks: 99 },
-          );
-          //}); user.auth(pair);
-        }, 10);
-      }, 100);
     });
 
     /*it.only('Make sure circular contexts are not copied', function(done){
