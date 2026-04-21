@@ -5,6 +5,7 @@ import base62 from "../base62.js";
 import sha256 from "../sha256.js";
 import settings from "../settings.js";
 import createCurveCore from "./utils.js";
+import bridge from "../crypto.js";
 
 const P = BigInt(
   "0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF",
@@ -24,7 +25,7 @@ const G = {
     "0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5",
   ),
 };
-export default createCurveCore({
+const core = createCurveCore({
   curve: "p256",
   P,
   N,
@@ -36,3 +37,15 @@ export default createCurveCore({
   settings,
   sha256,
 });
+
+// Wire WASM fast-path once the bridge is ready.
+bridge.ready.then(function () {
+  function toB(bi) { return core.bigIntToBytes(bi, 32); }
+  function fromB(u8) { return core.bytesToBigInt(u8); }
+
+  core.deterministicK = function (priv, hashBytes, attempt) {
+    return Promise.resolve(fromB(bridge.p2DetK(toB(priv), hashBytes, attempt || 0)));
+  };
+}).catch(function () { /* WASM unavailable — BigInt fallback remains active */ });
+
+export default core;

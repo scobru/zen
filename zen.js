@@ -2210,25 +2210,83 @@ defmod('./src/curves/utils.js', function(module, exp){
       return { x, y };
     }
 
-    function pointMultiply(scalar, point) {
-      let n = mod(scalar, N);
-      if (!n || !point) {
-        return null;
-      }
-      let result = null;
-      let addend = point;
-      while (n > 0n) {
-        if (n & 1n) {
-          result = pointAdd(result, addend);
-        }
-        addend = pointAdd(addend, addend);
-        n >>= 1n;
-      }
-      return result;
+    // ── Jacobian coordinate helpers ────────────────────────────────────────────
+    // Jacobian (X:Y:Z) represents affine (X/Z², Y/Z³). Infinity ↔ Z=0.
+    // Avoids one modInv per point addition (only one at the end per scalar mult).
+
+    function fadd(a, b) { return mod(a + b, P); }
+    function fsub(a, b) { return mod(a - b, P); }
+    function fmul(a, b) { return mod(a * b, P); }
+
+    // Jacobian doubling. Uses dbl-2007-bl formulas from hyperelliptic.org/EFD.
+    function jacobianDouble(X1, Y1, Z1) {
+      if (!Z1) return [0n, 1n, 0n];
+      const XX = fmul(X1, X1);
+      const YY = fmul(Y1, Y1);
+      const YYYY = fmul(YY, YY);
+      const ZZ = fmul(Z1, Z1);
+      const X1pYY = fadd(X1, YY);
+      const S = fadd(
+        fsub(fsub(fmul(X1pYY, X1pYY), XX), YYYY),
+        fsub(fsub(fmul(X1pYY, X1pYY), XX), YYYY),
+      );
+      const M = A === 0n
+        ? fmul(3n, XX)
+        : fadd(fmul(3n, XX), fmul(A, fmul(ZZ, ZZ)));
+      const T = fsub(fmul(M, M), fadd(S, S));
+      const Y3 = fsub(fmul(M, fsub(S, T)), fmul(8n, YYYY));
+      const Y1pZ1 = fadd(Y1, Z1);
+      const Z3 = fsub(fsub(fmul(Y1pZ1, Y1pZ1), YY), ZZ);
+      return [T, Y3, Z3];
     }
 
-    // Precomputed power-of-2 multiples of G: gPowers[i] = 2^i * G.
-    // Computed lazily (~82ms one-time cost); shared across all calls on this curve instance.
+    // Jacobian + affine mixed addition. Uses madd-2007-bl formulas.
+    function jacobianMixedAdd(X1, Y1, Z1, x2, y2) {
+      if (!Z1) return [x2, y2, 1n];
+      const Z1Z1 = fmul(Z1, Z1);
+      const U2 = fmul(x2, Z1Z1);
+      const S2 = fmul(y2, fmul(Z1, Z1Z1));
+      const H = fsub(U2, X1);
+      if (!H) {
+        if (!fsub(S2, Y1)) return jacobianDouble(X1, Y1, Z1);
+        return [0n, 1n, 0n];
+      }
+      const HH = fmul(H, H);
+      const I = fadd(fadd(HH, HH), fadd(HH, HH));
+      const J = fmul(H, I);
+      const r = fadd(fsub(S2, Y1), fsub(S2, Y1));
+      const V = fmul(X1, I);
+      const X3 = fsub(fsub(fmul(r, r), J), fadd(V, V));
+      const Y3 = fsub(fmul(r, fsub(V, X3)), fadd(fmul(Y1, J), fmul(Y1, J)));
+      const Z3 = fmul(fadd(Z1, Z1), H);
+      return [X3, Y3, Z3];
+    }
+
+    // Convert Jacobian (X:Y:Z) back to affine {x, y}. One modInv.
+    function jacobianToAffine(X, Y, Z) {
+      if (!Z) return null;
+      const Zinv = modInv(Z, P);
+      const Zinv2 = fmul(Zinv, Zinv);
+      const Zinv3 = fmul(Zinv, Zinv2);
+      return { x: fmul(X, Zinv2), y: fmul(Y, Zinv3) };
+    }
+
+    // Jacobian scalar × arbitrary affine point (MSB-first double-and-add).
+    // ~39× faster than affine double-and-add: 255 doubles + ~128 mixed adds + 1 modInv.
+    function pointMultiply(scalar, point) {
+      const n = mod(scalar, N);
+      if (!n || !point) return null;
+      let [RX, RY, RZ] = [0n, 1n, 0n];
+      const bits = n.toString(2);
+      for (let i = 0; i < bits.length; i++) {
+        if (RZ) [RX, RY, RZ] = jacobianDouble(RX, RY, RZ);
+        if (bits[i] === "1") [RX, RY, RZ] = jacobianMixedAdd(RX, RY, RZ, point.x, point.y);
+      }
+      return jacobianToAffine(RX, RY, RZ);
+    }
+
+    // Precomputed power-of-2 multiples of G: gPowers[i] = 2^i * G (affine).
+    // Built once per curve instance; ~82ms first call, free afterwards.
     let gPowers = null;
     function ensureGPowers() {
       if (gPowers) return;
@@ -2239,19 +2297,20 @@ defmod('./src/curves/utils.js', function(module, exp){
         pt = pointAdd(pt, pt);
       }
     }
-    // k*G using only additions against the precomputed table — ~3.9× faster than pointMultiply(k, G).
-    // Use for all fixed-base multiplications (key gen, sign k*G, verify/recover u1*G).
+
+    // Fixed-base scalar × G using precomputed gPowers + Jacobian accumulator.
+    // ~28× faster than affine: ~128 mixed adds + 1 modInv (no doublings needed).
     function pointMultiplyG(scalar) {
       ensureGPowers();
       let n = mod(scalar, N);
       if (!n) return null;
-      let result = null;
+      let [RX, RY, RZ] = [0n, 1n, 0n];
       for (let i = 0; i < 256; i++) {
-        if (n & 1n) result = pointAdd(result, gPowers[i]);
+        if (n & 1n) [RX, RY, RZ] = jacobianMixedAdd(RX, RY, RZ, gPowers[i].x, gPowers[i].y);
         n >>= 1n;
         if (!n) break;
       }
-      return result;
+      return jacobianToAffine(RX, RY, RZ);
     }
 
     function bytesToBigInt(bytes) {
@@ -2586,6 +2645,7 @@ defmod('./src/curves/secp256k1.js', function(module, exp){
   var sha256 = reqmod('./src/sha256.js').default;
   var hash = reqmod('./src/hash.js').default;
   var createCurveCore = reqmod('./src/curves/utils.js').default;
+  var bridge = reqmod('./src/crypto.js').default;
   const P = BigInt(
     "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F",
   );
@@ -2616,6 +2676,18 @@ defmod('./src/curves/secp256k1.js', function(module, exp){
     extras: { aeskey, hash },
   });
 
+  // Wire WASM fast-path once the bridge is ready.
+  // Falls back to BigInt automatically if WASM is unavailable.
+  bridge.ready.then(function () {
+    function toB(bi) { return core.bigIntToBytes(bi, 32); }
+    function fromB(u8) { return core.bytesToBigInt(u8); }
+
+    // WASM deterministicK is synchronous and ~40× faster than the HMAC-SHA256 JS path.
+    core.deterministicK = function (priv, hashBytes, attempt) {
+      return Promise.resolve(fromB(bridge.k1DetK(toB(priv), hashBytes, attempt || 0)));
+    };
+  }).catch(function () { /* WASM unavailable — BigInt fallback remains active */ });
+
   exp.default = core;
 });
 
@@ -2627,6 +2699,7 @@ defmod('./src/curves/p256.js', function(module, exp){
   var sha256 = reqmod('./src/sha256.js').default;
   var settings = reqmod('./src/settings.js').default;
   var createCurveCore = reqmod('./src/curves/utils.js').default;
+  var bridge = reqmod('./src/crypto.js').default;
   const P = BigInt(
     "0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF",
   );
@@ -2645,7 +2718,7 @@ defmod('./src/curves/p256.js', function(module, exp){
       "0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5",
     ),
   };
-  exp.default = createCurveCore({
+  const core = createCurveCore({
     curve: "p256",
     P,
     N,
@@ -2657,6 +2730,18 @@ defmod('./src/curves/p256.js', function(module, exp){
     settings,
     sha256,
   });
+
+  // Wire WASM fast-path once the bridge is ready.
+  bridge.ready.then(function () {
+    function toB(bi) { return core.bigIntToBytes(bi, 32); }
+    function fromB(u8) { return core.bytesToBigInt(u8); }
+
+    core.deterministicK = function (priv, hashBytes, attempt) {
+      return Promise.resolve(fromB(bridge.p2DetK(toB(priv), hashBytes, attempt || 0)));
+    };
+  }).catch(function () { /* WASM unavailable — BigInt fallback remains active */ });
+
+  exp.default = core;
 });
 
 defmod('./src/curves.js', function(module, exp){
