@@ -1,4 +1,4 @@
-# Trustless Ownership & Transfer on ZEN
+# Ownership & Transfer on ZEN — Under a 1-of-N Honest Watcher Model
 
 **Status:** Research / Design Phase  
 **Date:** 2026-04-20  
@@ -12,9 +12,9 @@ Most distributed systems fail at one deceptively simple task: **proving that exa
 
 Blockchains solve this, but they do so by introducing global consensus — miners, validators, stakers, a shared ledger that every participant must agree on. The cost is enormous: energy, latency, validator centralization, and a single point of regulatory or technical failure.
 
-ZEN's goal is different: **local-first, peer-to-peer, no special roles, no validators, no global state.** Can trustless ownership work inside this model?
+ZEN's goal is different: **local-first, peer-to-peer, no special roles, no validators, no global state.** Can ownership transfer work inside this model without a trusted third party?
 
-This document argues: **yes, with a different set of trade-offs that are more honest and more practical than blockchain alternatives.**
+This document argues: **yes, under a well-defined trust assumption that is weaker than "trustless" but stronger than requiring a trusted third party — and more honest about its trade-offs than most blockchain alternatives.**
 
 ---
 
@@ -36,21 +36,24 @@ Alice writes: sword.owner = "carol"
 
 In a distributed system, different peers may see different writes first. CRDT (last-write-wins) resolves this by taking the higher timestamp — but Alice controls her own timestamps. She can write both with the same timestamp, or forge a later one. **CRDT cannot solve ownership.**
 
-### 2.2 FLP Impossibility
+### 2.2 FLP Impossibility and the Honest Trade-Off
 
 Fischer, Lynch, and Paterson (1985) proved: **no deterministic algorithm can achieve consensus in an asynchronous network if even one process can fail.**
 
-This means there is no perfect solution. Every ownership system is a compromise:
+This means there is no perfect solution. Every ownership system is a compromise — including ZEN's. The table below maps each approach to its trust assumption:
 
-| Approach | What you sacrifice |
-|---|---|
-| Blockchain (PoW/PoS) | Decentralization, energy, speed |
-| BFT (Tendermint, PBFT) | ≥2/3 honest validators required |
-| Notary | Single point of trust/failure |
-| Hashgraph | In-house peers, permissioned gossip |
-| **Fraud-proof + challenge period** | **Latency (must wait for window)** |
+| Approach | Trust assumption | What you sacrifice |
+|---|---|---|
+| Bitcoin (PoW) | ≥51% honest hashrate | Decentralization, energy, speed |
+| Tendermint (BFT) | ≥2/3 honest validators | Permissioned validator set |
+| Optimistic Rollup | ≥1 honest watcher + L1 liveness | Finality latency, L1 dependency |
+| Notary | Single trusted party | Centralization |
+| **ZEN ownership (current)** | **≥1 honest watcher + network liveness** | **Finality latency (must wait T)** |
+| True "trustless" | Does not exist (FLP) | — |
 
-The last row is what ZEN can implement. We sacrifice **finality latency** (you must wait T seconds before transfer is confirmed), not decentralization or trust assumptions.
+ZEN's fraud-proof design sits in the same category as Optimistic Rollups: it requires **at least one honest peer to witness both forks during the challenge period T and broadcast fraud evidence**. This is sometimes called a **1-of-N honest watcher assumption**. If no peer witnesses both forks in time (due to eclipse or partition), the fraud can go undetected.
+
+This assumption is weaker than "trustless" but considerably stronger than requiring a trusted third party. Naming it precisely matters: it tells you exactly what you must ensure at the network layer to uphold the security guarantee.
 
 ### 2.3 Off-Chain Payment is Unsolvable
 
@@ -79,9 +82,21 @@ Each transfer claim is written to a unique soul derived from its signature hash.
 If two claims exist from the same previous owner pointing to different successors, the item is permanently burned. No winner. Both lose. This creates a **strong economic disincentive** against double-spending — the attacker loses the item too.
 
 **Rule 3: Challenge period**  
-A transfer is "pending" for T seconds (e.g., 60 seconds on LAN, 300 seconds on wide-area P2P). During this window, any honest peer can detect a fork and broadcast fraud evidence. After T with no fork detected, the transfer is final.
+A transfer is "pending" for T seconds (e.g., 60 seconds on LAN, 300–600 seconds on wide-area P2P). During this window, any honest peer can detect a fork and broadcast fraud evidence. After T with no fork detected, the transfer is final.
 
----
+### 3.3 Safety Condition: Choosing T
+
+> **Safety condition:** The challenge period T must be chosen such that `T >> expected_max_partition_duration` for the network topology in use. On a LAN with reliable connectivity, T=60s is reasonable. On wide-area P2P with potentially hostile relay nodes, T should be 300–600s minimum.
+>
+> **T is not a UX parameter — it is a security parameter derived from network characteristics.**
+
+With gossip-of-gossip propagation over N peers, worst-case propagation time is `O(log N) × round_latency`. For typical ZEN meshes this is on the order of 1–2 seconds, so T=60s already provides a large safety margin. T should be calibrated using empirical measurements on the target network topology (see §11.0).
+
+### 3.4 Active Witnessing During T
+
+Passive receipt is insufficient during the challenge period. A node relying only on what peers push to it can be silenced by a targeted eclipse. **During T, the finalizing node must actively query diverse peers** for conflicting steps — not just wait for conflicts to arrive.
+
+This transforms the 1-of-N watcher assumption: with active polling from diverse peers, any single honest peer in the queried set is sufficient to surface a fraud. The protocol's finalization gate enforces this requirement (see §5.2).
 
 ## 4. Data Structure
 
@@ -168,6 +183,35 @@ async function transfer(itemId, fromPair, toPub) {
 
 ### 5.2 Challenge Period and Finalization
 
+Finalization is split into two explicit phases to enforce active witnessing.
+
+**Phase 1 — Active witnessing (during T):**
+
+After receiving a transfer step, the interested node must actively broadcast the step and query diverse peers for conflicts — passive receipt is not sufficient.
+
+```js
+async function watchForConflicts(itemId, stepHash, duration) {
+    const deadline = Date.now() + duration;
+    const queriedPeers = new Set();
+
+    while (Date.now() < deadline) {
+        // Query a peer not yet asked, preferring high graph-distance peers
+        const peer = selectDiversePeer(queriedPeers);
+        const theirView = await peer.query(`item/${itemId}/chain`);
+        const conflicts = findConflicts(theirView, stepHash);
+        if (conflicts.length > 0) {
+            return { status: "conflict", evidence: conflicts };
+        }
+        queriedPeers.add(peer.pub);
+        await sleep(POLL_INTERVAL);
+    }
+
+    return { status: "clean" };
+}
+```
+
+**Phase 2 — Finalization (after T, only if Phase 1 returned "clean"):**
+
 ```js
 async function finalizeTransfer(itemId, pendingHash) {
     const step = await zen.get(`item/${itemId}/chain/${pendingHash}`).then();
@@ -178,7 +222,7 @@ async function finalizeTransfer(itemId, pendingHash) {
         throw new Error("Transfer still pending");
     }
 
-    // Check for forks: any other step pointing to the same prev?
+    // Check for forks in the locally merged graph (defense-in-depth after active polling)
     const allSteps = await zen.get(`item/${itemId}/chain`).map().then();
     const conflicts = Object.values(allSteps).filter(s => {
         const m = JSON.parse(s[":"]);
@@ -186,7 +230,7 @@ async function finalizeTransfer(itemId, pendingHash) {
     });
 
     if (conflicts.length > 0) {
-        // Fork detected → burn
+        // Fork detected → burn (self-evident evidence, no trusted writer needed)
         await zen.get(`item/${itemId}/burned`).put({
             reason: "double-spend",
             evidence: [pendingHash, hashOf(conflicts[0])],
@@ -200,16 +244,18 @@ async function finalizeTransfer(itemId, pendingHash) {
 }
 ```
 
+> **Core invariant:** A transfer step can only be finalized if, during the challenge period T, the finalizing node actively queried a diverse set of peers and none reported a conflicting step for the same `prev`. Finalization must not proceed on local state alone.
+
 ### 5.3 Who Runs Finalization?
 
-There is no special role. Anyone can run `finalizeTransfer`:
+There is no special role. Anyone can run the two-phase protocol:
 
 - **Bob**, when he comes online and wants to confirm he's the owner
 - **Any peer** watching the network (automated watchers)
 - **Alice herself**, to complete the transfer she initiated
 - **A background process** in a ZEN relay node
 
-This is the optimistic rollup pattern: you don't need anyone in particular to finalize — you just need *someone* to eventually do it, and the math guarantees they'll arrive at the same answer.
+This is the optimistic rollup pattern: you don't need anyone in particular to finalize — you just need *someone* to eventually do it, and the math guarantees they'll arrive at the same answer, provided the safety condition on T is met.
 
 ---
 
@@ -258,7 +304,9 @@ async function transferWithPrune(itemId, fromPair, toPub) {
 | After finalization | 1 again | Current only |
 | Dispute (double-spend) | 2 + burned flag | Evidence preserved |
 
-Long-term storage is **O(1) per item**, regardless of transfer history.
+Long-term storage is **O(1) per item in the steady state** (item changes hands regularly). In the worst case: O(depth) if transfers are not finalized; O(∞) for burned items where fraud evidence must be retained indefinitely to prevent re-creation under the same item ID. A reconfirm mechanism (§6.4) exists for long-term holders but requires active participation with no protocol-level incentive.
+
+> **Storage incentives are an open problem** — there is currently no mechanism that encourages nodes to retain fraud evidence long-term (see §10.6).
 
 ### 6.4 "Re-confirm" for Holders Who Never Transfer
 
@@ -284,21 +332,23 @@ After challenge period, `reconfirm` becomes current. Alice's step gets pruned. *
 
 PEN (ZEN's WASM policy engine) enforces the write rules at the protocol level. No application code can bypass these rules.
 
+> **Layer note:** The `recover(S)` call in all policy pseudocode below is handled by the **ZEN-PEN Bridge** (Layer 1), not PEN Core (Layer 0). The bridge recovers the signer's public key from the signature using `ZEN.recover()`, then injects it into register R[5] before invoking PEN Core. PEN Core itself only performs register comparisons — it has no cryptographic capabilities. When reading the policies below, treat `recover(S)` as "the pub already placed in R[5] by the bridge."
+
 ### 7.1 Policy for `item/<id>/chain/<hash>`
 
 ```
 POLICY chain-write:
   1. Input: new step S, writer W
-  2. Recover signer: pub = recover(S) 
+  2. Recover signer: pub = recover(S)          // R[5], injected by ZEN-PEN Bridge
   3. Get current step C = graph[item/id/current]
   4. If C is null (genesis):
        Accept only if signer matches genesis conditions
   5. Else:
        current_owner = JSON.parse(C).to
-       Assert pub === current_owner        // only owner can transfer
+       Assert pub === current_owner             // only owner can transfer
   6. Compute expected_hash = hash(S)
-  7. Assert soul_key === expected_hash     // write-once (hash is the key)
-  8. Assert soul does not exist yet       // truly write-once
+  7. Assert soul_key === expected_hash          // write-once (hash is the key)
+  8. Assert soul does not exist yet             // truly write-once
   9. Accept.
 ```
 
@@ -317,6 +367,25 @@ POLICY current-update:
   8. Check no sibling forks exist
   9. Accept.
 ```
+
+### 7.3 Policy for `item/<id>/burned`
+
+Without a policy here, any node can write a fake `burned` record with fabricated evidence — a **grief attack** that destroys Alice and Bob's item without any real double-spend. The fix: accept a burn write if and only if the evidence is cryptographically self-evident. No trusted writer is needed.
+
+```
+POLICY burned-write:
+  1. Input: burn record B = { reason, evidence: [hash1, hash2] }
+  2. Assert evidence is an array of exactly 2 distinct step hashes
+  3. Get step1 = graph[item/id/chain/hash1]
+  4. Get step2 = graph[item/id/chain/hash2]
+  5. Assert step1 exists AND step2 exists
+  6. Assert JSON.parse(step1).prev === JSON.parse(step2).prev  // same predecessor → fork
+  7. Assert recover(step1) === recover(step2)                  // signed by the same sender
+  8. Assert graph[item/id/burned] does not already exist       // write-once
+  9. Accept.  // Evidence is self-proving; any node may write it.
+```
+
+This policy transforms burn into a **permission-less, self-evident operation**: whoever finds a fork first can write the burn evidence, and the policy engine verifies the evidence itself rather than trusting the writer's identity.
 
 ---
 
@@ -338,17 +407,29 @@ POLICY current-update:
 
 **Attack:** Alice controls Bob's peers during the transfer. She ensures Bob only sees "fork A" (transfer to Carol), not "fork B" (transfer to himself). After T seconds, Alice's preferred fork gets finalized while Bob's fork is isolated.
 
-**Defense:** After partition heals, the burn rule still applies retroactively. The `current` pointer update requires passing conflict checks. If both forks exist in the merged graph, `current` update is rejected and burn is triggered.
+**Defense:** After partition heals, the burn rule still applies retroactively — *provided fraud evidence arrives before finalization*. The `current` pointer update requires passing conflict checks. If both forks exist in the merged graph, `current` update is rejected and burn is triggered.
 
-**Residual risk:** If Alice can maintain the eclipse **permanently**, she can prevent Bob's fork from ever reaching other peers, and Carol's fork gets finalized. This is a network-layer attack, not a protocol-layer attack. Mitigation: use multiple diverse peer connections, onion routing, etc.
+**Critical caveat:** The burn rule applies retroactively **only if fraud evidence propagates before finalization**. If Alice can maintain an eclipse for the full duration T, fork A finalizes before the conflict is ever detected. This is the most precise attack vector against the system: it exploits the gap between the passive propagation assumption and the liveness requirement.
+
+Mitigations:
+1. **Active conflict polling** (Phase 1 of finalization, §5.2): query diverse peers during T, not just wait for gossip to arrive.
+2. **T >> eclipse duration**: T must exceed Alice's realistic eclipse capacity, not just typical propagation time.
+3. **Diverse peer connections**: connect to peers with different network paths to minimize eclipse surface.
+4. **Onion routing / relay diversity**: prevent Alice from controlling a single network chokepoint.
+
+**Residual risk:** If Alice can maintain a permanent eclipse, she can prevent Bob's fork from ever reaching other peers, and Carol's fork gets finalized. This is a network-layer attack; the protocol cannot defend against it without network-layer counter-measures.
 
 ### 8.3 Grief Attack
 
-**Attack:** Alice deliberately creates two conflicting transfers to burn her own item (out of spite, to deny Bob after Bob paid off-chain, etc.).
+**Attack (self-grief):** Alice deliberately creates two conflicting transfers to burn her own item (out of spite, to deny Bob after Bob paid off-chain, etc.).
 
-**Defense:** The protocol cannot prevent this. If Alice is willing to destroy the item, she can. This is the Two Generals Problem — off-chain payment is not atomically linked to on-chain transfer.
+**Defense:** The protocol cannot prevent an owner from destroying their own item. If Alice is willing to burn it, she can. This is the Two Generals Problem — off-chain payment is not atomically linked to on-chain transfer.
 
-**Mitigation:** HTLC (Hash Time-Locked Contracts) for on-chain payment coordination (see §10).
+**Attack (third-party grief):** Carol writes a fake `burned` record for Alice and Bob's item without any real double-spend.
+
+**Defense:** The PEN policy for `item/<id>/burned` (§7.3) is self-evident — it accepts a burn write only if the submitted evidence (two step hashes) cryptographically proves a fork by the same sender. Carol cannot fabricate valid evidence without Alice's signing key.
+
+**Mitigation for self-grief:** HTLC (Hash Time-Locked Contracts) for on-chain payment coordination (see §10).
 
 ### 8.4 Timestamp Manipulation
 
@@ -366,9 +447,11 @@ POLICY current-update:
 
 ---
 
-## 9. Comparison to Blockchain
+## 9. Comparison to Blockchain and Analogous Systems
 
-This design reuses blockchain's foundational data structure (hash chain) but differs at every level of the stack:
+This design reuses blockchain's foundational data structure (hash chain) but differs at every level of the stack. The closest analogs in the design space are Nano's block lattice and Lightning Network's payment channels.
+
+### 9.1 Bitcoin / Ethereum vs. ZEN
 
 | Property | Bitcoin/Ethereum | ZEN Ownership |
 |---|---|---|
@@ -377,14 +460,31 @@ This design reuses blockchain's foundational data structure (hash chain) but dif
 | **Consensus** | PoW / PoS (global agreement) | None — fraud proofs only |
 | **Validators** | Miners / stakers | No special roles |
 | **Finality** | Probabilistic (depth) | Deterministic after T |
-| **History** | Immutable forever | Prunable (O(1) long-term) |
+| **History** | Immutable forever | Prunable (O(1) steady-state) |
 | **Global clock** | Block height | Not required |
-| **Throughput** | ~7-30 TPS (global) | Parallel per item |
-| **Trust model** | ≥51% honest | Any single honest peer |
+| **Throughput** | ~7–30 TPS (global) | Parallel per item |
+| **Trust model** | ≥51% honest hashrate | ≥1 honest watcher + network liveness |
 
-**Closest analog:** Optimistic Rollups (Arbitrum, Optimism), but without requiring an L1 chain. ZEN is its own settlement layer.
+### 9.2 Nano, Lightning Network, and ZEN
 
-**Also similar to:** Nano's bilateral block lattice (each account has its own chain), but without requiring the receiver to publish a "receive block."
+| Property | Nano | Lightning Network | ZEN Ownership |
+|---|---|---|---|
+| Per-item/account chain | ✓ | ✓ (per channel) | ✓ |
+| Fraud proofs | ✗ (delegated PoS voting) | ✓ (justice transactions) | ✓ |
+| Settlement layer | Nano L1 | Bitcoin L1 | **Self (no L1)** |
+| Receiver must be online | ✓ (receive block required) | ✓ (for routing) | ✗ |
+| Challenge period | None | ~1 week | Configurable (T) |
+| Trust assumption | Delegated representatives | ≥1 honest watcher | ≥1 honest watcher |
+
+**Nano** is architecturally closest to ZEN: each account has its own chain, and no global consensus is needed for individual transfers. Nano resolves double-spend by delegated PoS voting (representatives). ZEN replaces that vote with fraud proofs — the fork itself is the evidence, and burn is the automatic penalty. This eliminates any representative-selection centralization.
+
+**Lightning Network** uses the same optimistic pattern: off-chain state transitions optimistically, with fraud proofs (justice transactions) and a challenge period enforced by the Bitcoin L1. The critical difference is that Lightning settles on Bitcoin's L1 as a backstop; **ZEN has no L1** — it is its own settlement layer.
+
+This "no L1" property is both a strength and a limitation:
+- **Strength:** no dependency on an external blockchain; fully self-contained; no transaction fees or throughput bottleneck from a base layer.
+- **Limitation:** no ultimate settlement fallback. If fraud evidence is suppressed for long enough, there is no external anchor to appeal to. T and active witnessing are the only safeguards.
+
+ZEN consciously accepts this trade-off: the target use cases (game items, digital collectibles, access rights, certificates) rarely require the finality guarantees that justify L1 dependency costs.
 
 ---
 
@@ -470,21 +570,37 @@ Current design: item souls are `item/<id>/...`. Who names the ID? Who discovers 
 - **Content-addressed:** item ID = hash of genesis step (globally unique, no coordination)
 - **Registry soul:** a discovery layer at `registry/<category>/<id>` pointing to items
 
-Content-addressing is the most trustless: `item/<hash_of_genesis>/...` — no naming conflicts possible, globally unique by construction.
+Content-addressing is the most collision-resistant: `item/<hash_of_genesis>/...` — no naming conflicts possible, globally unique by construction.
+
+### 10.7 Storage Incentives for Fraud Evidence
+
+Burned items leave fraud evidence that must be retained indefinitely to prevent re-creation under the same item ID. Currently there is no protocol-level incentive for nodes to store this evidence long-term. Nodes may prune it to save space, creating a window for item resurrection attacks.
+
+**Further research needed:** reputation systems, economic incentives, or archival node designation for fraud evidence storage.
 
 ---
 
 ## 11. Implementation Roadmap
 
+### Phase 0: Network Primitives (Prerequisite for All Phases)
+
+Without these primitives, Phase 1's `finalizeTransfer` will have a silent security bug: it checks only local state and passes when it should not, violating the core invariant.
+
+- [ ] **Active peer querying for conflict detection** — `zen.get(path).fromPeers(k)` queries k diverse peers, not just local merged state
+- [ ] **Propagation bound measurement** — empirical measurement of O(log N) propagation time on test network with N peers
+- [ ] **T calibration tooling** — given measured propagation bound, compute a recommended safe T value
+- [ ] **Gossip-of-gossip integration** — ensure fork broadcasts propagate to the full peer set within T; verify worst-case with simulated eclipse scenarios
+
 ### Phase 1: Core Protocol (Proof of Concept)
 - [ ] `ZEN.item.create(pair, metadata)` — genesis step
 - [ ] `ZEN.item.transfer(itemId, fromPair, toPub)` — transfer step
 - [ ] `ZEN.item.owner(itemId)` — verify current owner
-- [ ] `ZEN.item.finalize(itemId, hash)` — promote pending to current
-- [ ] Basic PEN policy for `chain/*` (write-once, signer check)
+- [ ] `ZEN.item.finalize(itemId, hash)` — two-phase finalize (active poll + promote)
+- [ ] PEN policy for `chain/*` (write-once, signer check)
+- [ ] PEN policy for `burned` (self-evident burn, §7.3)
 
 ### Phase 2: Fraud Detection
-- [ ] `ZEN.item.watch(itemId, cb)` — watch for forks
+- [ ] `ZEN.item.watch(itemId, cb)` — active conflict watcher during T
 - [ ] Automatic burn on fork detection
 - [ ] `ZEN.item.status(itemId)` — `pending | confirmed | burned`
 - [ ] Peer broadcasting of fraud evidence
@@ -504,18 +620,24 @@ Content-addressing is the most trustless: `item/<hash_of_genesis>/...` — no na
 
 ## 12. Summary
 
-ZEN can implement trustless ownership transfer without blockchain, validators, or global consensus. The design:
+ZEN implements ownership transfer under a **1-of-N honest watcher assumption**: as long as at least one honest peer witnesses both forks during the challenge period T and fraud evidence propagates before finalization, fraud is self-defeating. This is weaker than "trustless" (which FLP impossibility shows cannot exist in an asynchronous network) but stronger than requiring a trusted third party.
+
+The design:
 
 1. **Uses ZEN's native primitives**: `ZEN.sign`, `ZEN.recover`, HAM CRDT, PEN policies
 2. **Fraud proofs replace consensus**: double-spend is self-detecting and self-punishing
 3. **Bob never needs to be online to receive**: transfer is one-sided (Alice signs, Bob reads later)
-4. **O(1) storage long-term**: lazy pruning by sender keeps chain at depth 1-2
+4. **O(1) storage in steady state**: lazy pruning by sender keeps chain at depth 1–2; burned items retain evidence indefinitely
 5. **O(1) verification**: only the leaf of the chain matters; history is confirmed and irrelevant
 
-The only honest trade-off: **finality latency** (challenge period T). This is unavoidable in any trustless system — FLP impossibility ensures no faster deterministic solution exists in an asynchronous network.
+The honest trade-offs:
+- **Finality latency** (challenge period T) — unavoidable under FLP impossibility
+- **Network liveness requirement** — partition must heal before finalization; T must be chosen with this in mind
+- **Active witnessing obligation** — finalization requires querying diverse peers during T, not just passive receipt
+- **No L1 settlement fallback** — ZEN is its own settlement layer; T and active witnessing are the only safeguards
 
-This trade-off is **more honest** than blockchain's trade-offs (validator centralization, energy, PoS stake requirements). For most real-world use cases (game items, digital collectibles, access rights, certificates), a 60-300 second finality window is entirely acceptable.
+For most real-world use cases (game items, digital collectibles, access rights, certificates), a 60–600 second finality window is entirely acceptable, and the trust assumption is far more honest than blockchain alternatives that obscure similar assumptions under "decentralization" language.
 
 ---
 
-*Next: implement Phase 1 as a standalone `lib/item.js` module and validate against the PANIC test suite.*
+*Next: implement Phase 0 network primitives, then Phase 1 as a standalone `lib/item.js` module, and validate against the PANIC test suite.*
