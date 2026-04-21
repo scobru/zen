@@ -76,10 +76,11 @@ export default async function hash(data, pair, cb, opt) {
       salt = undefined;
     }
 
-    // Mining mode: loop with base62-encoded nonces until the hash meets pow requirements.
-    // The nonce is embedded in the data (not opt.salt) so the proof is self-contained
-    // and compatible with pen.js PoW verification, which hashes the field value directly
-    // via SHA-256 with no salt.
+    // Mining mode: loop with base62-encoded nonces until hash(proof) meets pow
+    // requirements. The nonce is bound to data (the key) so it cannot be replayed
+    // on different keys. The nonce is stored separately in msg.put["^"].
+    // data may be a function(nonce)=>string for flexible proof formats, or a string
+    // in which case proof = data + ":" + nonce.
     if (opt.pow) {
       const pow = opt.pow;
       const prefix = (pow.unit || "0").repeat(
@@ -87,17 +88,15 @@ export default async function hash(data, pair, cb, opt) {
       );
       const subOpt = Object.assign({}, opt);
       delete subOpt.pow;
+      const isFn = typeof data === "function";
+      const base = isFn ? null : (typeof data === "string" ? data : await shim.stringify(data));
       let counter = 0;
       while (true) {
         const nonce = intToB62(counter);
-        const proof =
-          typeof data === "function"
-            ? String(data(nonce))
-            : String(data) + ":" + nonce;
-        const h = await hash(proof, salt, null, subOpt);
+        const proof = isFn ? data(nonce) : base + ":" + nonce;
+        const h = await hash(proof, null, null, subOpt);
         if ((h || "").indexOf(prefix) === 0) {
-          const result = { hash: h, nonce, proof };
-          return cbOk(cb, result);
+          return cbOk(cb, { hash: h, nonce, proof });
         }
         counter++;
         if (counter % 1000 === 0) {

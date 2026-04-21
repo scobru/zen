@@ -580,13 +580,9 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
         return;
       }
       // Peer re-propagation path: verify existing signature
-      var raw2 = {};
-      try {
-        raw2 = JSON.parse(ctx.val) || {};
-      } catch (e) {}
       runtime.opt.pack(msg.put, function (packed) {
         runtime.recover(packed).then(function (signerPub) {
-          runtime.verify(packed, signerPub || raw2["*"] || sec.upub || null, function (data) {
+          runtime.verify(packed, signerPub || sec.upub || null, function (data) {
             data = runtime.opt.unpack(data);
             if (data === void 0) return reject("PEN: valid signature required");
             chk.next(eve, msg, reject);
@@ -624,6 +620,10 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
         ? runtime.check.$zen(ctx.msg, (ctx.at && ctx.at.user) || "", null)
         : {};
     var writer = sec.upub || (sec.authenticator || {}).pub || "";
+    // Transfer opt.pow nonce to msg.put["^"] for peer propagation
+    if (sec.opt && sec.opt.pow && !ctx.put["^"]) {
+      ctx.put["^"] = String(sec.opt.pow);
+    }
     var regs = [
       ctx.key,
       ctx.val,
@@ -631,7 +631,8 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
       ctx.state || 0,
       Date.now(),
       writer,
-      pathpart, // R[6]: path after pencode/ in soul (e.g. 'asdf-1234/hgfd-2345')
+      pathpart,     // R[6]: path after pencode/ in soul (e.g. 'asdf-1234/hgfd-2345')
+      ctx.put["^"] || "", // R[7]: PoW nonce (standalone, stored in msg.put["^"])
     ];
 
     pen.ready.then(function () {
@@ -644,9 +645,14 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
       if (!ok) return reject("PEN: predicate failed");
 
       if (policy.pow) {
-        var field = regs[policy.pow.field] || "";
+        // Verify hash(key + ":" + nonce) meets difficulty.
+        // R[policy.pow.field] is always R[7] (nonce); key is always R[0].
+        // Binding nonce to key prevents replay across different keys.
+        var nonce = regs[policy.pow.field] || "";
+        var key0 = regs[0] || "";
+        var proof = key0 + ":" + nonce;
         return runtime.hash(
-          field,
+          proof,
           null,
           function (hash) {
             var punit = policy.pow.unit || "0";

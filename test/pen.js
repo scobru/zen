@@ -976,44 +976,34 @@ describe("ZEN + PEN integration", function () {
 
   // ── PoW ─────────────────────────────────────────────────────────────────────
 
-  it("pow difficulty:1 — ZEN.hash produces hex hash starting with enough zeros ~50% of time → verify loop", function (done) {
+  it("pow difficulty:1 — ZEN.hash mines nonce bound to key; pen verifies hash(key+nonce) via R[7]", function (done) {
     this.timeout(30000);
     var difficulty = 1;
-    var soul = ZEN.pen({ pow: { field: 1, difficulty: difficulty } });
+    var key = "1234:item-abc:buy:writerPubXyz";
+    var soul = ZEN.pen({ pow: { field: 7, difficulty: difficulty } });
     var bc = pen.unpack(soul.slice(1));
     var policy = pen.scanpolicy(bc);
     assert.strictEqual(policy.pow.difficulty, difficulty, "pow policy parsed");
-    assert.strictEqual(policy.pow.field, 1, "pow field is R[1] (val)");
+    assert.strictEqual(policy.pow.field, 7, "pow field is R[7] (nonce)");
 
-    // Find a value whose SHA-256 hex starts with '0'
-    var attempt = 0;
-    function tryWork(nonce) {
-      attempt++;
-      if (attempt > 200) {
-        return done(new Error("could not find PoW solution in 200 tries"));
-      }
-      var val = "order_data_nonce" + nonce;
-      ZEN.hash(
-        val,
-        null,
-        function (hash) {
-          if (hash && hash.slice(0, difficulty) === "0".repeat(difficulty)) {
-            // penStage would accept this
-            assert.ok(hash.startsWith("0"), "hash satisfies difficulty:1");
-            assert.ok(
-              pen.run(bc, ["k", val, soul, 0, Date.now(), ""]),
-              true,
-              "predicate is PASS (no val constraint)",
-            );
-            done();
-          } else {
-            tryWork(nonce + 1);
-          }
-        },
-        { name: "SHA-256", encode: "hex" },
-      );
-    }
-    tryWork(0);
+    // Mine nonce such that hash(key + ":" + nonce) starts with "0"
+    ZEN.hash(
+      key,
+      null,
+      function (result) {
+        assert.ok(result && result.nonce, "hash returns nonce");
+        assert.ok(result.hash.startsWith("0"), "hash satisfies difficulty:1");
+        // penStage verifies hash(R[0] + ":" + R[7]) — key bound to nonce
+        // The WASM VM predicate itself has no key constraint here, so it passes
+        assert.strictEqual(
+          pen.run(bc, [key, "val", soul, 0, Date.now(), "", "", result.nonce]),
+          true,
+          "predicate is PASS",
+        );
+        done();
+      },
+      { pow: { difficulty: difficulty }, name: "SHA-256", encode: "hex" },
+    );
   });
 
   it("pow + string predicate combined: val must be string AND have PoW", function (done) {

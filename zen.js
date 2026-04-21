@@ -2017,10 +2017,11 @@ defmod('./src/hash.js', function(module, exp){
         salt = undefined;
       }
 
-      // Mining mode: loop with base62-encoded nonces until the hash meets pow requirements.
-      // The nonce is embedded in the data (not opt.salt) so the proof is self-contained
-      // and compatible with pen.js PoW verification, which hashes the field value directly
-      // via SHA-256 with no salt.
+      // Mining mode: loop with base62-encoded nonces until hash(proof) meets pow
+      // requirements. The nonce is bound to data (the key) so it cannot be replayed
+      // on different keys. The nonce is stored separately in msg.put["^"].
+      // data may be a function(nonce)=>string for flexible proof formats, or a string
+      // in which case proof = data + ":" + nonce.
       if (opt.pow) {
         const pow = opt.pow;
         const prefix = (pow.unit || "0").repeat(
@@ -2028,17 +2029,15 @@ defmod('./src/hash.js', function(module, exp){
         );
         const subOpt = Object.assign({}, opt);
         delete subOpt.pow;
+        const isFn = typeof data === "function";
+        const base = isFn ? null : (typeof data === "string" ? data : await shim.stringify(data));
         let counter = 0;
         while (true) {
           const nonce = intToB62(counter);
-          const proof =
-            typeof data === "function"
-              ? String(data(nonce))
-              : String(data) + ":" + nonce;
-          const h = await hash(proof, salt, null, subOpt);
+          const proof = isFn ? data(nonce) : base + ":" + nonce;
+          const h = await hash(proof, null, null, subOpt);
           if ((h || "").indexOf(prefix) === 0) {
-            const result = { hash: h, nonce, proof };
-            return cbOk(cb, result);
+            return cbOk(cb, { hash: h, nonce, proof });
           }
           counter++;
           if (counter % 1000 === 0) {
@@ -4311,13 +4310,9 @@ defmod('./src/pen.js', function(module, exp){
           return;
         }
         // Peer re-propagation path: verify existing signature
-        var raw2 = {};
-        try {
-          raw2 = JSON.parse(ctx.val) || {};
-        } catch (e) {}
         runtime.opt.pack(msg.put, function (packed) {
           runtime.recover(packed).then(function (signerPub) {
-            runtime.verify(packed, signerPub || raw2["*"] || sec.upub || null, function (data) {
+            runtime.verify(packed, signerPub || sec.upub || null, function (data) {
               data = runtime.opt.unpack(data);
               if (data === void 0) return reject("PEN: valid signature required");
               chk.next(eve, msg, reject);
@@ -4355,6 +4350,10 @@ defmod('./src/pen.js', function(module, exp){
           ? runtime.check.$zen(ctx.msg, (ctx.at && ctx.at.user) || "", null)
           : {};
       var writer = sec.upub || (sec.authenticator || {}).pub || "";
+      // Transfer opt.pow nonce to msg.put["^"] for peer propagation
+      if (sec.opt && sec.opt.pow && !ctx.put["^"]) {
+        ctx.put["^"] = String(sec.opt.pow);
+      }
       var regs = [
         ctx.key,
         ctx.val,
@@ -4362,7 +4361,8 @@ defmod('./src/pen.js', function(module, exp){
         ctx.state || 0,
         Date.now(),
         writer,
-        pathpart, // R[6]: path after pencode/ in soul (e.g. 'asdf-1234/hgfd-2345')
+        pathpart,     // R[6]: path after pencode/ in soul (e.g. 'asdf-1234/hgfd-2345')
+        ctx.put["^"] || "", // R[7]: PoW nonce (standalone, stored in msg.put["^"])
       ];
 
       pen.ready.then(function () {
@@ -4375,9 +4375,14 @@ defmod('./src/pen.js', function(module, exp){
         if (!ok) return reject("PEN: predicate failed");
 
         if (policy.pow) {
-          var field = regs[policy.pow.field] || "";
+          // Verify hash(key + ":" + nonce) meets difficulty.
+          // R[policy.pow.field] is always R[7] (nonce); key is always R[0].
+          // Binding nonce to key prevents replay across different keys.
+          var nonce = regs[policy.pow.field] || "";
+          var key0 = regs[0] || "";
+          var proof = key0 + ":" + nonce;
           return runtime.hash(
-            field,
+            proof,
             null,
             function (hash) {
               var punit = policy.pow.unit || "0";
