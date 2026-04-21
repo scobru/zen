@@ -256,7 +256,7 @@ The ZEN bridge defines:
 | `0xC0` | SGN | Verify a signature (`authenticator` matches writer) |
 | `0xC1` | CRT | Check a certificate |
 | `0xC2` | NOA | No-auth (public write allowed) |
-| `0xC3` | POW | Proof-of-work check |
+| `0xC4` | POW | Proof-of-work check — reads nonce from R[7] (`msg.put["^"]`), reconstructs `proof = R[0] + ":" + R[7]`, SHA-256-hashes it |
 
 These are used when `ZEN.pen()` compiles a policy that requires authentication or PoW.
 

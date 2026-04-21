@@ -293,29 +293,32 @@ const result = await ZEN.hash(
 
 ### 3.5.2 Pen PoW compatibility
 
-ZEN's pen policy engine verifies PoW with:
+ZEN's pen policy engine verifies PoW by reconstructing the proof from two registers and hashing it:
 
 ```js
 // pen.js internals — how the verifier checks PoW:
-hash(fieldValue, null, cb, { name: "SHA-256", encode: "hex" })
+// R[0] = key (the graph key being written)
+// R[7] = nonce (from msg.put["^"] — stored separately, not in the key)
+var proof = R[0] + ":" + R[7];
+hash(proof, null, cb, { name: "SHA-256", encode: "hex" })
 // passes if hash starts with pow.unit.repeat(pow.difficulty)
 ```
 
 Mining is compatible because:
-1. The `proof` IS the literal field value (key/val/soul/etc.) written to the graph.
-2. Both the miner and the verifier hash that same string via `SHA-256/hex`.
-3. Same input → same hash → same prefix check → **passes automatically**.
+1. For string data `ZEN.hash(key, ...)` mines nonce such that `hash(key + ":" + nonce)` meets the prefix requirement.
+2. `result.proof` equals `key + ":" + nonce` — the exact string pen reconstructs at verify time.
+3. Same proof → same SHA-256 → same prefix check → **passes automatically**.
+
+The nonce is **not** embedded in the key. It travels as `msg.put["^"]` on the wire and is placed in R[7] before the policy runs.
 
 ```js
-// Mine a key for a pen soul with pow: { unit: "0", difficulty: 2 }
-const { proof } = await ZEN.hash(
-  nonce => `${candle}:${nonce}`,
-  null, null,
+// Mine a key for a pen soul with pow: { field: 7, difficulty: 2 }
+const { nonce } = await ZEN.hash(myKey, null, null,
   { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 2 } }
 );
 
-// Write using `proof` as the key — pen will accept it
-zen.get(penSoul).get(proof).put(data, cb, { authenticator: pair });
+// Write with clean key — nonce goes via opt.pow, pen reads it from msg.put["^"]
+zen.get(penSoul).get(myKey).put(data, cb, { authenticator: pair, pow: nonce });
 ```
 
 > **Why not `opt.salt` as nonce?**
@@ -324,7 +327,7 @@ zen.get(penSoul).get(proof).put(data, cb, { authenticator: pair });
 > and calls `sha256(data)` directly. `opt.salt` is **never read** in that path — it only
 > exists in the PBKDF2 branch. Therefore, changing `opt.salt` has zero effect on the
 > SHA-256 output, and cannot be used as a nonce for pen-compatible PoW mining.
-> The nonce **must** be embedded in the data itself.
+> The nonce **must** be passed separately through `opt.pow` / `msg.put["^"]`.
 
 ---
 

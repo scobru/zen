@@ -217,7 +217,7 @@ const result = await ZEN.hash(
 // result.nonce  — the base62 nonce that produced the win
 ```
 
-The `proof` value is compatible with PEN's PoW policy: when pen verifies a write it calls `SHA-256(field)` directly, which matches `ZEN.hash(proof, null, null, { name: "SHA-256", encode: "hex" })`.
+**PEN compatibility:** pen reads the nonce from `msg.put["^"]` (register R[7]) and the key from R[0], reconstructs `proof = key + ":" + nonce`, then SHA-256-hashes it. For string data this is identical to `ZEN.hash(result.proof, null, null, { name: "SHA-256", encode: "hex" })`. The nonce is **not** embedded in the key string — it travels as a separate wire field (`^`) so keys stay clean.
 
 ### Hash modes
 
