@@ -759,30 +759,7 @@ describe("ZEN", function () {
         expect("string" == typeof Zen.valid({ a: 1 })).to.be(false);
         expect("string" == typeof Zen.valid(function () {})).to.be(false);
       });
-      it.skip("is lex", function () {
-        expect(Zen.is.lex({ "#": "soul" })).to.eql({ soul: "soul" });
-        expect(Zen.is.lex({ ".": "field" })).to.eql({ field: "field" });
-        expect(Zen.is.lex({ "=": "value" })).to.eql({ value: "value" });
-        expect(Zen.is.lex({ ">": "state" })).to.eql({ state: "state" });
-        expect(Zen.is.lex({ "#": { "=": "soul" } })).to.eql({
-          soul: { "=": "soul" },
-        });
-        expect(Zen.is.lex({ "#": { "=": "soul" }, ".": [] })).to.be(false);
-        expect(Zen.is.lex({ "#": { "=": "soul" }, asdf: "oye" })).to.be(false);
-        expect(Zen.is.lex()).to.be(false);
-        expect(Zen.is.lex("")).to.be(false);
-      });
-      it.skip("is lex ify", function () {
-        expect(
-          Zen.is.lex.ify({
-            "#": "soul",
-            ".": "field",
-            soul: "foo",
-            field: "field",
-            state: 0,
-          }),
-        ).to.eql({ "#": "soul", ".": "field", ">": 0 });
-      });
+
     });
   });
   describe("ify", function () {
@@ -1378,130 +1355,6 @@ describe("ZEN", function () {
         done && done();
       })();
     };
-
-    it.skip("zen chain separation", function (done) {
-      // TODO: UNDO!
-      var zen = Zen();
-
-      var c1 = zen.put({ hello: "world" });
-
-      var c2 = zen.put({ hi: "earth" });
-
-      c1.on(function (val) {
-        expect(val.hi).to.not.be.ok();
-      });
-
-      c2.on(function (val) {
-        expect(val.hello).to.not.be.ok();
-        if (done.c) {
-          return;
-        }
-        done();
-        done.c = 1;
-      });
-    });
-
-    describe.skip("timeywimey", function () {
-      // TODO: UNDO!
-
-      it("kitty", function (done) {
-        var g1 = zen.put({ hey: "kitty" }).key("timeywimey/kitty");
-
-        var g2 = zen.get("timeywimey/kitty").on(function (val) {
-          delete val._;
-          //console.log("kitty?", val);
-          expect(val.hey).to.be("kitty");
-          expect(val.hi).to.not.be.ok();
-          expect(val.hello).to.not.be.ok();
-          expect(val.foo).to.not.be.ok();
-          if (done.c) {
-            return;
-          }
-          done();
-          done.c = 1;
-        });
-      });
-
-      it("kitty puppy", function (done) {
-        var g3 = zen.put({ hey: "kitty" }).key("timeywimey/kitty/puppy");
-
-        var g4 = zen.put({ hi: "puppy" }).key("timeywimey/kitty/puppy");
-
-        var g5 = zen.get("timeywimey/kitty/puppy").on(function (val) {
-          //delete val._;
-          //console.log("puppy?", val);
-          expect(val.hey).to.be("kitty");
-          expect(val.hi).to.be("puppy");
-          if (done.c) {
-            return;
-          }
-          done();
-          done.c = 1;
-        });
-      });
-
-      it("hello", function (done) {
-        zen.get("timeywimey/hello").on(function (val) {
-          //delete val._;
-          //console.log("hello?", val);
-          expect(val.hello).to.be("world");
-          if (done.c) {
-            return;
-          }
-          done();
-          done.c = 1;
-        });
-
-        zen.put({ hello: "world" }).key("timeywimey/hello");
-      });
-
-      it("hello foo", function (done) {
-        zen.get("timeywimey/hello/foo").on(function (val) {
-          //delete val._;
-          expect(val.hello).to.be("world");
-          if (val.foo) {
-            expect(val.foo).to.be("bar");
-            if (done.c) {
-              return;
-            }
-            done();
-            done.c = 1;
-          }
-        });
-
-        zen.put({ hello: "world" }).key("timeywimey/hello/foo");
-
-        zen.put({ foo: "bar" }).key("timeywimey/hello/foo");
-      });
-
-      it("all", function (done) {
-        zen.put({ hey: "kitty" }).key("timeywimey/all");
-
-        zen.put({ hi: "puppy" }).key("timeywimey/all");
-
-        zen.get("timeywimey/all").on(function (val) {
-          // console.log('all', done.c, val);
-          expect(val.hey).to.be("kitty");
-          expect(val.hi).to.be("puppy");
-          if (val.hello) {
-            expect(val.hello).to.be("world");
-            done.hello = true;
-          }
-          if (val.foo) {
-            expect(val.foo).to.be("bar");
-            if (done.c || !done.hello) {
-              return;
-            }
-            done();
-            done.c = 1;
-          }
-        });
-
-        zen.put({ hello: "world" }).key("timeywimey/all");
-
-        zen.put({ foo: "bar" }).key("timeywimey/all");
-      });
-    });
 
     describe("predictable souls", function () {
       it("public", function (done) {
@@ -5130,51 +4983,6 @@ describe("ZEN", function () {
     });
     //return;
 
-    it.skip("do not refire", function (done) {
-      // for Wasis @yokowasis ! Thanks for finding.
-      var zen = Zen();
-
-      for (i = 0; i <= 100; i++) {
-        zen
-          .get("something")
-          .get("level1")
-          .put({
-            [i]: i,
-          });
-      }
-
-      for (i = 0; i <= 100; i++) {
-        zen
-          .get("something")
-          .get("level1")
-          .get("level2")
-          .put({
-            [i]: i,
-          });
-      }
-
-      var c = 0;
-      setTimeout(function () {
-        zen
-          .get("something")
-          .get("level1")
-          .on(() => {
-            c++;
-          });
-
-        setTimeout(function () {
-          zen
-            .get("something")
-            .get("level1")
-            .once(function (x) {
-              setTimeout(function () {
-                expect(c).to.be(1);
-                nopasstun(done, zen);
-              }, 100);
-            });
-        }, 100);
-      }, 100);
-    });
     /*it.skip('Memory management', function(done){
 			this.timeout(9999999);
 			var zen = Zen(), c = 100000, big = "big";

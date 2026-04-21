@@ -1014,29 +1014,6 @@ var Zen;
           });
       });
 
-      it.skip("read contacts in descending order", function (done) {
-        // TODO!!!
-        var all = {},
-          to;
-        names.forEach(function (v) {
-          all[v] = true;
-        });
-        zen
-          .get("names")
-          .get({ ".": { "-": 1 }, "%": 1000 * 100, "-": 1 })
-          .once()
-          .map()
-          .once(function (data, key) {
-            expect(data.name).to.be.ok();
-            expect(data.age).to.be.ok();
-            delete all[key];
-            clearTimeout(to);
-            to = setTimeout(function () {
-              expect(Object.empty(all)).to.be.ok();
-              done();
-            }, 100);
-          });
-      });
     });
   });
 }
