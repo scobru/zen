@@ -461,20 +461,6 @@ var Zen;
         return;
     });*/
 
-      it("deleting old RAD tests (may take long time)", function (done) {
-        done(); // Mocha doesn't print test until after its done, so show this first.
-      });
-      it("deleted", function (done) {
-        this.timeout(60 * 1000);
-        if (!Zen.window) {
-          return done();
-        }
-        //await new Promise(function(res){ indexedDB.deleteDatabase('radatatest').onsuccess = function(e){ res() } } );
-        indexedDB.deleteDatabase("radatatest").onsuccess = function (e) {
-          done();
-        };
-      });
-
       it("write contacts", function (done) {
         var all = {},
           to,
