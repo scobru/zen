@@ -13,12 +13,23 @@ async function verify(data, pair, cb, opt) {
     const pub = pair && pair.pub ? pair.pub : pair;
     // Curve priority: embedded in signed data → pair.curve → opt.curve → secp256k1
     const c = crv((msg && msg.c) || (pair && pair.curve) || opt.curve);
-    const pt = c.parsePub(pub);
     const h = await c.shaBytes(msg.m);
     const sigBytes = new Uint8Array(
       c.shim.Buffer.from(msg.s || "", opt.encode || "base64"),
     );
     const { r, s } = c.parseSignature(sigBytes);
+    let pt;
+    if (pub) {
+      pt = c.parsePub(pub);
+    } else {
+      if (msg.v === undefined || msg.v === null) {
+        throw new Error("Public key or recovery bit (v) required");
+      }
+      if (typeof c.recoverPub !== "function") {
+        throw new Error("Curve does not support public key recovery");
+      }
+      pt = c.recoverPub(msg.v, r, s, h);
+    }
     const z = c.mod(c.bytesToBigInt(h), c.N);
     const w = c.modInv(s, c.N);
     const u1 = c.mod(z * w, c.N);
