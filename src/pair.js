@@ -1,5 +1,6 @@
 import crv from "./curves.js";
 import applyFormat from "./format.js";
+import { cryptoErr, cbOk } from "./err.js";
 
 async function derivepriv(c, priv, seed, label) {
   for (let i = 0; i < 100; i++) {
@@ -122,24 +123,9 @@ async function pair(cb, opt) {
       encPriv: epriv,
       encPub: epub,
     });
-    if (cb) {
-      try {
-        cb(out);
-      } catch (e) {
-        console.log(e);
-      }
-    }
-    return out;
+    return cbOk(cb, out);
   } catch (e) {
-    if (cb) {
-      try {
-        cb();
-      } catch (cbErr) {
-        console.log(cbErr);
-      }
-      return;
-    }
-    throw e;
+    return cryptoErr(e, cb);
   }
 }
 

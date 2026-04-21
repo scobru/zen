@@ -1,4 +1,5 @@
 import core from "./curves/secp256k1.js";
+import { cryptoErr, cbOk } from "./err.js";
 
 async function decrypt(data, pair, cb, opt) {
   try {
@@ -24,24 +25,9 @@ async function decrypt(data, pair, cb, opt) {
     const out = await core.settings.parse(
       new core.shim.TextDecoder("utf8").decode(decrypted),
     );
-    if (cb) {
-      try {
-        cb(out);
-      } catch (e) {
-        console.log(e);
-      }
-    }
-    return out;
+    return cbOk(cb, out);
   } catch (e) {
-    if (cb) {
-      try {
-        cb();
-      } catch (cbErr) {
-        console.log(cbErr);
-      }
-      return;
-    }
-    throw e;
+    return cryptoErr(e, cb);
   }
 }
 

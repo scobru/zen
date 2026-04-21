@@ -1,4 +1,5 @@
 import core from "./curves/secp256k1.js";
+import { cryptoErr } from "./err.js";
 
 async function encrypt(data, pair, cb, opt) {
   try {
@@ -29,15 +30,7 @@ async function encrypt(data, pair, cb, opt) {
     };
     return core.finalize(out, opt, cb);
   } catch (e) {
-    if (cb) {
-      try {
-        cb();
-      } catch (cbErr) {
-        console.log(cbErr);
-      }
-      return;
-    }
-    throw e;
+    return cryptoErr(e, cb);
   }
 }
 

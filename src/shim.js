@@ -278,4 +278,17 @@ timeoutApi.each =
     next();
   };
 
+api.toBytes = function toBytes(data) {
+  if (data instanceof Uint8Array) {
+    return data;
+  }
+  if (data instanceof ArrayBuffer) {
+    return new Uint8Array(data);
+  }
+  if (data && data.buffer instanceof ArrayBuffer) {
+    return new Uint8Array(data.buffer, data.byteOffset || 0, data.byteLength);
+  }
+  return new api.TextEncoder().encode(typeof data === "string" ? data : String(data));
+};
+
 export default api;

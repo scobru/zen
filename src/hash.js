@@ -3,6 +3,7 @@ import settings from "./settings.js";
 import sha256 from "./sha256.js";
 import keccak256 from "./keccak256.js";
 import base62 from "./base62.js";
+import { cryptoErr, cbOk } from "./err.js";
 
 function normhash(name) {
   const raw = (name || "").toString();
@@ -96,14 +97,7 @@ export default async function hash(data, pair, cb, opt) {
         const h = await hash(proof, salt, null, subOpt);
         if ((h || "").indexOf(prefix) === 0) {
           const result = { hash: h, nonce, proof };
-          if (cb) {
-            try {
-              cb(result);
-            } catch (e) {
-              console.log(e);
-            }
-          }
-          return result;
+          return cbOk(cb, result);
         }
         counter++;
         if (counter % 1000 === 0) {
@@ -121,14 +115,7 @@ export default async function hash(data, pair, cb, opt) {
     if (ishash(opt.name)) {
       let hashed = shim.Buffer.from(await digest(data, opt.name), "binary");
       hashed = encbuf(hashed, enc);
-      if (cb) {
-        try {
-          cb(hashed);
-        } catch (e) {
-          console.log(e);
-        }
-      }
-      return hashed;
+      return cbOk(cb, hashed);
     }
 
     if (typeof salt === "number") {
@@ -164,14 +151,7 @@ export default async function hash(data, pair, cb, opt) {
       data = shim.random(data.length);
       let hkdfOut = shim.Buffer.from(hkdfBits, "binary");
       hkdfOut = encbuf(hkdfOut, enc);
-      if (cb) {
-        try {
-          cb(hkdfOut);
-        } catch (e) {
-          console.log(e);
-        }
-      }
-      return hkdfOut;
+      return cbOk(cb, hkdfOut);
     }
 
     const key = await (shim.ossl || shim.subtle).importKey(
@@ -194,23 +174,8 @@ export default async function hash(data, pair, cb, opt) {
     data = shim.random(data.length);
     let out = shim.Buffer.from(bits, "binary");
     out = encbuf(out, enc);
-    if (cb) {
-      try {
-        cb(out);
-      } catch (e) {
-        console.log(e);
-      }
-    }
-    return out;
+    return cbOk(cb, out);
   } catch (e) {
-    if (cb) {
-      try {
-        cb();
-      } catch (cbErr) {
-        console.log(cbErr);
-      }
-      return;
-    }
-    throw e;
+    return cryptoErr(e, cb);
   }
 }

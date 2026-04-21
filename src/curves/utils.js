@@ -375,6 +375,18 @@ function createCurveCore(config) {
     return data;
   }
 
+  function parseSignature(sigBytes) {
+    if (sigBytes.length !== 64) {
+      throw new Error("Invalid signature length");
+    }
+    const r = bytesToBigInt(sigBytes.slice(0, 32));
+    const s = bytesToBigInt(sigBytes.slice(32));
+    if (r <= 0n || r >= N || s <= 0n || s >= N) {
+      throw new Error("Signature out of range");
+    }
+    return { r, s };
+  }
+
   async function finalize(result, opt, cb) {
     const out = opt && opt.raw ? result : await shim.stringify(result);
     if (cb) {
@@ -428,6 +440,7 @@ function createCurveCore(config) {
       hashToScalar,
       randomScalar,
       normalizeMessage,
+      parseSignature,
       finalize,
     },
     extras,

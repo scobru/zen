@@ -1,4 +1,5 @@
 import crv from "./curves.js";
+import { cryptoErr } from "./err.js";
 
 async function sign(data, pair, cb, opt) {
   try {
@@ -44,15 +45,7 @@ async function sign(data, pair, cb, opt) {
     }
     throw new Error("Failed to sign");
   } catch (e) {
-    if (cb) {
-      try {
-        cb();
-      } catch (x) {
-        console.log(x);
-      }
-      return;
-    }
-    throw e;
+    return cryptoErr(e, cb);
   }
 }
 

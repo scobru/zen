@@ -1,4 +1,5 @@
 import crv from "./curves.js";
+import { cryptoErr, cbOk } from "./err.js";
 
 async function secret(epub, pair, cb, opt) {
   try {
@@ -16,24 +17,9 @@ async function secret(epub, pair, cb, opt) {
     }
     const h = await c.shaBytes(c.compactPoint(shared));
     const out = c.base62.bufToB62(h);
-    if (cb) {
-      try {
-        cb(out);
-      } catch (e) {
-        console.log(e);
-      }
-    }
-    return out;
+    return cbOk(cb, out);
   } catch (e) {
-    if (cb) {
-      try {
-        cb();
-      } catch (x) {
-        console.log(x);
-      }
-      return;
-    }
-    throw e;
+    return cryptoErr(e, cb);
   }
 }
 

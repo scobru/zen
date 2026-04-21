@@ -505,6 +505,19 @@ defmod('./src/shim.js', function(module, exp){
       next();
     };
 
+  api.toBytes = function toBytes(data) {
+    if (data instanceof Uint8Array) {
+      return data;
+    }
+    if (data instanceof ArrayBuffer) {
+      return new Uint8Array(data);
+    }
+    if (data && data.buffer instanceof ArrayBuffer) {
+      return new Uint8Array(data.buffer, data.byteOffset || 0, data.byteLength);
+    }
+    return new api.TextEncoder().encode(typeof data === "string" ? data : String(data));
+  };
+
   exp.default = api;
 });
 
@@ -1885,29 +1898,45 @@ defmod('./src/aeskey.js', function(module, exp){
 defmod('./src/keccak256.js', function(module, exp){
   var shim = reqmod('./src/shim.js').default;
   var bridge = reqmod('./src/crypto.js').default;
-  function toBytes(data) {
-    if (typeof data === "string") {
-      return new shim.TextEncoder().encode(data);
-    }
-    if (data instanceof Uint8Array) {
-      return data;
-    }
-    if (data instanceof ArrayBuffer) {
-      return new Uint8Array(data);
-    }
-    if (data && data.buffer instanceof ArrayBuffer) {
-      return new Uint8Array(data.buffer, data.byteOffset || 0, data.byteLength);
-    }
-    return new shim.TextEncoder().encode(String(data));
-  }
-
   async function keccak256(data) {
     await bridge.ready;
-    const bytes = toBytes(data);
+    const bytes = shim.toBytes(data);
     return shim.Buffer.from(bridge.keccak256(bytes));
   }
 
   exp.default = keccak256;
+});
+
+defmod('./src/err.js', function(module, exp){
+  // Shared error-handling helpers for async crypto functions.
+
+  function cryptoErr(e, cb) {
+    if (cb) {
+      try {
+        cb();
+      } catch (x) {
+        console.log(x);
+      }
+      return;
+    }
+    throw e;
+  }
+
+  function cbOk(cb, val) {
+    if (cb) {
+      try {
+        cb(val);
+      } catch (x) {
+        console.log(x);
+      }
+    }
+    return val;
+  }
+
+
+
+  exp.cryptoErr = cryptoErr;
+  exp.cbOk = cbOk;
 });
 
 defmod('./src/hash.js', function(module, exp){
@@ -1916,6 +1945,7 @@ defmod('./src/hash.js', function(module, exp){
   var sha256 = reqmod('./src/sha256.js').default;
   var keccak256 = reqmod('./src/keccak256.js').default;
   var base62 = reqmod('./src/base62.js').default;
+  var { cryptoErr, cbOk } = reqmod('./src/err.js');
   function normhash(name) {
     const raw = (name || "").toString();
     const slim = raw.toLowerCase().replace(/[\s_-]/g, "");
@@ -2008,14 +2038,7 @@ defmod('./src/hash.js', function(module, exp){
           const h = await hash(proof, salt, null, subOpt);
           if ((h || "").indexOf(prefix) === 0) {
             const result = { hash: h, nonce, proof };
-            if (cb) {
-              try {
-                cb(result);
-              } catch (e) {
-                console.log(e);
-              }
-            }
-            return result;
+            return cbOk(cb, result);
           }
           counter++;
           if (counter % 1000 === 0) {
@@ -2033,14 +2056,7 @@ defmod('./src/hash.js', function(module, exp){
       if (ishash(opt.name)) {
         let hashed = shim.Buffer.from(await digest(data, opt.name), "binary");
         hashed = encbuf(hashed, enc);
-        if (cb) {
-          try {
-            cb(hashed);
-          } catch (e) {
-            console.log(e);
-          }
-        }
-        return hashed;
+        return cbOk(cb, hashed);
       }
 
       if (typeof salt === "number") {
@@ -2076,14 +2092,7 @@ defmod('./src/hash.js', function(module, exp){
         data = shim.random(data.length);
         let hkdfOut = shim.Buffer.from(hkdfBits, "binary");
         hkdfOut = encbuf(hkdfOut, enc);
-        if (cb) {
-          try {
-            cb(hkdfOut);
-          } catch (e) {
-            console.log(e);
-          }
-        }
-        return hkdfOut;
+        return cbOk(cb, hkdfOut);
       }
 
       const key = await (shim.ossl || shim.subtle).importKey(
@@ -2106,24 +2115,9 @@ defmod('./src/hash.js', function(module, exp){
       data = shim.random(data.length);
       let out = shim.Buffer.from(bits, "binary");
       out = encbuf(out, enc);
-      if (cb) {
-        try {
-          cb(out);
-        } catch (e) {
-          console.log(e);
-        }
-      }
-      return out;
+      return cbOk(cb, out);
     } catch (e) {
-      if (cb) {
-        try {
-          cb();
-        } catch (cbErr) {
-          console.log(cbErr);
-        }
-        return;
-      }
-      throw e;
+      return cryptoErr(e, cb);
     }
   }
 
@@ -2509,6 +2503,18 @@ defmod('./src/curves/utils.js', function(module, exp){
       return data;
     }
 
+    function parseSignature(sigBytes) {
+      if (sigBytes.length !== 64) {
+        throw new Error("Invalid signature length");
+      }
+      const r = bytesToBigInt(sigBytes.slice(0, 32));
+      const s = bytesToBigInt(sigBytes.slice(32));
+      if (r <= 0n || r >= N || s <= 0n || s >= N) {
+        throw new Error("Signature out of range");
+      }
+      return { r, s };
+    }
+
     async function finalize(result, opt, cb) {
       const out = opt && opt.raw ? result : await shim.stringify(result);
       if (cb) {
@@ -2562,6 +2568,7 @@ defmod('./src/curves/utils.js', function(module, exp){
         hashToScalar,
         randomScalar,
         normalizeMessage,
+        parseSignature,
         finalize,
       },
       extras,
@@ -2608,78 +2615,8 @@ defmod('./src/curves/secp256k1.js', function(module, exp){
     sha256,
     extras: { aeskey, hash },
   });
-  const {
-    HALF_N,
-    mod,
-    modPow,
-    modInv,
-    isPoint,
-    isOnCurve,
-    pointAdd,
-    pointMultiply,
-    bytesToBigInt,
-    bigIntToBytes,
-    concatBytes,
-    utf8Bytes,
-    decodeBase64Url,
-    encodeBase64,
-    parseScalar,
-    assertScalar,
-    scalarToString,
-    pointToPub,
-    parsePub,
-    publicFromPrivate,
-    compactPoint,
-    shaBytes,
-    hmacSha256,
-    deterministicK,
-    hashToScalar,
-    randomScalar,
-    normalizeMessage,
-    finalize,
-  } = core;
-
 
   exp.default = core;
-
-  exp.P = P;
-  exp.N = N;
-  exp.A = A;
-  exp.B = B;
-  exp.G = G;
-  exp.HALF_N = HALF_N;
-  exp.mod = mod;
-  exp.modPow = modPow;
-  exp.modInv = modInv;
-  exp.isPoint = isPoint;
-  exp.isOnCurve = isOnCurve;
-  exp.pointAdd = pointAdd;
-  exp.pointMultiply = pointMultiply;
-  exp.bytesToBigInt = bytesToBigInt;
-  exp.bigIntToBytes = bigIntToBytes;
-  exp.concatBytes = concatBytes;
-  exp.utf8Bytes = utf8Bytes;
-  exp.decodeBase64Url = decodeBase64Url;
-  exp.encodeBase64 = encodeBase64;
-  exp.parseScalar = parseScalar;
-  exp.assertScalar = assertScalar;
-  exp.scalarToString = scalarToString;
-  exp.pointToPub = pointToPub;
-  exp.parsePub = parsePub;
-  exp.publicFromPrivate = publicFromPrivate;
-  exp.compactPoint = compactPoint;
-  exp.shaBytes = shaBytes;
-  exp.hmacSha256 = hmacSha256;
-  exp.deterministicK = deterministicK;
-  exp.hashToScalar = hashToScalar;
-  exp.randomScalar = randomScalar;
-  exp.normalizeMessage = normalizeMessage;
-  exp.finalize = finalize;
-  exp.shim = shim;
-  exp.base62 = base62;
-  exp.settings = settings;
-  exp.aeskey = aeskey;
-  exp.hash = hash;
 });
 
 defmod('./src/curves/p256.js', function(module, exp){
@@ -2736,6 +2673,7 @@ defmod('./src/curves.js', function(module, exp){
 
 defmod('./src/verify.js', function(module, exp){
   var crv = reqmod('./src/curves.js').default;
+  var { cryptoErr, cbOk } = reqmod('./src/err.js');
   async function verify(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -2743,31 +2681,17 @@ defmod('./src/verify.js', function(module, exp){
       const msg = await c0.settings.parse(data);
       if (pair === false) {
         const raw = await c0.settings.parse(msg.m);
-        if (cb) {
-          try {
-            cb(raw);
-          } catch (e) {
-            console.log(e);
-          }
-        }
-        return raw;
+        return cbOk(cb, raw);
       }
       const pub = pair && pair.pub ? pair.pub : pair;
       // Curve priority: embedded in signed data → pair.curve → opt.curve → secp256k1
       const c = crv((msg && msg.c) || (pair && pair.curve) || opt.curve);
       const pt = c.parsePub(pub);
       const h = await c.shaBytes(msg.m);
-      const sig = new Uint8Array(
+      const sigBytes = new Uint8Array(
         c.shim.Buffer.from(msg.s || "", opt.encode || "base64"),
       );
-      if (sig.length !== 64) {
-        throw new Error("Invalid signature length");
-      }
-      const r = c.bytesToBigInt(sig.slice(0, 32));
-      const s = c.bytesToBigInt(sig.slice(32));
-      if (r <= 0n || r >= c.N || s <= 0n || s >= c.N) {
-        throw new Error("Signature out of range");
-      }
+      const { r, s } = c.parseSignature(sigBytes);
       const z = c.mod(c.bytesToBigInt(h), c.N);
       const w = c.modInv(s, c.N);
       const u1 = c.mod(z * w, c.N);
@@ -2780,24 +2704,9 @@ defmod('./src/verify.js', function(module, exp){
         typeof msg.m === "string" && c.settings.check(msg.m)
           ? msg.m
           : await c.settings.parse(msg.m);
-      if (cb) {
-        try {
-          cb(out);
-        } catch (e) {
-          console.log(e);
-        }
-      }
-      return out;
+      return cbOk(cb, out);
     } catch (e) {
-      if (cb) {
-        try {
-          cb();
-        } catch (x) {
-          console.log(x);
-        }
-        return;
-      }
-      throw e;
+      return cryptoErr(e, cb);
     }
   }
 
@@ -2809,6 +2718,7 @@ defmod('./src/verify.js', function(module, exp){
 
 defmod('./src/recover.js', function(module, exp){
   var crv = reqmod('./src/curves.js').default;
+  var { cryptoErr, cbOk } = reqmod('./src/err.js');
   async function recover(data, cb, opt) {
     try {
       opt = opt || {};
@@ -2819,37 +2729,15 @@ defmod('./src/recover.js', function(module, exp){
       }
       const c = crv((msg && msg.c) || opt.curve);
       const h = await c.shaBytes(msg.m);
-      const sig = new Uint8Array(
+      const sigBytes = new Uint8Array(
         c.shim.Buffer.from(msg.s || "", opt.encode || "base64"),
       );
-      if (sig.length !== 64) {
-        throw new Error("Invalid signature length");
-      }
-      const r = c.bytesToBigInt(sig.slice(0, 32));
-      const s = c.bytesToBigInt(sig.slice(32));
-      if (r <= 0n || r >= c.N || s <= 0n || s >= c.N) {
-        throw new Error("Signature out of range");
-      }
+      const { r, s } = c.parseSignature(sigBytes);
       const point = c.recoverPub(msg.v, r, s, h);
       const pub = c.pointToPub(point);
-      if (cb) {
-        try {
-          cb(pub);
-        } catch (e) {
-          console.log(e);
-        }
-      }
-      return pub;
+      return cbOk(cb, pub);
     } catch (e) {
-      if (cb) {
-        try {
-          cb();
-        } catch (x) {
-          console.log(x);
-        }
-        return;
-      }
-      throw e;
+      return cryptoErr(e, cb);
     }
   }
 
@@ -2861,6 +2749,7 @@ defmod('./src/recover.js', function(module, exp){
 
 defmod('./src/sign.js', function(module, exp){
   var crv = reqmod('./src/curves.js').default;
+  var { cryptoErr } = reqmod('./src/err.js');
   async function sign(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -2905,15 +2794,7 @@ defmod('./src/sign.js', function(module, exp){
       }
       throw new Error("Failed to sign");
     } catch (e) {
-      if (cb) {
-        try {
-          cb();
-        } catch (x) {
-          console.log(x);
-        }
-        return;
-      }
-      throw e;
+      return cryptoErr(e, cb);
     }
   }
 
@@ -4986,6 +4867,7 @@ defmod('./src/format.js', function(module, exp){
 defmod('./src/pair.js', function(module, exp){
   var crv = reqmod('./src/curves.js').default;
   var applyFormat = reqmod('./src/format.js').default;
+  var { cryptoErr, cbOk } = reqmod('./src/err.js');
   async function derivepriv(c, priv, seed, label) {
     for (let i = 0; i < 100; i++) {
       const off = await c.hashToScalar(seed, label + (i ? i : ""));
@@ -5107,24 +4989,9 @@ defmod('./src/pair.js', function(module, exp){
         encPriv: epriv,
         encPub: epub,
       });
-      if (cb) {
-        try {
-          cb(out);
-        } catch (e) {
-          console.log(e);
-        }
-      }
-      return out;
+      return cbOk(cb, out);
     } catch (e) {
-      if (cb) {
-        try {
-          cb();
-        } catch (cbErr) {
-          console.log(cbErr);
-        }
-        return;
-      }
-      throw e;
+      return cryptoErr(e, cb);
     }
   }
 
@@ -5136,6 +5003,7 @@ defmod('./src/pair.js', function(module, exp){
 
 defmod('./src/encrypt.js', function(module, exp){
   var core = reqmod('./src/curves/secp256k1.js').default;
+  var { cryptoErr } = reqmod('./src/err.js');
   async function encrypt(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -5165,15 +5033,7 @@ defmod('./src/encrypt.js', function(module, exp){
       };
       return core.finalize(out, opt, cb);
     } catch (e) {
-      if (cb) {
-        try {
-          cb();
-        } catch (cbErr) {
-          console.log(cbErr);
-        }
-        return;
-      }
-      throw e;
+      return cryptoErr(e, cb);
     }
   }
 
@@ -5185,6 +5045,7 @@ defmod('./src/encrypt.js', function(module, exp){
 
 defmod('./src/decrypt.js', function(module, exp){
   var core = reqmod('./src/curves/secp256k1.js').default;
+  var { cryptoErr, cbOk } = reqmod('./src/err.js');
   async function decrypt(data, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -5209,24 +5070,9 @@ defmod('./src/decrypt.js', function(module, exp){
       const out = await core.settings.parse(
         new core.shim.TextDecoder("utf8").decode(decrypted),
       );
-      if (cb) {
-        try {
-          cb(out);
-        } catch (e) {
-          console.log(e);
-        }
-      }
-      return out;
+      return cbOk(cb, out);
     } catch (e) {
-      if (cb) {
-        try {
-          cb();
-        } catch (cbErr) {
-          console.log(cbErr);
-        }
-        return;
-      }
-      throw e;
+      return cryptoErr(e, cb);
     }
   }
 
@@ -5238,6 +5084,7 @@ defmod('./src/decrypt.js', function(module, exp){
 
 defmod('./src/secret.js', function(module, exp){
   var crv = reqmod('./src/curves.js').default;
+  var { cryptoErr, cbOk } = reqmod('./src/err.js');
   async function secret(epub, pair, cb, opt) {
     try {
       opt = opt || {};
@@ -5254,24 +5101,9 @@ defmod('./src/secret.js', function(module, exp){
       }
       const h = await c.shaBytes(c.compactPoint(shared));
       const out = c.base62.bufToB62(h);
-      if (cb) {
-        try {
-          cb(out);
-        } catch (e) {
-          console.log(e);
-        }
-      }
-      return out;
+      return cbOk(cb, out);
     } catch (e) {
-      if (cb) {
-        try {
-          cb();
-        } catch (x) {
-          console.log(x);
-        }
-        return;
-      }
-      throw e;
+      return cryptoErr(e, cb);
     }
   }
 
@@ -5283,6 +5115,7 @@ defmod('./src/secret.js', function(module, exp){
 
 defmod('./src/certify.js', function(module, exp){
   var sign = reqmod('./src/sign.js').default;
+  var { cryptoErr, cbOk } = reqmod('./src/err.js');
   /*
     The Certify Protocol was made out of love by a Vietnamese code enthusiast.
     Vietnamese people around the world deserve respect!
@@ -5405,24 +5238,9 @@ defmod('./src/certify.js', function(module, exp){
 
       var cert = await sign(data, auth, null, { raw: 1 });
       var out = opt.raw ? cert : JSON.stringify(cert);
-      if (cb) {
-        try {
-          cb(out);
-        } catch (e) {
-          console.log(e);
-        }
-      }
-      return out;
+      return cbOk(cb, out);
     } catch (e) {
-      if (cb) {
-        try {
-          cb();
-        } catch (x) {
-          console.log(x);
-        }
-        return;
-      }
-      throw e;
+      return cryptoErr(e, cb);
     }
   }
 

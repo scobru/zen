@@ -1,4 +1,5 @@
 import sign from "./sign.js";
+import { cryptoErr, cbOk } from "./err.js";
 
 /*
   The Certify Protocol was made out of love by a Vietnamese code enthusiast.
@@ -122,24 +123,9 @@ async function certify(certs, pol, auth, cb, opt) {
 
     var cert = await sign(data, auth, null, { raw: 1 });
     var out = opt.raw ? cert : JSON.stringify(cert);
-    if (cb) {
-      try {
-        cb(out);
-      } catch (e) {
-        console.log(e);
-      }
-    }
-    return out;
+    return cbOk(cb, out);
   } catch (e) {
-    if (cb) {
-      try {
-        cb();
-      } catch (x) {
-        console.log(x);
-      }
-      return;
-    }
-    throw e;
+    return cryptoErr(e, cb);
   }
 }
 
