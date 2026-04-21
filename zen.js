@@ -7889,9 +7889,8 @@ defmod('./src/websocket.js', function(module, exp){
 
     var mesh = (opt.mesh = opt.mesh || Zen.Mesh(root));
 
-    var env = Zen.window || {};
     var websocket =
-      opt.WebSocket || env.WebSocket || env.webkitWebSocket || env.mozWebSocket;
+      opt.WebSocket || globalThis.WebSocket;
     if (!websocket) {
       return;
     }
