@@ -543,6 +543,24 @@ describe("ZEN.pen()", function () {
     assert.strictEqual(pen.run(bc, [200, "v", soul, 0, Date.now(), ""]), true);
     assert.strictEqual(pen.run(bc, [100, "v", soul, 0, Date.now(), ""]), false);
   });
+
+  it("path in R[6]: passes path prefix predicate, wrong path fails", function () {
+    var soul = ZEN.pen({ path: { pre: "usr/" } });
+    var soulWithPath = soul + "/usr/alice";
+    var slashIdx = soulWithPath.indexOf("/");
+    var pencode = soulWithPath.slice(1, slashIdx);
+    var pathpart = soulWithPath.slice(slashIdx + 1); // 'usr/alice'
+    var bc = pen.unpack(pencode);
+    assert.strictEqual(pen.run(bc, ["k", "v", soulWithPath, 0, Date.now(), "", pathpart]), true, 'path prefix "usr/" accepted');
+    assert.strictEqual(pen.run(bc, ["k", "v", soulWithPath, 0, Date.now(), "", "admin/alice"]), false, "wrong path prefix rejected");
+  });
+
+  it("no slash in soul: R[6] is empty string, key predicate still evaluates", function () {
+    var soul = ZEN.pen({ key: "mykey" });
+    var bc = pen.unpack(soul.slice(1));
+    assert.strictEqual(pen.run(bc, ["mykey", "v", soul, 0, Date.now(), "", ""]), true, "matching key with empty path");
+    assert.strictEqual(pen.run(bc, ["wrongkey", "v", soul, 0, Date.now(), "", ""]), false, "wrong key rejected");
+  });
 });
 
 // ── ZEN.candle helper ─────────────────────────────────────────────────────────
@@ -688,173 +706,94 @@ describe("pen.scanpolicy()", function () {
       "gte:192 bytecode + sign: both detected correctly",
     );
   });
-});
 
-// ── penStage (mocked integration) ─────────────────────────────────────────────
-
-describe("penStage (mocked pipeline)", function () {
-  this.timeout(5000);
-
-  function mockCtx(soul, key, val) {
-    var msg = {
-      put: { "#": soul, ".": key, ":": val, ">": Date.now() },
-      _: {},
-    };
-    var forwarded = { called: false, msg: null };
-    var ctx = {
-      soul: soul,
-      key: key,
-      val: val,
-      state: Date.now(),
-      msg: msg,
-      at: { user: { is: { pub: "" } }, opt: {} },
-      eve: {
-        to: {
-          next: function (m) {
-            forwarded.called = true;
-            forwarded.msg = m;
-          },
-        },
-      },
-      pub: "",
-    };
-    return { ctx: ctx, forwarded: forwarded };
-  }
-
-  it("rejects when bytecode is empty / too short", function (done) {
-    // Create a soul with invalid (too-short) content
-    var soul = "!0"; // '0' in base62 decodes to empty
-    var r = mockCtx(soul, "k", "v");
-    var rejected = null;
-    ZEN.check &&
-      ZEN.check.plugins &&
-      ZEN.check.plugins.forEach(function (fn) {
-        fn(r.ctx, [null]);
-      });
-    // Simulate what penStage would do directly
-    pen.unpack("0"); // should not throw, but length check rejects
-    // Test via run: soul '!0' → unpack('0') → empty → should reject
-    done(); // tested indirectly; WASM rejects unknown/empty bytecode
-  });
-
-  it("rejects when predicate fails (no-policy soul)", function (done) {
-    // val must be string, write a number
-    var soul = ZEN.pen({ val: { type: "string" } });
-    var r = mockCtx(soul, "k", 42);
-    var rejected = null;
-
-    // Direct pipeline simulation: build ctx and run penStage manually
-    var bc = pen.unpack(soul.slice(1));
-    var policy = pen.scanpolicy(bc);
-    var regs = [r.ctx.key, r.ctx.val, soul, 0, Date.now(), ""];
-
-    pen.run(bc, regs) === false
-      ? ((rejected = "PEN: predicate failed"), done())
-      : done(new Error("should have failed"));
-  });
-
-  it("accepts when predicate passes (no-policy soul) — verify run returns true", function (done) {
-    var soul = ZEN.pen({ val: { type: "string" } });
-    var r = mockCtx(soul, "k", "valid");
-    var bc = pen.unpack(soul.slice(1));
-    var regs = ["k", "valid", soul, 0, Date.now(), ""];
-    assert.strictEqual(pen.run(bc, regs), true);
-    done();
-  });
-
-  it("soul with path: penStage extracts path after first / into R[6]", function (done) {
-    var soul = ZEN.pen({ path: { pre: "usr/" } });
-    // Simulate soul with path: '!pencode/usr/alice'
-    var soulWithPath = soul + "/usr/alice";
-    var slashIdx = soulWithPath.indexOf("/");
-    var pencode = soulWithPath.slice(1, slashIdx);
-    var pathpart = soulWithPath.slice(slashIdx + 1); // 'usr/alice'
-    var bc = pen.unpack(pencode);
-    var regs = ["k", "v", soulWithPath, 0, Date.now(), "", pathpart];
-    assert.strictEqual(pen.run(bc, regs), true, 'path prefix "usr/" accepted');
-
-    var regsWrong = ["k", "v", soulWithPath, 0, Date.now(), "", "admin/alice"];
-    assert.strictEqual(
-      pen.run(bc, regsWrong),
-      false,
-      "wrong path prefix rejected",
-    );
-    done();
-  });
-
-  it("soul without path: path R[6] defaults to empty string", function (done) {
-    var soul = ZEN.pen({ key: "mykey" });
-    // No slash in soul — path should be ''
-    var pencode = soul.slice(1);
-    var pathpart = "";
-    var bc = pen.unpack(pencode);
-    var regs = ["mykey", "v", soul, 0, Date.now(), "", pathpart];
-    assert.strictEqual(
-      pen.run(bc, regs),
-      true,
-      "no-path soul still passes key predicate",
-    );
-    done();
-  });
-
-  it("open policy: eve.to.next called without auth", function (done) {
-    var soul = ZEN.pen({ open: true });
-    var r = mockCtx(soul, "k", "hello");
-    var called = false;
-    r.ctx.eve.to.next = function () {
-      called = true;
-      done();
-    };
-
-    // Simulate applypolicy for open case
-    var bc = pen.unpack(soul.slice(1));
-    var policy = pen.scanpolicy(bc);
-    assert.strictEqual(policy.open, true);
-    // When no sign/cert/pow and open=true, applypolicy calls eve.to.next
-    r.ctx.eve.to.next(r.ctx.msg);
-  });
-
-  it("sign policy: detected in scanpolicy, bytecode still evaluates correctly", function (done) {
-    var soul = ZEN.pen({ val: { type: "string" }, sign: true });
-    var bc = pen.unpack(soul.slice(1));
-    var policy = pen.scanpolicy(bc);
-    assert.strictEqual(policy.sign, true);
-    // predicate: accept string val
-    assert.strictEqual(
-      pen.run(bc, ["k", "hello", soul, 0, Date.now(), ""]),
-      true,
-    );
-    // predicate: reject number val
-    assert.strictEqual(pen.run(bc, ["k", 99, soul, 0, Date.now(), ""]), false);
-    done();
-  });
-
-  it("pow policy: field, difficulty, and unit correctly extracted", function (done) {
+  it("detects pow policy and extracts field, difficulty, and default unit", function () {
     var soul = ZEN.pen({ pow: { field: 1, difficulty: 4 } });
     var bc = pen.unpack(soul.slice(1));
-    var policy = pen.scanpolicy(bc);
-    assert.ok(policy.pow);
-    assert.strictEqual(policy.pow.field, 1);
-    assert.strictEqual(policy.pow.difficulty, 4);
-    assert.strictEqual(policy.pow.unit, "0", 'unit defaults to "0"');
-    done();
+    var p = pen.scanpolicy(bc);
+    assert.ok(p.pow, "pow policy present");
+    assert.strictEqual(p.pow.field, 1);
+    assert.strictEqual(p.pow.difficulty, 4);
+    assert.strictEqual(p.pow.unit, "0", 'unit defaults to "0"');
+  });
+});
+
+// ── penStage (real graph enforcement) ────────────────────────────────────────
+
+describe("penStage (real graph enforcement)", function () {
+  this.timeout(10000);
+
+  var pair;
+
+  before(function (done) {
+    ZEN.pair(function (p) {
+      pair = p;
+      done();
+    });
   });
 
-  it("bytecode size limit: rejects payloads > 512 bytes", function () {
-    // Build bytecode that exceeds 512 bytes using 3 large-string EQ exprs in AND
-    // Each bc.eq(r0, str(200-char)) ≈ 204 bytes; AND([3]) ≈ 614 bytes + version byte
+  it("invalid soul is rejected at graph level", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    var soul = "!0"; // '0' decodes to empty/too-short bytecode
+    zen.get(soul).get("k").put("value", function (ack) {
+      assert.ok(ack && ack.err, "invalid soul must be rejected: " + JSON.stringify(ack));
+      done();
+    });
+  });
+
+  it("bytecode > 512 bytes is rejected at graph level", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
     var bc = pen.bc;
     var longStr = "x".repeat(200);
-    var bigBc = prog(
-      bc.and([
-        bc.eq(bc.r0(), bc.str(longStr)),
-        bc.eq(bc.r0(), bc.str(longStr)),
-        bc.eq(bc.r0(), bc.str(longStr)),
-      ]),
-    );
-    // Just verify the bytecode itself exceeds 512
-    assert.ok(bigBc.length > 512, "test bytecode is large enough");
-    // penStage would reject souls whose unpack > 512 bytes
+    var bigBc = prog(bc.and([
+      bc.eq(bc.r0(), bc.str(longStr)),
+      bc.eq(bc.r0(), bc.str(longStr)),
+      bc.eq(bc.r0(), bc.str(longStr)),
+    ]));
+    assert.ok(bigBc.length > 512, "test setup: bytecode exceeds 512 bytes");
+    var bigSoul = "!" + pen.pack(bigBc);
+    zen.get(bigSoul).get("k").put("v", function (ack) {
+      assert.ok(ack && ack.err, "oversized bytecode must be rejected at graph level: " + JSON.stringify(ack));
+      done();
+    });
+  });
+
+  it("open:true soul accepts anonymous put at graph level", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    var soul = ZEN.pen({ open: true });
+    zen.get(soul).get("k").put("hello", function (ack) {
+      assert.ok(!ack || !ack.err, "open soul must accept anonymous write: " + (ack && ack.err));
+      done();
+    });
+  });
+
+  it("string predicate rejects number value at graph level", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    var soul = ZEN.pen({ val: { type: "string" }, open: true });
+    zen.get(soul).get("k").put(42, function (ack) {
+      assert.ok(ack && ack.err, "number must be rejected by string-type soul at graph level: " + JSON.stringify(ack));
+      done();
+    });
+  });
+
+  it("sign:true soul rejects unsigned put at graph level", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    var soul = ZEN.pen({ sign: true });
+    zen.get(soul).get("k").put("value", function (ack) {
+      assert.ok(ack && ack.err, "unsigned put must be rejected by sign:true soul: " + JSON.stringify(ack));
+      done();
+    });
+  });
+
+  it("sign:true soul accepts put with authenticator at graph level", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    var soul = ZEN.pen({ val: { type: "string" }, sign: true });
+    ZEN.sign("order_value", pair, function (value) {
+      zen.get(soul).get("k").put(value, function (ack) {
+        assert.ok(!ack || !ack.err, "authenticated put must be accepted: " + (ack && ack.err));
+        done();
+      }, { authenticator: pair });
+    });
   });
 });
 
