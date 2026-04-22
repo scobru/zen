@@ -2414,9 +2414,14 @@ defmod('./src/curves/utils.js', function(module, exp){
       if (typeof value !== "string" || !value) {
         throw new Error((name || "Scalar") + " must be a string");
       }
-      const scalar = /^[A-Za-z0-9]{44}$/.test(value)
-        ? base62.b62ToBI(value)
-        : bytesToBigInt(decodeBase64Url(value));
+      let scalar;
+      if (/^[A-Za-z0-9]{44}$/.test(value)) {
+        scalar = base62.b62ToBI(value);                   // zen base62 (44 chars)
+      } else if (/^0x[0-9a-fA-F]{64}$/.test(value)) {
+        scalar = BigInt(value);                            // EVM/BTC 0x-prefixed hex (32 bytes)
+      } else {
+        scalar = bytesToBigInt(decodeBase64Url(value));   // legacy base64url
+      }
       return assertScalar(scalar, name);
     }
 
@@ -2481,6 +2486,17 @@ defmod('./src/curves/utils.js', function(module, exp){
           x: bytesToBigInt(decodeBase64Url(parts[0])),
           y: bytesToBigInt(decodeBase64Url(parts[1])),
         };
+      } else if (pub.length === 132 && /^0x04[0-9a-fA-F]{128}$/.test(pub)) {
+        // EVM uncompressed pubkey: 0x04 + 32-byte x + 32-byte y
+        point = {
+          x: BigInt("0x" + pub.slice(4, 68)),
+          y: BigInt("0x" + pub.slice(68)),
+        };
+      } else if (pub.length === 68 && /^0x0[23][0-9a-fA-F]{64}$/.test(pub)) {
+        // BTC/hex compressed pubkey: 0x02/03 + 32-byte x
+        const x = BigInt("0x" + pub.slice(4));
+        const parity = BigInt(parseInt(pub[3]) & 1);
+        point = { x, y: liftX(x, parity) };
       } else {
         throw new Error("Unrecognized public key format");
       }

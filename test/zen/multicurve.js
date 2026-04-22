@@ -313,6 +313,53 @@ describe("sign/verify — multi-curve", function () {
   });
 });
 
+// ─── Format round-trip ───────────────────────────────────────────────────────
+describe("zen.pair() — format round-trip", function () {
+  this.timeout(20 * 1000);
+
+  it("zen → evm → zen round-trip preserves pub and epriv", async function () {
+    const zen = await ZEN.pair(null, { seed: "round-trip-test" });
+    const evm = await ZEN.pair(null, { priv: zen.priv, epriv: zen.epriv, format: "evm" });
+    const back = await ZEN.pair(null, { priv: evm.priv, epriv: evm.epriv, format: "zen" });
+    assert.strictEqual(back.pub, zen.pub, "pub must survive zen→evm→zen round-trip");
+    assert.strictEqual(back.epub, zen.epub, "epub must survive zen→evm→zen round-trip");
+    assert.strictEqual(back.priv, zen.priv, "priv must survive zen→evm→zen round-trip");
+    assert.strictEqual(back.epriv, zen.epriv, "epriv must survive zen→evm→zen round-trip");
+  });
+
+  it("spread evm pair back to zen also round-trips", async function () {
+    const zen = await ZEN.pair(null, { seed: "spread-round-trip" });
+    const evm = await ZEN.pair(null, { priv: zen.priv, epriv: zen.epriv, format: "evm" });
+    const back = await ZEN.pair(null, { ...evm, format: "zen" });
+    assert.strictEqual(back.pub, zen.pub, "spread round-trip must recover original pub");
+    assert.strictEqual(back.epub, zen.epub, "spread round-trip must recover original epub");
+  });
+
+  it("zen → btc epub is parseable as a curve point (no round-trip via WIF)", async function () {
+    // BTC round-trip through WIF private key format is out of scope (requires base58 decode).
+    // This test confirms btc.epub (compressed hex 0x02/03+64hex) is a valid point that
+    // parsePub can handle — tested indirectly by verifying ECDH still works.
+    const alice = await ZEN.pair(null, { seed: "alice-btc-epub" });
+    const bob = await ZEN.pair(null, { seed: "bob-btc-epub" });
+    const bobBtc = await ZEN.pair(null, { priv: bob.priv, epriv: bob.epriv, format: "btc" });
+    // alice computes shared secret using bob's BTC-format compressed epub
+    const s1 = await ZEN.secret(bobBtc.epub, alice);
+    // bob computes shared secret using alice's zen epub
+    const s2 = await ZEN.secret(alice.epub, bob);
+    assert.strictEqual(s1, s2, "ECDH must work cross-format with BTC compressed epub");
+  });
+
+  it("evm ECDH still works after round-trip", async function () {
+    const alice = await ZEN.pair(null, { seed: "alice-rt" });
+    const bob = await ZEN.pair(null, { seed: "bob-rt" });
+    const aliceEvm = await ZEN.pair(null, { priv: alice.priv, epriv: alice.epriv, format: "evm" });
+    const aliceBack = await ZEN.pair(null, { priv: aliceEvm.priv, epriv: aliceEvm.epriv, format: "zen" });
+    const s1 = await ZEN.secret(bob.epub, alice);
+    const s2 = await ZEN.secret(bob.epub, aliceBack);
+    assert.strictEqual(s1, s2, "ECDH shared secret must match after evm round-trip");
+  });
+});
+
 // ─── secret multi-curve ───────────────────────────────────────────────────────
 describe("secret — multi-curve", function () {
   this.timeout(20 * 1000);
