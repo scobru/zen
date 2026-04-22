@@ -126,13 +126,13 @@ ZEN ships a full cryptographic runtime. The static methods on `ZEN` work without
 
 ```js
 const pair = await ZEN.pair();
-// pair.pub   — 88-character secp256k1 public key (base62)
+// pair.pub   — 45-character secp256k1 public key (base62 compressed)
 // pair.priv  — private key (keep this secret!)
 // pair.epub  — ephemeral public key (for ECDH)
 // pair.epriv — ephemeral private key
 // pair.curve — "secp256k1"
 
-console.log(pair.pub.length);  // 88
+console.log(pair.pub.length);  // 45
 ```
 
 Sign and verify:

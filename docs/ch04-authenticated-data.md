@@ -12,7 +12,7 @@ ZEN has no account server, no usernames, no sessions. **Identity is a key pair.*
 
 ```js
 const me = await ZEN.pair();
-// me.pub  — 88-char base62 public key  (share freely)
+// me.pub  — 45-char base62 public key  (share freely)
 // me.priv — 44-char base62 private key (never share)
 ```
 

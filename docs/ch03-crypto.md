@@ -53,6 +53,36 @@ const pair = await ZEN.pair("my deterministic seed");
 // Same seed → same key pair, every time
 ```
 
+**Format conversion — same key, different output format:**
+
+Pass an existing `priv`/`epriv` back into `ZEN.pair()` with a different `format`. The underlying scalar is identical; only the encoding changes.
+
+```js
+// Generate once — use for graph writes, signing, ECDH
+const zenPair = await ZEN.pair();
+
+// Get the same key in EVM format — use for on-chain transactions (ETH, BSC, …)
+const evmPair = await ZEN.pair(null, {
+  priv:  zenPair.priv,
+  epriv: zenPair.epriv,
+  format: "evm",
+});
+// evmPair.pub   = "0xAbCdEf…"  (EIP-55 checksummed address)
+// evmPair.priv  = "0x1234…"    (32-byte hex private key)
+// evmPair.epub  = "0x04…"      (uncompressed pubkey for ECDH)
+
+// Or Bitcoin P2PKH
+const btcPair = await ZEN.pair(null, {
+  priv:  zenPair.priv,
+  epriv: zenPair.epriv,
+  format: "btc",
+});
+// btcPair.pub  = "1AbcDef…"  (P2PKH mainnet address)
+// btcPair.priv = "KwDiBf…"   (WIF compressed)
+```
+
+`zenPair`, `evmPair`, and `btcPair` all represent the **same cryptographic key** — just serialized differently. No new seed is generated; `priv` is parsed back to the raw scalar and re-encoded.
+
 ---
 
 ## 3.2 Signing and verification
@@ -415,7 +445,7 @@ Public keys are **compressed**: only the x-coordinate (44 chars base62) plus 1 p
 This is a deliberate change from the original GUN database which used base64url. Base62 enables keys to be used as URL path segments and graph souls without any escaping.
 
 ZEN automatically accepts legacy formats for backward compatibility:
-- Old ZEN uncompressed (88-char, `[A-Za-z0-9]{88}`) — base62 x + base62 y
+- Old ZEN uncompressed (88-char, `[A-Za-z0-9]{88}`) — base62 x + base62 y (legacy, read-only)
 - Legacy GUN base64url (87-char, `base64url.base64url`) — original GUN format
 
 ---
