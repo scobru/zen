@@ -1,6 +1,6 @@
 {
   "name": "@akaoio/zen",
-  "version": "0.2020.1241",
+  "version": "1.0.0",
   "description": "A realtime, decentralized, offline-first, graph data synchronization engine.",
   "types": "index.d.ts",
   "main": "index.js",
