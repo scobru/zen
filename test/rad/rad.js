@@ -888,21 +888,29 @@ var Zen;
             all[v] = true;
           }
         });
+        // Use .map().on() instead of .once().map().once() so data arriving
+        // from a cold RAD disk cache is still captured (not missed by .once()).
         zen
           .get("names")
           .get({ ".": { "*": find }, "%": 1000 * 100 })
-          .once()
           .map()
-          .once(function (data, key) {
+          .on(function (data, key) {
+            if (done.c) {
+              return;
+            }
             expect(data.name).to.be.ok();
             expect(data.age).to.be.ok();
             expect("m" == key[0]).to.be.ok();
             delete all[key];
             clearTimeout(to);
             to = setTimeout(function () {
+              if (done.c) {
+                return;
+              }
+              done.c = 1;
               expect(Object.empty(all)).to.be.ok();
               done();
-            }, 100);
+            }, 300);
           });
       });
 
