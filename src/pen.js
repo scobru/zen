@@ -572,26 +572,9 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
     }
 
     if (policy.sign) {
-      var sec = chk.$zen(msg, at.user || "", null);
-      if (sec.authenticator) {
-        chk.auth(msg, reject, sec.authenticator, function () {
-          chk.next(eve, msg, reject);
-        });
-        return;
-      }
-      // Peer re-propagation path: verify existing signature
-      runtime.opt.pack(msg.put, function (packed) {
-        runtime.recover(packed).then(function (signerPub) {
-          runtime.verify(packed, signerPub || sec.upub || null, function (data) {
-            data = runtime.opt.unpack(data);
-            if (data === void 0) return reject("PEN: valid signature required");
-            chk.next(eve, msg, reject);
-          });
-        }).catch(function () {
-          reject("PEN: cannot recover signer pub");
-        });
-      });
-      return;
+      // Signature was already verified and msg.put updated in penStage before
+      // the predicate ran — just forward.
+      return chk.next(eve, msg, reject);
     }
 
     // open or no policy: forward directly without stringify
@@ -624,51 +607,93 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
     if (sec.opt && sec.opt.pow && !ctx.put["^"]) {
       ctx.put["^"] = String(sec.opt.pow);
     }
-    var regs = [
-      ctx.key,
-      ctx.val,
-      soul,
-      ctx.state || 0,
-      Date.now(),
-      writer,
-      pathpart,     // R[6]: path after pencode/ in soul (e.g. 'asdf-1234/hgfd-2345')
-      ctx.put["^"] || "", // R[7]: PoW nonce (standalone, stored in msg.put["^"])
-    ];
 
-    pen.ready.then(function () {
-      var ok;
-      try {
-        ok = pen.run(bytecode, regs);
-      } catch (e) {
-        return reject("PEN VM: " + (e.message || e));
+    // Run bytecode predicates with ctx.val (must be verified plaintext by this point)
+    // then hand off to applypolicy for final forwarding.
+    function runPredicate() {
+      var regs = [
+        ctx.key,
+        ctx.val,   // R[1]: verified plaintext when sign:true, raw otherwise
+        soul,
+        ctx.state || 0,
+        Date.now(),
+        writer,
+        pathpart,     // R[6]: path after pencode/ in soul
+        ctx.put["^"] || "", // R[7]: PoW nonce
+      ];
+
+      pen.ready.then(function () {
+        var ok;
+        try {
+          ok = pen.run(bytecode, regs);
+        } catch (e) {
+          return reject("PEN VM: " + (e.message || e));
+        }
+        if (!ok) return reject("PEN: predicate failed");
+
+        if (policy.pow) {
+          // Verify hash(key + ":" + nonce) meets difficulty.
+          // R[policy.pow.field] is always R[7] (nonce); key is always R[0].
+          // Binding nonce to key prevents replay across different keys.
+          var nonce = regs[policy.pow.field] || "";
+          var key0 = regs[0] || "";
+          var proof = key0 + ":" + nonce;
+          return runtime.hash(
+            proof,
+            null,
+            function (hash) {
+              var punit = policy.pow.unit || "0";
+              var pdiff =
+                policy.pow.difficulty != null ? policy.pow.difficulty : 1;
+              var prefix = punit.repeat(pdiff);
+              if ((hash || "").indexOf(prefix) !== 0)
+                return reject("PEN: PoW insufficient");
+              applypolicy(policy, ctx, reject);
+            },
+            { name: "SHA-256", encode: "hex" },
+          );
+        }
+
+        applypolicy(policy, ctx, reject);
+      });
+    }
+
+    // For sign:true, verify and unpack BEFORE running the predicate so that:
+    //   - ctx.val is the verified plaintext (not the raw SEA blob)
+    //   - msg.put[":"] and msg.put["="] are set consistently with check.auth
+    if (policy.sign) {
+      var chk = runtime.check;
+      var msg = ctx.msg;
+      if (sec.authenticator) {
+        // New write: sign first, check.auth updates msg.put[":"] and msg.put["="]
+        chk.auth(msg, reject, sec.authenticator, function (parsed) {
+          ctx.val = parsed;
+          policy._verified = true;
+          runPredicate();
+        });
+        return;
       }
-      if (!ok) return reject("PEN: predicate failed");
+      // Peer re-propagation: verify existing signature then unpack
+      runtime.opt.pack(ctx.put, function (packed) {
+        runtime.recover(packed).then(function (signerPub) {
+          runtime.verify(packed, signerPub || sec.upub || null, function (data) {
+            data = runtime.opt.unpack(data);
+            if (data === void 0) return reject("PEN: valid signature required");
+            var sig = (packed && packed.s) || "";
+            ctx.put[":"] = { ":": data, "~": sig };
+            ctx.put["="] = data;
+            ctx.val = data;
+            policy._verified = true;
+            runPredicate();
+          });
+        }).catch(function () {
+          reject("PEN: cannot recover signer pub");
+        });
+      });
+      return;
+    }
 
-      if (policy.pow) {
-        // Verify hash(key + ":" + nonce) meets difficulty.
-        // R[policy.pow.field] is always R[7] (nonce); key is always R[0].
-        // Binding nonce to key prevents replay across different keys.
-        var nonce = regs[policy.pow.field] || "";
-        var key0 = regs[0] || "";
-        var proof = key0 + ":" + nonce;
-        return runtime.hash(
-          proof,
-          null,
-          function (hash) {
-            var punit = policy.pow.unit || "0";
-            var pdiff =
-              policy.pow.difficulty != null ? policy.pow.difficulty : 1;
-            var prefix = punit.repeat(pdiff);
-            if ((hash || "").indexOf(prefix) !== 0)
-              return reject("PEN: PoW insufficient");
-            applypolicy(policy, ctx, reject);
-          },
-          { name: "SHA-256", encode: "hex" },
-        );
-      }
-
-      applypolicy(policy, ctx, reject);
-    });
+    runPredicate();
   }
 
   if (runtime && runtime.check && runtime.check.use) {
