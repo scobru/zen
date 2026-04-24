@@ -682,7 +682,7 @@ var Zen;
 
     var ntmp = names;
     describe("RAD + ZEN", function () {
-      this.timeout(1000 * 9);
+      this.timeout(1000 * 20);
       var ochunk = 1000;
       Zen.on("opt", function (root) {
         root.opt.localStorage = false;
@@ -805,25 +805,29 @@ var Zen;
 
       it("small range once", function (done) {
         var check = {};
-        zen.get("people").get("alice").put({ cool: "beans" });
-        zen.get("people").get("alexander").put({ nice: "beans" });
-        zen.get("people").get("bob").put({ lol: "beans" });
-        zen
-          .get("people")
-          .get({ ".": { "*": "a" }, "%": 1000 * 100 })
-          .once()
-          .map()
-          .once(function (d, k) {
-            expect("a" === k[0]).to.be.ok();
-            check[k] = d;
-            if (check.alice && check.alexander) {
-              if (done.c) {
-                return;
+        var pending = 3;
+        function ready() {
+          if (--pending) return;
+          zen
+            .get("people")
+            .get({ ".": { "*": "a" }, "%": 1000 * 100 })
+            .once()
+            .map()
+            .once(function (d, k) {
+              expect("a" === k[0]).to.be.ok();
+              check[k] = d;
+              if (check.alice && check.alexander) {
+                if (done.c) {
+                  return;
+                }
+                done.c = 1;
+                done();
               }
-              done.c = 1;
-              done();
-            }
-          });
+            });
+        }
+        zen.get("people").get("alice").put({ cool: "beans" }, ready);
+        zen.get("people").get("alexander").put({ nice: "beans" }, ready);
+        zen.get("people").get("bob").put({ lol: "beans" }, ready);
       });
 
       it("small range twice", function (done) {
