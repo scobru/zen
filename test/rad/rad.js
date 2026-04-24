@@ -827,28 +827,32 @@ var Zen;
       });
 
       it("small range twice", function (done) {
-        var check = {};
         var zen = Zen();
-        zen.get("peoplez").get("alice").put({ cool: "beans" });
-        zen.get("peoplez").get("alexander").put({ nice: "beans" });
-        zen.get("peoplez").get("bob").put({ lol: "beans" });
-        zen
-          .get("peoplez")
-          .get({ ".": { "*": "a" }, "%": 1000 * 100 })
-          .once()
-          .map()
-          .once(function (d, k) {
-            expect("a" === k[0]).to.be.ok();
-            check[k] = (check[k] || 0) + 1;
-            expect(check[k]).to.be(1);
-            if (check.alice && check.alexander) {
-              if (next.c) {
-                return;
+        var pending = 3;
+        function ready() {
+          if (--pending) return;
+          var check = {};
+          zen
+            .get("peoplez")
+            .get({ ".": { "*": "a" }, "%": 1000 * 100 })
+            .once()
+            .map()
+            .once(function (d, k) {
+              expect("a" === k[0]).to.be.ok();
+              check[k] = (check[k] || 0) + 1;
+              expect(check[k]).to.be(1);
+              if (check.alice && check.alexander) {
+                if (next.c) {
+                  return;
+                }
+                next.c = 1;
+                next();
               }
-              next.c = 1;
-              next();
-            }
-          });
+            });
+        }
+        zen.get("peoplez").get("alice").put({ cool: "beans" }, ready);
+        zen.get("peoplez").get("alexander").put({ nice: "beans" }, ready);
+        zen.get("peoplez").get("bob").put({ lol: "beans" }, ready);
         function next() {
           var neck = {};
           zen
