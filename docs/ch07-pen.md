@@ -16,13 +16,13 @@ PEN is layered:
 │  Define policies using ZEN.pen() API                │
 │  Use candle numbers, windows, PoW hashes            │
 ├─────────────────────────────────────────────────────┤
-│  Layer 1: ZEN-PEN Bridge (lib/pen.js)               │
+│  Layer 1: ZEN-PEN Bridge (src/pen.js)               │
 │  Knows register conventions (R0=key, R1=val…)       │
 │  Injects R4=Date.now() before calling PEN core      │
 │  Handles policy opcodes: SGN, CRT, NOA, POW         │
 │  Compiles ZEN.pen(spec) → bytecode                  │
 ├─────────────────────────────────────────────────────┤
-│  Layer 0: PEN Core (lib/pen.wasm) — STANDALONE      │
+│  Layer 0: PEN Core (src/pen.wasm) — STANDALONE      │
 │  Source: src/pen.zig (Zig), compiled to WASM        │
 │  Input: (bytecode, registers[])                     │
 │  Output: boolean                                    │
@@ -71,11 +71,13 @@ When PEN is called from the ZEN bridge, registers are populated as follows:
 | Register | Field | Description |
 |---------|-------|-------------|
 | `R[0]` | `key` | The graph key being written |
-| `R[1]` | `val` | The value being written |
+| `R[1]` | `val` | The value being written (verified plaintext when `sign:true`) |
 | `R[2]` | `soul` | The soul of the node |
 | `R[3]` | `state` | The HAM state timestamp |
 | `R[4]` | `now` | `Date.now()` — injected by the ZEN bridge |
-| `R[5]` | `pub` | The writer's public key |
+| `R[5]` | `pub` | The writer's public key (recovered from signature when `sign:true`) |
+| `R[6]` | `path` | Path after `pencode/` in soul (e.g. soul `!abc/foo/bar` → path `foo/bar`) |
+| `R[7]` | `nonce` | PoW nonce from `msg.put["^"]` — always reserved, never set by user |
 | `R[128–255]` | `local[n]` | Local slots, set by `LET` opcode |
 
 Host registers (`R[0..127]`) are provided by the ZEN bridge. Local registers (`R[128..255]`) are scratch space inside the policy.
@@ -253,16 +255,70 @@ The ZEN bridge defines:
 
 | Opcode | Name | Description |
 |--------|------|-------------|
-| `0xC0` | SGN | Verify a signature (`authenticator` matches writer) |
-| `0xC1` | CRT | Check a certificate |
-| `0xC2` | NOA | No-auth (public write allowed) |
-| `0xC4` | POW | Proof-of-work check — reads nonce from R[7] (`msg.put["^"]`), reconstructs `proof = R[0] + ":" + R[7]`, SHA-256-hashes it |
+| `0xC0` | SGN | Require a valid ECDSA signature from the writer |
+| `0xC1` | CRT | Require a certificate signed by a specific public key |
+| `0xC3` | NOA | Open write — no authentication required |
+| `0xC4` | POW | Proof-of-work — reads nonce from R[7] (`msg.put["^"]`), reconstructs the canonical block `JSON.stringify({"#":soul,".": key,":":val,">": state})`, verifies `SHA-256(block + ":" + nonce)` meets the required difficulty |
 
 These are used when `ZEN.pen()` compiles a policy that requires authentication or PoW.
 
 ---
 
-## 7.10 Using PEN for write access control
+## 7.10 PoW policy — `pow` in `ZEN.pen(spec)`
+
+When a soul is compiled with a `pow` policy, every write to that soul must include a valid proof-of-work nonce in `msg.put["^"]`. The proof is verified against the **canonical block** — all four fields that uniquely identify the write:
+
+```js
+JSON.stringify({
+  "#": soul,   // namespace owner
+  ".": key,    // the specific key
+  ":": val,    // the value being written
+  ">": state,  // HAM timestamp
+}) + ":" + nonce
+```
+
+SHA-256 of this string must start with `unit.repeat(difficulty)`.
+
+```js
+// Compile a soul that requires PoW
+const soul = ZEN.pen({ pow: { unit: "0", difficulty: 3 } })
+// hash must start with "000"
+
+// With sign as well (independent policies)
+const soul = ZEN.pen({ sign: true, pow: { unit: "0", difficulty: 3 } })
+```
+
+### `field` is NOT part of the API
+
+R[7] is always reserved for the PoW nonce. **Do not pass `field`** in the `pow` spec — it is ignored:
+
+```js
+// WRONG — field is silently ignored
+ZEN.pen({ pow: { field: 7, difficulty: 3 } })
+
+// CORRECT
+ZEN.pen({ pow: { difficulty: 3 } })           // unit defaults to "0"
+ZEN.pen({ pow: { unit: "0", difficulty: 3 } }) // explicit
+```
+
+### Auto-mining in `put`
+
+When writing to a PoW soul, pass `pow` as a **policy object** in `opt` — ZEN will mine automatically:
+
+```js
+zen.get(soul).get(key).put(data, cb, {
+  authenticator: pair,              // needed if soul has sign:true
+  pow: { unit: "0", difficulty: 3 } // triggers auto-mining
+})
+```
+
+Mining happens inside `penStage` before the predicate runs. The computed nonce is stored in `msg.put["^"]` and propagated to all peers. Peers re-verify by rebuilding the same canonical block.
+
+**Defaults**: `unit` defaults to `"0"`, `difficulty` defaults to `3`. If `pow` is not passed at all, no mining occurs.
+
+---
+
+## 7.11 Using PEN for write access control
 
 A practical example: only the key owner can write to a specific path.
 
@@ -289,7 +345,7 @@ The ZEN security middleware calls `ZEN.run(policy, registers)` before accepting 
 
 ---
 
-## 7.11 `ZEN.candle` — time-window policies
+## 7.12 `ZEN.candle` — time-window policies
 
 A **candle** is a unit of time: `floor(Date.now() / windowMs)`. Two writes within the same candle share the same candle number.
 
@@ -315,7 +371,7 @@ LET(0, DIVU(R[4], window),            ← current candle (R[128])
 
 ---
 
-## 7.12 Building PEN from source
+## 7.13 Building PEN from source
 
 PEN Core is written in Zig. The source lives at `src/pen.zig` and `src/wasm.zig`.
 
@@ -331,7 +387,7 @@ Zig must be on your `PATH`. See [ziglang.org](https://ziglang.org/download/) to 
 
 ---
 
-## 7.13 Testing PEN
+## 7.14 Testing PEN
 
 ```bash
 npm run testPEN:unit

@@ -4349,9 +4349,38 @@ defmod('./src/pen.js', function(module, exp){
           ? runtime.check.$zen(ctx.msg, (ctx.at && ctx.at.user) || "", null)
           : {};
       var writer = sec.upub || (sec.authenticator || {}).pub || "";
-      // Transfer opt.pow nonce to msg.put["^"] for peer propagation
-      if (sec.opt && sec.opt.pow && !ctx.put["^"]) {
-        ctx.put["^"] = String(sec.opt.pow);
+
+      // Auto-mine if opt.pow is a policy object {unit, difficulty} and no nonce yet.
+      // Must be called AFTER signing so ctx.val is already the verified plaintext.
+      // Peers re-propagating already have the nonce in ctx.put["^"], so this is a no-op for them.
+      function mineIfNeeded(cb) {
+        var pow = sec.opt && sec.opt.pow;
+        if (pow && typeof pow === "object" && !ctx.put["^"]) {
+          var proofBlock = JSON.stringify({
+            "#": ctx.put["#"] || "",
+            ".": ctx.put["."] || "",
+            ":": ctx.val,
+            ">": ctx.put[">"] || 0,
+          });
+          runtime.hash(
+            function (nonce) { return proofBlock + ":" + nonce; },
+            null,
+            function (result) {
+              ctx.put["^"] = result.nonce;
+              cb();
+            },
+            {
+              pow: {
+                unit: pow.unit || "0",
+                difficulty: pow.difficulty != null ? pow.difficulty : 3,
+              },
+              name: "SHA-256",
+              encode: "hex",
+            },
+          );
+        } else {
+          cb();
+        }
       }
 
       // Run bytecode predicates with ctx.val (must be verified plaintext by this point)
@@ -4378,12 +4407,18 @@ defmod('./src/pen.js', function(module, exp){
           if (!ok) return reject("PEN: predicate failed");
 
           if (policy.pow) {
-            // Verify hash(key + ":" + nonce) meets difficulty.
-            // R[policy.pow.field] is always R[7] (nonce); key is always R[0].
-            // Binding nonce to key prevents replay across different keys.
-            var nonce = regs[policy.pow.field] || "";
-            var key0 = regs[0] || "";
-            var proof = key0 + ":" + nonce;
+            // Verify SHA-256(canonical_block + ":" + nonce) meets difficulty.
+            // The canonical block is {#, ., :, >} — the same data used during signing.
+            // Binding nonce to the full block (soul + key + val + state) prevents
+            // replay across different keys or values.
+            var nonce = regs[7] || ""; // R[7] is always the PoW nonce
+            var proofBlock = JSON.stringify({
+              "#": ctx.put["#"] || "",
+              ".": ctx.put["."] || "",
+              ":": ctx.val,
+              ">": ctx.put[">"] || 0,
+            });
+            var proof = proofBlock + ":" + nonce;
             return runtime.hash(
               proof,
               null,
@@ -4415,7 +4450,7 @@ defmod('./src/pen.js', function(module, exp){
           chk.auth(msg, reject, sec.authenticator, function (parsed) {
             ctx.val = parsed;
             policy._verified = true;
-            runPredicate();
+            mineIfNeeded(runPredicate);
           });
           return;
         }
@@ -4430,7 +4465,7 @@ defmod('./src/pen.js', function(module, exp){
               ctx.put["="] = data;
               ctx.val = data;
               policy._verified = true;
-              runPredicate();
+              mineIfNeeded(runPredicate);
             });
           }).catch(function () {
             reject("PEN: cannot recover signer pub");
@@ -4439,7 +4474,7 @@ defmod('./src/pen.js', function(module, exp){
         return;
       }
 
-      runPredicate();
+      mineIfNeeded(runPredicate);
     }
 
     if (runtime && runtime.check && runtime.check.use) {
@@ -4624,7 +4659,7 @@ defmod('./src/pen.js', function(module, exp){
       }
       if (spec.open) pred.push(0xc3);
       if (spec.pow) {
-        var powfield = (spec.pow.field || 0) & 0xff;
+        var powfield = 7; // R[7] is always reserved for PoW nonce; field is not user-configurable
         var powdiff =
           (spec.pow.difficulty != null ? spec.pow.difficulty : 1) & 0xff;
         var powunit = spec.pow.unit ? String(spec.pow.unit).slice(0, 255) : "";

@@ -486,12 +486,12 @@ describe("ZEN.pen()", function () {
     assert.strictEqual(pen.scanpolicy(bc).open, true);
   });
 
-  it('{ pow: { field:1, difficulty:3 } } emits 0xC4 + field + diff, unit defaults to "0"', function () {
+  it('{ pow: { field:1, difficulty:3 } } emits 0xC4, user field ignored, field always R[7], unit defaults to "0"', function () {
     var soul = ZEN.pen({ pow: { field: 1, difficulty: 3 } });
     var bc = pen.unpack(soul.slice(1));
     var p = pen.scanpolicy(bc);
     assert.ok(p.pow);
-    assert.strictEqual(p.pow.field, 1);
+    assert.strictEqual(p.pow.field, 7, "user field:1 ignored; always R[7]");
     assert.strictEqual(p.pow.difficulty, 3);
     assert.strictEqual(
       p.pow.unit,
@@ -500,14 +500,14 @@ describe("ZEN.pen()", function () {
     );
   });
 
-  it('{ pow: { unit: "asdf", difficulty: 2 } } unit and difficulty round-trip', function () {
+  it('{ pow: { unit: "asdf", difficulty: 2 } } unit and difficulty round-trip (field always R[7])', function () {
     var soul = ZEN.pen({ pow: { field: 0, unit: "asdf", difficulty: 2 } });
     var bc = pen.unpack(soul.slice(1));
     var p = pen.scanpolicy(bc);
     assert.ok(p.pow);
     assert.strictEqual(p.pow.unit, "asdf");
     assert.strictEqual(p.pow.difficulty, 2);
-    assert.strictEqual(p.pow.field, 0);
+    assert.strictEqual(p.pow.field, 7, "user field:0 ignored; always R[7]");
   });
 
   it('{ pow: { unit: "abc" } } difficulty defaults to 1', function () {
@@ -707,12 +707,12 @@ describe("pen.scanpolicy()", function () {
     );
   });
 
-  it("detects pow policy and extracts field, difficulty, and default unit", function () {
+  it("detects pow policy and extracts field (always 7), difficulty, and default unit", function () {
     var soul = ZEN.pen({ pow: { field: 1, difficulty: 4 } });
     var bc = pen.unpack(soul.slice(1));
     var p = pen.scanpolicy(bc);
     assert.ok(p.pow, "pow policy present");
-    assert.strictEqual(p.pow.field, 1);
+    assert.strictEqual(p.pow.field, 7, "user field:1 ignored; always R[7]");
     assert.strictEqual(p.pow.difficulty, 4);
     assert.strictEqual(p.pow.unit, "0", 'unit defaults to "0"');
   });
@@ -945,14 +945,14 @@ describe("ZEN + PEN integration", function () {
     );
   });
 
-  it("pow + string predicate combined: val must be string AND have PoW", function (done) {
+  it("pow + string predicate combined: val must be string AND have PoW (field always R[7])", function (done) {
     var soul = ZEN.pen({
       val: { type: "string" },
       pow: { field: 1, difficulty: 1 },
     });
     var bc = pen.unpack(soul.slice(1));
     var policy = pen.scanpolicy(bc);
-    assert.strictEqual(policy.pow.field, 1);
+    assert.strictEqual(policy.pow.field, 7, "user field:1 ignored; always R[7]");
     assert.strictEqual(policy.pow.difficulty, 1);
     // predicate: val must be a string (number fails regardless of pow)
     assert.strictEqual(
@@ -1268,6 +1268,342 @@ describe("ZEN + PEN integration", function () {
           },
           { authenticator: pair },
         );
+    });
+  });
+});
+
+// ── ZEN.pen({ pow }) — field hardcoded to R[7] ───────────────────────────────
+
+describe("ZEN.pen({ pow }) — field hardcoded to R[7]", function () {
+  it("{ pow: { unit: '0', difficulty: 2 } } (no field) → scanpolicy.pow.field === 7", function () {
+    var soul = ZEN.pen({ pow: { unit: "0", difficulty: 2 } });
+    var bc = pen.unpack(soul.slice(1));
+    var p = pen.scanpolicy(bc);
+    assert.ok(p.pow, "pow policy present");
+    assert.strictEqual(p.pow.field, 7, "field is always 7 (nonce register)");
+    assert.strictEqual(p.pow.unit, "0");
+    assert.strictEqual(p.pow.difficulty, 2);
+  });
+
+  it("{ pow: { field: 3, unit: '0', difficulty: 2 } } — user field ignored, always 7", function () {
+    var soul = ZEN.pen({ pow: { field: 3, unit: "0", difficulty: 2 } });
+    var bc = pen.unpack(soul.slice(1));
+    var p = pen.scanpolicy(bc);
+    assert.ok(p.pow, "pow policy present");
+    assert.strictEqual(p.pow.field, 7, "user-supplied field:3 is ignored; always R[7]");
+  });
+
+  it("{ pow: { field: 0, difficulty: 2 } } — field:0 also overridden to 7", function () {
+    var soul = ZEN.pen({ pow: { field: 0, difficulty: 2 } });
+    var bc = pen.unpack(soul.slice(1));
+    var p = pen.scanpolicy(bc);
+    assert.strictEqual(p.pow.field, 7, "field:0 also overridden to R[7]");
+  });
+
+  it("{ pow: { difficulty: 1 } } (no field, no unit) → field=7, unit='0'", function () {
+    var soul = ZEN.pen({ pow: { difficulty: 1 } });
+    var bc = pen.unpack(soul.slice(1));
+    var p = pen.scanpolicy(bc);
+    assert.strictEqual(p.pow.field, 7);
+    assert.strictEqual(p.pow.unit, "0");
+    assert.strictEqual(p.pow.difficulty, 1);
+  });
+});
+
+// ── canonical block PoW hash ──────────────────────────────────────────────────
+
+describe("canonical block PoW hash", function () {
+  this.timeout(30000);
+
+  it("mining hashes JSON.stringify({#,.,':',>}) + ':' + nonce (canonical block format)", function (done) {
+    var soul = "!testSoul";
+    var key = "price";
+    var val = "42.5";
+    var state = 1700000000000;
+    var proofBlock = JSON.stringify({ "#": soul, ".": key, ":": val, ">": state });
+    ZEN.hash(
+      function (nonce) { return proofBlock + ":" + nonce; },
+      null,
+      function (result) {
+        assert.ok(result && result.nonce, "mining returns nonce");
+        assert.ok(typeof result.hash === "string", "mining returns hash string");
+        assert.ok(result.hash.startsWith("0"), "hash satisfies difficulty:1");
+        // Verification: re-hash the same canonical proof string → identical hash
+        ZEN.hash(proofBlock + ":" + result.nonce, null, function (verifyHash) {
+          assert.strictEqual(verifyHash, result.hash, "verification hash matches mining hash");
+          done();
+        }, { name: "SHA-256", encode: "hex" });
+      },
+      { pow: { unit: "0", difficulty: 1 }, name: "SHA-256", encode: "hex" },
+    );
+  });
+
+  it("nonce is bound to the canonical block — different key produces different proof string", function (done) {
+    var soul = "!testSoul";
+    var val = "100";
+    var state = 1700000000000;
+    var blockA = JSON.stringify({ "#": soul, ".": "keyA", ":": val, ">": state });
+    var blockB = JSON.stringify({ "#": soul, ".": "keyB", ":": val, ">": state });
+    ZEN.hash(
+      function (nonce) { return blockA + ":" + nonce; },
+      null,
+      function (result) {
+        assert.ok(result.hash.startsWith("0"), "blockA hash satisfies difficulty:1");
+        var proofA = blockA + ":" + result.nonce;
+        var proofB = blockB + ":" + result.nonce;
+        assert.notStrictEqual(proofA, proofB, "proof strings differ when key differs — replay is blocked at hash level");
+        done();
+      },
+      { pow: { unit: "0", difficulty: 1 }, name: "SHA-256", encode: "hex" },
+    );
+  });
+
+  it("nonce is bound to the canonical block — different value produces different proof string", function (done) {
+    var soul = "!testSoul";
+    var key = "price";
+    var state = 1700000000000;
+    var blockA = JSON.stringify({ "#": soul, ".": key, ":": "100", ">": state });
+    var blockB = JSON.stringify({ "#": soul, ".": key, ":": "200", ">": state });
+    ZEN.hash(
+      function (nonce) { return blockA + ":" + nonce; },
+      null,
+      function (result) {
+        var proofA = blockA + ":" + result.nonce;
+        var proofB = blockB + ":" + result.nonce;
+        assert.notStrictEqual(proofA, proofB, "proof strings differ when value differs — replay is blocked at hash level");
+        done();
+      },
+      { pow: { unit: "0", difficulty: 1 }, name: "SHA-256", encode: "hex" },
+    );
+  });
+
+  it("nonce is bound to the canonical block — different soul produces different proof string", function (done) {
+    var key = "price";
+    var val = "42";
+    var state = 1700000000000;
+    var blockA = JSON.stringify({ "#": "!soulA", ".": key, ":": val, ">": state });
+    var blockB = JSON.stringify({ "#": "!soulB", ".": key, ":": val, ">": state });
+    ZEN.hash(
+      function (nonce) { return blockA + ":" + nonce; },
+      null,
+      function (result) {
+        var proofA = blockA + ":" + result.nonce;
+        var proofB = blockB + ":" + result.nonce;
+        assert.notStrictEqual(proofA, proofB, "proof strings differ when soul differs — cross-soul replay blocked");
+        done();
+      },
+      { pow: { unit: "0", difficulty: 1 }, name: "SHA-256", encode: "hex" },
+    );
+  });
+});
+
+// ── penStage — auto-mining via opt.pow ────────────────────────────────────────
+
+describe("penStage — auto-mining via opt.pow", function () {
+  this.timeout(30000);
+
+  it("opt.pow = {unit:'0', difficulty:1} auto-mines and write is accepted by pow soul", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    var soul = ZEN.pen({ pow: { unit: "0", difficulty: 1 } });
+    zen.get(soul).get("k").put("value", function (ack) {
+      assert.ok(!ack || !ack.err, "auto-mined write must be accepted: " + (ack && ack.err));
+      done();
+    }, { pow: { unit: "0", difficulty: 1 } });
+  });
+
+  it("no opt.pow on pow:difficulty:4 soul → write rejected (no nonce, hash won't satisfy difficulty)", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    // difficulty:4 → 1 in 65536 chance of false positive, effectively impossible
+    var soul = ZEN.pen({ pow: { unit: "0", difficulty: 4 } });
+    zen.get(soul).get("k").put("value", function (ack) {
+      assert.ok(ack && ack.err, "write without nonce must be rejected by pow soul: " + JSON.stringify(ack));
+      done();
+    });
+  });
+
+  it("auto-mined value is readable back from graph", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    var soul = ZEN.pen({ val: { type: "string" }, pow: { unit: "0", difficulty: 1 } });
+    var value = "market_price_" + Date.now();
+    zen.get(soul).get("price").put(value, function (ack) {
+      assert.ok(!ack || !ack.err, "auto-mined write accepted: " + (ack && ack.err));
+      zen.get(soul).get("price").once(function (v) {
+        assert.strictEqual(v, value, "auto-mined value round-trips through graph");
+        done();
+      });
+    }, { pow: { unit: "0", difficulty: 1 } });
+  });
+
+  it("string val predicate + pow: wrong type rejected even with opt.pow", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    var soul = ZEN.pen({ val: { type: "string" }, pow: { unit: "0", difficulty: 1 } });
+    zen.get(soul).get("k").put(42, function (ack) {
+      assert.ok(ack && ack.err, "number rejected by string-type soul even when opt.pow provided: " + JSON.stringify(ack));
+      done();
+    }, { pow: { unit: "0", difficulty: 1 } });
+  });
+
+  it("sign:true + pow: authenticator + opt.pow together → write accepted", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    var soul = ZEN.pen({ val: { type: "string" }, sign: true, pow: { unit: "0", difficulty: 1 } });
+    ZEN.pair(function (pair) {
+      ZEN.sign("signed_order", pair, function (signed) {
+        zen.get(soul).get("k").put(signed, function (ack) {
+          assert.ok(!ack || !ack.err, "sign+pow write accepted: " + (ack && ack.err));
+          done();
+        }, { authenticator: pair, pow: { unit: "0", difficulty: 1 } });
+      });
+    });
+  });
+});
+
+// ── canonical block — state binds nonce ───────────────────────────────────────
+// Proves: the canonical block {#,.,':',>} includes the HAM state timestamp '>'.
+// Changing '>' produces a different proof string → old nonce is cryptographically
+// invalid for the new block (1-in-16 false-positive rate at difficulty:1 means
+// the probability of accidental acceptance is ~6%, so we test structural inequality
+// rather than probabilistic hash failure).
+
+describe("canonical block — state binds nonce", function () {
+  this.timeout(30000);
+
+  it("state change produces different canonical block — old nonce gives different proof string", function (done) {
+    var soul = "!testSoul";
+    var key = "price";
+    var val = "42";
+    var S1 = 1700000000000;
+    var S2 = S1 + 1; // any state increment (each write gets a new Zen.state())
+    var block1 = JSON.stringify({ "#": soul, ".": key, ":": val, ">": S1 });
+    var block2 = JSON.stringify({ "#": soul, ".": key, ":": val, ">": S2 });
+
+    ZEN.hash(
+      function (nonce) { return block1 + ":" + nonce; },
+      null,
+      function (result) {
+        assert.ok(result.hash.startsWith("0"), "nonce is valid for state S1");
+
+        // Same nonce applied to a block with state S2 creates a different proof string
+        var proof1 = block1 + ":" + result.nonce;
+        var proof2 = block2 + ":" + result.nonce;
+        assert.notStrictEqual(proof1, proof2,
+          "canonical blocks differ when > (state) differs — old nonce is structurally invalid for new state");
+
+        // Block strings themselves differ (confirming > is included in canonical block)
+        assert.notStrictEqual(block1, block2,
+          "canonical block JSON changes when state changes");
+        done();
+      },
+      { pow: { unit: "0", difficulty: 1 }, name: "SHA-256", encode: "hex" },
+    );
+  });
+
+  it("canonical block includes all 4 fields: soul(#), key(.), value(:), state(>)", function () {
+    // Changing each field independently changes the block JSON string
+    var base = { "#": "!soul", ".": "k", ":": "v", ">": 1000 };
+    var withDiffSoul  = Object.assign({}, base, { "#": "!soul2" });
+    var withDiffKey   = Object.assign({}, base, { ".": "k2" });
+    var withDiffVal   = Object.assign({}, base, { ":": "v2" });
+    var withDiffState = Object.assign({}, base, { ">": 1001 });
+
+    var baseStr = JSON.stringify(base);
+    assert.notStrictEqual(JSON.stringify(withDiffSoul),  baseStr, "soul(#) is part of canonical block");
+    assert.notStrictEqual(JSON.stringify(withDiffKey),   baseStr, "key(.) is part of canonical block");
+    assert.notStrictEqual(JSON.stringify(withDiffVal),   baseStr, "value(:) is part of canonical block");
+    assert.notStrictEqual(JSON.stringify(withDiffState), baseStr, "state(>) is part of canonical block");
+  });
+
+  it("same soul+key+val+state always produces the same canonical block (deterministic)", function () {
+    var a = JSON.stringify({ "#": "!s", ".": "k", ":": "v", ">": 9999 });
+    var b = JSON.stringify({ "#": "!s", ".": "k", ":": "v", ">": 9999 });
+    assert.strictEqual(a, b, "canonical block is deterministic for same inputs");
+  });
+});
+
+// ── value update — re-sign and re-mine required ───────────────────────────────
+// Proves: when a soul enforces sign and/or pow, users can still update the value
+// by providing a fresh signature and a freshly mined nonce for the new write.
+// The new write's canonical block has a new '>' state timestamp, making the old
+// nonce invalid and requiring a new one.
+
+describe("value update — re-sign and re-mine required", function () {
+  this.timeout(60000);
+
+  it("pow soul: second write with new value is accepted and overwrites first", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    var soul = ZEN.pen({ val: { type: "string" }, pow: { unit: "0", difficulty: 1 } });
+    var opt = { pow: { unit: "0", difficulty: 1 } };
+
+    zen.get(soul).get("price").put("value_v1", function (ack1) {
+      assert.ok(!ack1 || !ack1.err, "v1 write accepted: " + (ack1 && ack1.err));
+
+      // Second write: new value → new state → auto-mine new nonce
+      zen.get(soul).get("price").put("value_v2", function (ack2) {
+        assert.ok(!ack2 || !ack2.err, "v2 update accepted: " + (ack2 && ack2.err));
+
+        zen.get(soul).get("price").once(function (v) {
+          assert.strictEqual(v, "value_v2", "latest value is v2 after update");
+          done();
+        });
+      }, opt);
+    }, opt);
+  });
+
+  it("sign+pow soul: second write (new sign + new mine) is accepted and overwrites first", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    var soul = ZEN.pen({ val: { type: "string" }, sign: true, pow: { unit: "0", difficulty: 1 } });
+
+    ZEN.pair(function (pair) {
+      var opt = { authenticator: pair, pow: { unit: "0", difficulty: 1 } };
+
+      ZEN.sign("order_v1", pair, function (signed1) {
+        zen.get(soul).get("order").put(signed1, function (ack1) {
+          assert.ok(!ack1 || !ack1.err, "v1 signed+mined write accepted: " + (ack1 && ack1.err));
+
+          // Update: new value → new sign + new mine (both happen automatically via opt)
+          ZEN.sign("order_v2", pair, function (signed2) {
+            zen.get(soul).get("order").put(signed2, function (ack2) {
+              assert.ok(!ack2 || !ack2.err, "v2 update (new sign+mine) accepted: " + (ack2 && ack2.err));
+
+              zen.get(soul).get("order").once(function (v) {
+                assert.strictEqual(v, signed2, "latest value is signed_v2 after update");
+                done();
+              });
+            }, opt);
+          });
+        }, opt);
+      });
+    });
+  });
+
+  it("sign+pow soul: multiple sequential updates all accepted; last value wins", function (done) {
+    var zen = Zen({ radisk: false, peers: [], localStorage: false });
+    var soul = ZEN.pen({ val: { type: "string" }, sign: true, pow: { unit: "0", difficulty: 1 } });
+
+    ZEN.pair(function (pair) {
+      var opt = { authenticator: pair, pow: { unit: "0", difficulty: 1 } };
+      var writes = ["v1", "v2", "v3"];
+      var idx = 0;
+
+      function next() {
+        if (idx >= writes.length) {
+          // All writes done — latest value should be signed "v3"
+          zen.get(soul).get("seq").once(function (v) {
+            ZEN.verify(v, pair.pub, function (plain) {
+              assert.strictEqual(plain, "v3", "final value after 3 sequential updates is v3");
+              done();
+            });
+          });
+          return;
+        }
+        var val = writes[idx++];
+        ZEN.sign(val, pair, function (signed) {
+          zen.get(soul).get("seq").put(signed, function (ack) {
+            assert.ok(!ack || !ack.err, "write " + val + " accepted: " + (ack && ack.err));
+            next();
+          }, opt);
+        });
+      }
+      next();
     });
   });
 });
