@@ -1,6 +1,7 @@
 {
   "name": "@akaoio/zen",
-  "version": "1.0.2",
+  "type": "module",
+  "version": "1.0.3",
   "description": "A realtime, decentralized, offline-first, graph data synchronization engine.",
   "types": "index.d.ts",
   "main": "index.js",
@@ -98,6 +99,5 @@
     "mocha": "^6.2.0",
     "prettier": "^3.8.3",
     "uglify-js": "^3.6.0"
-  },
-  "type": "module"
+  }
 }
