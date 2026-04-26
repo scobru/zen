@@ -53,11 +53,14 @@ request_url     = origin_path                                               ← 
 claim_value     = extract(plaintext, selector)                              ← ZK
 ```
 
-Public inputs: `SHA256(server_cert)`, `SHA256(response_ciphertext)`, `SHA256(request_ciphertext)`,
+Public inputs (9): `SHA256(server_cert)`, `SHA256(response_ciphertext)`, `SHA256(request_ciphertext)`,
 `transcript_hash_cv`, `origin_host_hash`, `origin_path_hash`, `selector_hash`, `claim_value`, `timestamp`
 
-Private inputs: `oracle_ephem_priv`, `server_ephem_pub`, `server_hello_bytes`, `cert_verify_sig`,
-`plaintext`, `request_plaintext`
+> `timestamp` (`att[">"]) is public input `p.i[8]` (unix seconds as BN254 scalar). The verifier checks `base62_decode(str(att[">"]))` against `p.i[8]` before the pairing check. This is required to make the cert validity window constraint (`leaf.notBefore ≤ timestamp ≤ leaf.notAfter`) verifiable — if `timestamp` were a private input, the prover could supply any value within the cert's validity range even for an expired cert.
+
+Private inputs: `oracle_ephem_priv`, `server_ephem_pub`, `server_hello_bytes`,
+`client_hello_bytes`, `enc_exts_bytes`, `cert_bytes`, `server_finished_bytes`,
+`cert_verify_sig`, `resp_plaintext`, `req_plaintext`, `resp_seq_no`, `req_seq_no`
 
 If the oracle uses a fake server → binding 1 fails (`cert_chain_verify`). If they MITM-swap `server_ephem_pub` → binding 2 fails (`CertificateVerify`). If they alter ciphertext → binding 5 fails (AES-GCM auth tag). If they fetch a different URL → binding 5 fails (request_url constraint). If they claim a wrong value → extraction constraint fails.
 
@@ -73,12 +76,13 @@ This is a large circuit (~9 M constraints for RSA-cert servers, ~15 M for ECDSA-
 │  zktls.prove({ url, extract, circuit })                       │
 │  zen.get(soul).get(key).put(val, cb, { tls: attestation })    │
 ├───────────────────────────────────────────────────────────────┤
-│  Layer 2: ZEN bridge (src/pen.js + src/put.js)                │
+│  Layer 2: ZEN bridge (src/pen.js + src/put.js + src/get.js)   │
 │  PEN opcode 0xC5 — enforces tls policy on every write         │
 │  spec.tls in ZEN.pen() compiles to 0xC5 tail bytes            │
-│  opt.tls in zen.put() auto-proves or passes attestation       │
+│  opt.tls in zen.put() auto-proves, stores att in _["&"]       │
+│  .tls(cb) on zen.get() reads _["&"] from resolved node        │
 ├───────────────────────────────────────────────────────────────┤
-│  Layer 1: lib/zktls.js  (~2000 lines, single file)            │
+│  Layer 1: lib/zktls.js  (~3000 lines, bundled from lib/zk/tls/)   │
 │  prove(opt)    → Attestation   (oracle role, BigInt prover)   │
 │  verify(att)   → boolean       (all peers, calls WASM)        │
 │  setup(circuit, ptau, out)     (one-time trusted setup)       │
@@ -86,8 +90,8 @@ This is a large circuit (~9 M constraints for RSA-cert servers, ~15 M for ECDSA-
 │  Internals: BN254 BigInt, Groth16 prover, R1CS (tls13)       │
 │  R1CS written directly in JS — no Circom dependency           │
 ├───────────────────────────────────────────────────────────────┤
-│  Layer 0: lib/zktls.wasm — STANDALONE (~35–45 KB, 0 imports)     │
-│  Source: lib/zktls.zig                                        │
+│  Layer 0: lib/zktls.wasm — STANDALONE (~35–45 KB, 0 imports)  │
+│  Source: lib/zk/tls/*.zig (entry: lib/zk/tls/main.zig)        │
 │  Groth16 verifier over BN254                                  │
 │  BN254 field tower (Fp → Fp2 → Fp6 → Fp12)                   │
 │  Ate pairing, AES-128-GCM, SHA-256                            │
@@ -131,20 +135,20 @@ server_cert_pub = cert_chain_verify(server_cert, embedded_root_CAs)
   where: sig_verify(root_CA_pub, intermediate.tbs, intermediate.sig) = true
          sig_verify(intermediate.pub, leaf.tbs, leaf.sig) = true
          server_cert_pub = leaf.spki
-         leaf.notBefore ≤ timestamp ≤ leaf.notAfter           ← cert validity (P3)
+         leaf.notBefore ≤ timestamp ≤ leaf.notAfter           ← circuit constraint, timestamp = p.i[8]
 
 /* Step 2 — Hostname: cert belongs to claimed domain (SAN/CN in circuit) */
 hostname_in_cert = extract_SAN_or_CN(leaf.tbs)                 ← in-circuit DER extraction
-hostname_in_cert = origin_host                                  ← public input             (P1)
+hostname_in_cert = origin_host                                  ← circuit constraint, hash = p.i[4]
 
 /* Step 3 — CertificateVerify: server_ephem_pub ↔ server cert identity */
 /* server_hello_bytes is private witness; circuit hashes it to bind server_ephem_pub
    into the transcript before verifying CertificateVerify signature */
-server_ephem_pub   = parse_key_share(server_hello_bytes)        ← in-circuit extraction
+server_ephem_pub   = parse_key_share(server_hello_bytes)        ← in-circuit extraction (private)
 transcript_hash_cv = SHA256(client_hello_bytes || server_hello_bytes
-                            || enc_exts_bytes || cert_bytes)    ← in-circuit hash   (P0)
+                            || enc_exts_bytes || cert_bytes)    ← in-circuit hash = p.i[3]
 context_cv         = "TLS 1.3, server CertificateVerify\0" || transcript_hash_cv
-sig_verify(server_cert_pub, context_cv, cert_verify_sig) = true ← ECDSA/RSA-PSS     (P0)
+sig_verify(server_cert_pub, context_cv, cert_verify_sig) = true ← ECDSA/RSA-PSS circuit constraint
 
 /* Step 4 — Ephemeral ECDH */
 HS = ECDH(oracle_ephem_priv, server_ephem_pub)                  ← private × private
@@ -153,7 +157,7 @@ HS = ECDH(oracle_ephem_priv, server_ephem_pub)                  ← private × p
 early_secret     = HKDF-Extract(0x00^32, 0x00^32)
 derived_hs       = HKDF-Expand-Label(early_secret, "derived", SHA256(""), 32)
 handshake_secret = HKDF-Extract(derived_hs, HS)
-transcript_hash_full = SHA256(... || server_finished_bytes)     ← up to server Finished
+transcript_hash_full = SHA256(... || server_finished_bytes)     ← up to server Finished (private)
 s_hs_traffic     = HKDF-Expand-Label(handshake_secret, "s hs traffic", transcript_hash_cv, 32)
 master_secret    = HKDF-Extract(
                      HKDF-Expand-Label(handshake_secret, "derived", SHA256(""), 32), 0x00^32)
@@ -165,27 +169,27 @@ client_write_key = HKDF-Expand-Label(c_ap_traffic, "key", "", 16)   // for reque
 client_write_iv  = HKDF-Expand-Label(c_ap_traffic, "iv",  "", 12)   //   binding
 
 /* Step 6 — AES-128-GCM: AEAD with auth tag + sequence number in IV */
-/* Response (server → oracle): */
+/* Response (server → oracle) — single TLS ApplicationData record, max 16 KB: */
 resp_per_record_iv = server_write_iv XOR (0x00^4 || resp_seq_no_uint64_be)
 resp_AAD           = 0x17 0x03 0x03 <resp_ciphertext_len_uint16_be>   // 5-byte TLS record header
 resp_plaintext, resp_tag_valid = AES_128_GCM_decrypt(
     server_write_key, resp_per_record_iv, response_ciphertext, resp_AAD)
-resp_tag_valid = true                                           ← circuit constraint    (P2)
+resp_tag_valid = true                                           ← circuit constraint; hash = p.i[1]
 
 /* Request (oracle → server) — binds HTTP URL to proof: */
 req_per_record_iv  = client_write_iv XOR (0x00^4 || req_seq_no_uint64_be)
 req_AAD            = 0x17 0x03 0x03 <req_ciphertext_len_uint16_be>
 req_plaintext, req_tag_valid = AES_128_GCM_decrypt(
     client_write_key, req_per_record_iv, request_ciphertext, req_AAD)
-req_tag_valid = true                                            ← circuit constraint
+req_tag_valid = true                                            ← circuit constraint; hash = p.i[2]
 request_path = parse_http_request_path(req_plaintext)
-request_path = origin_path                                      ← public input          (P0)
+request_path = origin_path                                      ← circuit constraint; hash = p.i[5]
 
 /* Step 7 — Extraction */
-extract(resp_plaintext, selector) = claim_value                 ← public input
+extract(resp_plaintext, selector) = claim_value                 ← circuit constraint; encoded = p.i[7]
 ```
 
-Public inputs (8 elements in `p.i`, all BN254 scalars — see §6 attestation format):
+Public inputs (9 elements in `p.i`, all BN254 scalars — see §6 attestation format):
 
 | `p.i` index | Value | Notes |
 |---|---|---|
@@ -196,18 +200,18 @@ Public inputs (8 elements in `p.i`, all BN254 scalars — see §6 attestation fo
 | 4 | `SHA256(origin_host)` | Hostname binding; verifier hashes `att.o.h` |
 | 5 | `SHA256(origin_path)` | URL path binding; verifier hashes `att.o["/"]` |
 | 6 | `selector_hash` | Hash of extraction path; verifier recomputes from `att.x["/"]` |
-| 7 | `claim_value` | Proven value as BN254 scalar (UTF-8 codepoints) |
+| 7 | `claim_value` | Proven value: if ≤ 31 UTF-8 bytes → big-endian integer of bytes; if longer → `SHA256(UTF-8 bytes)` truncated to 31 bytes |
+| 8 | `timestamp` | Unix seconds (`att[">"`) as BN254 scalar; verifier checks `p.i[8] == att[">"` before pairing |
 
 Private inputs: `oracle_ephem_priv`, `server_ephem_pub`, `server_hello_bytes`,
 `client_hello_bytes`, `enc_exts_bytes`, `cert_bytes`, `server_finished_bytes`,
 `cert_verify_sig`, `resp_plaintext`, `req_plaintext`, `resp_seq_no`, `req_seq_no`
 
-> `timestamp` (`att[">"]`) is **signed** in the attestation envelope (oracle's ZEN key pair) but is NOT a `p.i` element — it is authenticated by the oracle's ECDSA signature over the full attestation JSON, not by the SNARK. Verifiers must enforce `sign: true` in the PEN soul when timestamp freshness is security-critical.
+> `timestamp` (`att[">"`) is public input `p.i[8]` (unix seconds as BN254 scalar). The verifier confirms `p.i[8] == att[">"` in the pre-pairing reconstruction step. This binds the cert validity window check (`leaf.notBefore ≤ timestamp ≤ leaf.notAfter`) to the actual fetch time — preventing the oracle from supplying a fake timestamp that makes an expired cert appear valid. `sign: true` in the PEN soul additionally binds the timestamp via the oracle's ZEN key pair, enforcing freshness via `maxAge`.
 
 **Trust model:** Trustless conditional on:
-1. At least one Hermez ptau participant destroyed their toxic waste
+1. At least one of the 54 Hermez ptau contributors destroyed their toxic waste
 2. No root CA in the embedded bundle is currently compromised
-3. The verifier enforces the PEN `sign: true` policy (for timestamp freshness)
 
 **Constraint estimate:**
 
@@ -312,27 +316,28 @@ All keys are single characters. `&` is the wire-level key on `msg.put` (pictogra
 | 4 | `SHA256(att.o.h)` | `att.p.i[4]` |
 | 5 | `SHA256(att.o["/"])` | `att.p.i[5]` |
 | 6 | recompute `selector_hash` from `att.x["/"]` | `att.p.i[6]` |
-| 7 | `encode_claim(att.v.v)` | `att.p.i[7]` |
+| 7 | `encode_claim(att.v.v)` — if ≤ 31 bytes: big-endian int of UTF-8 bytes; else: `SHA256(UTF-8 bytes)` truncated to 31 bytes | `att.p.i[7]` |
+| 8 | `att[">"` as integer | `att.p.i[8]` |
 
 If any check fails, the verifier rejects before calling `groth16_verify` in WASM.
 
 | Key | Required | Description |
 |-----|----------|-------------|
-| `c` | ✓ | `"tls13"` or custom registered name |
+| `c` | ✓ | `"tls13"` or custom registered name — must match `circuit` in the 0xC5 policy, not just any registered handler |
 | `o.h` | ✓ | HTTPS server hostname |
 | `o["/"]` | ✓ | Request path + query string |
 | `o.m` | — | HTTP method, default `"GET"` |
 | `x.t` | ✓ | `"json"`, `"regex"`, or `"text"` |
 | `x["/"]` | ✓ | Dot-notation JSON path or regex with one capture group |
-| `v.v` | ✓ | The proven extracted value (as string) |
+| `v.v` | ✓ | The proven extracted value (as string); max 31 UTF-8 bytes for direct encoding, longer values use SHA256 |
 | `v.t` | — | `"string"`, `"number"`, `"boolean"` |
 | `s.c` | ✓ | Base64 DER-encoded server cert chain |
-| `s.r` | ✓ | Base64 raw TLS ApplicationData record (server → oracle) |
+| `s.r` | ✓ | Base64 raw TLS ApplicationData record (server → oracle) — single record, max 16 KB |
 | `s.q` | ✓ | Base64 raw TLS ApplicationData record (oracle → server, HTTP request) |
 | `s.h` | ✓ | Base62 32-byte SHA-256 of handshake up to Certificate (for CertificateVerify) |
 | `p.a/b/c` | ✓ | Groth16 proof points (base62 encoded) |
-| `p.i` | ✓ | 8-element Groth16 public inputs array (base62 BN254 scalars) |
-| `>` | ✓ | Unix seconds when fetch occurred (signed in oracle's ZEN envelope, not in `p.i`) |
+| `p.i` | ✓ | **9-element** Groth16 public inputs array (base62 BN254 scalars); `p.i[8]` = timestamp |
+| `>` | ✓ | Unix seconds when fetch occurred — also `p.i[8]` in the SNARK proof |
 | `e` | — | Attestation freshness window (seconds) |
 
 ---
@@ -422,6 +427,8 @@ After the session completes, the oracle holds all private witness data for the c
 
 This approach is fully self-contained — no OS-level key logging, no external proxy, no platform-specific hooks.
 
+> **P-256 key exchange requirement:** The oracle's TLS client advertises a P-256 `key_share` in ClientHello. The circuit implements P-256 ECDH (not X25519). Virtually all HTTPS servers support P-256 in TLS 1.3 alongside X25519, but servers that have disabled P-256 entirely will refuse the connection. If a target server requires X25519, a separate circuit variant with a Curve25519 constraint would be needed.
+
 ---
 
 ## 8. `zktls.verify(attestation, policy?)` — verify a proof
@@ -444,7 +451,7 @@ Policy fields:
 | Field | Effect |
 |-------|--------|
 | `host` | Must match `att.o.h` |
-| `path` | Prefix match against `att.o["/"]`. `'/api/v3/*'` accepts any path under `/api/v3/`. |
+| `path` | Prefix match against `att.o["/"]` (path + query string). `'/api/v3/simple/price'` matches any URL under that path, including different query strings. To pin an exact URL, include the full query string in the policy `path`. |
 | `maxAge` | Reject if `Date.now()/1000 - att[">"] > maxAge` |
 | `claimType` | `att.v.v` must parse as this type |
 
@@ -482,8 +489,11 @@ const soul = ZEN.pen({
 
 `spec.tls` compiles to a `0xC5` tail byte followed by the serialised policy. The Zig VM (`pen.wasm`) does not process this opcode — it is handled entirely by `applypolicy()` in `src/pen.js`.
 
+`applypolicy()` checks `att.c` against the policy `circuit` field and rejects if they do not match. This prevents an attacker from writing an attestation with `c: "my-circuit"` (a custom-registered verifier that always returns `true`) against a soul compiled for `"tls13"`.
+
 ```
 0xC5
+<circuit_len: u8>  <circuit: utf8>           e.g. "tls13" (required — no default to prevent bypass)
 <host_len: u8>     <host: utf8>
 <path_len: u8>     <path: utf8>
 <flags: u8>                                  bit 0 = has_maxAge
@@ -524,6 +534,8 @@ zen.get(soul).get('btcUsd').put(att.v.v, null, {
   authenticator: pair,
   tls: att,
 })
+// put.js signs { v: att.v.v, ph: SHA256(att.p) } — binding value to this specific proof
+// so an attacker cannot swap att with an older attestation proving the same value
 ```
 
 ### Option B — auto-prove inline
@@ -541,6 +553,43 @@ zen.get(soul).get('btcUsd').put(null, null, {
 // att.v.v is set automatically as the written value
 // msg.put["&"] is set automatically to the attestation
 ```
+
+### Option C — reading zkTLS-attested data
+
+The attestation is stored in `_["&"]` of the graph node — a metadata field analogous to HAM state `_[">"]`. It travels with the node during sync. Any peer can read it via the `.tls()` chain method, with or without re-verification:
+
+```js
+// Read value only — same as any get (no change to normal usage)
+zen.get(soul).get('btcUsd').on(val => {
+  console.log(val) // "42150.73"
+})
+
+// Read attestation + value together
+zen.get(soul).get('btcUsd').tls((att, val) => {
+  console.log(val)       // "42150.73"
+  console.log(att.c)     // "tls13"
+  console.log(att.o.h)   // "api.coingecko.com"
+  console.log(att[">"])  // 1714060800 (unix seconds of fetch)
+})
+
+// Explicitly re-verify on read (optional — verification already ran at write time
+// on every accepting peer; this is for auditing or third-party forwarding)
+zen.get(soul).get('btcUsd').tls(async (att, val) => {
+  const ok = await zktls.verify(att, {
+    host:   'api.coingecko.com',
+    maxAge: 3600,
+  })
+  console.log(ok) // true
+})
+```
+
+**Storage:** `put.js` embeds the attestation in `node._["&"]` when it processes `opt.tls`. The `_["&"]` field is part of the ZEN node metadata (alongside `_["#"]` soul and `_[">"]` HAM state) and is never treated as user data.
+
+**Verification lifecycle:**
+- **At write time** — every peer that accepts the `put` runs `zktls.verify()` via PEN opcode `0xC5`. The value only enters the graph if the proof is valid.
+- **At read time** — verification is NOT automatic. Call `zktls.verify()` explicitly inside `.tls(cb)` if independent re-verification is needed (e.g., forwarding proof to an external system).
+
+**`get.js` change required:** Add `.tls()` to `Zen.chain` — reads `_["&"]` from the resolved node and calls `cb(attestation, value)`.
 
 ---
 
@@ -600,7 +649,7 @@ console.log(ok) // true
 
 ## 13. Trusted setup
 
-The `tls13` circuit uses Groth16, which requires a one-time **trusted setup**. ZEN zkTLS uses the public **Hermez Powers of Tau** ceremony (2021, ~1000 participants, toxic waste demonstrably destroyed):
+The `tls13` circuit uses Groth16, which requires a one-time **trusted setup**. ZEN zkTLS uses the public **Hermez Powers of Tau** ceremony (2020–2021, 54 contributors + randomness beacon, toxic waste demonstrably destroyed):
 
 | Circuit | Constraints | Required ptau | File size |
 |---------|-------------|--------------|-----------|
@@ -637,11 +686,15 @@ The `.zkey` file (~4–6 GB) is only needed on oracle nodes (provers). The verif
 | Oracle alters response ciphertext | AES-GCM auth tag check is inside circuit; `SHA256(ciphertext)` is `p.i[1]` — mismatch → reject before pairing | Circuit (Step 6) |
 | Oracle fetches different URL | HTTP request decrypted in circuit under same session key; `request_path = origin_path` is a circuit constraint | Circuit (Step 6) |
 | Oracle claims wrong extracted value | `extract(resp_plaintext, selector) = claim_value` is a circuit constraint | Circuit (Step 7) |
-| Oracle replays old data | Oracle's ZEN envelope signature covers `timestamp`; PEN `sign: true` + `maxAge` enforces freshness | Attestation signature |
-| Expired certificate | `notBefore ≤ timestamp ≤ notAfter` is a circuit constraint; expired cert → proof invalid | Circuit (Step 1) |
+| Oracle replays old data | `timestamp = p.i[8]` pins the fetch time inside the SNARK; `sign: true` + `maxAge` enforces freshness via oracle's ZEN signature | Circuit (Step 1) + Attestation signature |
+| Oracle supplies fake timestamp to pass expired cert | `timestamp` is `p.i[8]` — a public input; verifier checks `p.i[8] == att[">"]` before calling WASM; mismatch → reject | Pre-pairing check |
+| Attestation swap (replace `att` with older proof of same value) | `put.js` signs `{ v: att.v.v, ph: SHA256(att.p) }`; SNARK proof is session-unique — swapping `att` changes `att.p`, invalidating the signature | Attestation signature |
+| Custom circuit bypass (`att.c: "always-true-circuit"`) | 0xC5 policy encodes `circuit` name; `applypolicy()` rejects if `att.c ≠ policy.circuit`; no default | 0xC5 policy |
+| Expired certificate | `notBefore ≤ timestamp ≤ notAfter` is a circuit constraint; `timestamp = p.i[8]` is the actual fetch time | Circuit (Step 1) |
 | Root CA compromise | Update embedded root CA list → rebuild `lib/zktls.wasm` → redeploy | Re-deployment |
-| Groth16 toxic waste attack | Use Hermez public ceremony (~1000 participants); `vk.json` pinned in WASM — any tampering detectable | Trusted setup |
+| Groth16 toxic waste attack | Use Hermez public ceremony (54 contributors + beacon); `vk.json` pinned in WASM — any tampering detectable | Trusted setup |
 | Revoked certificate (CRL/OCSP) | Not checkable in static circuit; mitigated by short `maxAge` + oracle key rotation | Policy (partial) |
+| Response body > 16 KB (multi-record) | Not supported in `tls13` circuit — single TLS ApplicationData record only; `prove()` rejects if response spans multiple records | Implementation guard |
 
 ### What the proof guarantees (and does not guarantee)
 
@@ -649,15 +702,16 @@ The `.zkey` file (~4–6 GB) is only needed on oracle nodes (provers). The verif
 - Response plaintext was AES-128-GCM decrypted from `response_ciphertext` with auth tag intact
 - Session key was derived from ECDH with `server_ephem_pub` that is bound to `server_cert` via `CertificateVerify`
 - `server_cert` chains to an embedded root CA and its SAN/CN matches `origin.host`
-- `server_cert` was within its validity window at `timestamp`
+- `server_cert` was within its validity window at `timestamp` (the actual fetch time, `p.i[8]`)
 - HTTP request decrypted from `request_ciphertext` has path matching `origin.path`
 - `v.v` is the correct extraction of `x["/"]` from the response
+- The SNARK was produced for `timestamp = att[">"]` (not a privately-chosen fake time)
 
 **Does NOT guarantee (outside circuit):**
 - Certificate has not been revoked (CRL/OCSP not in circuit)
-- `timestamp` is genuine (signed by oracle's ZEN key — requires PEN `sign: true` to enforce)
 - The root CA bundle is not stale (operational concern — requires WASM rebuild on CA change)
 - Oracle machine was not compromised at proving time (attacker with `.zkey` + oracle machine can forge any proof)
+- Response body fits within a single TLS ApplicationData record (≤ 16 KB)
 
 ---
 
@@ -783,7 +837,8 @@ Single-phase implementation targeting the `tls13` circuit — the only circuit n
 1. `lib/zk/tls/*.js` — modular source (tls, bn254, groth16, r1cs, witness, setup, verify, index)
 2. `lib/zk/tls/*.zig` — BN254 field tower + Groth16 verifier (Zig → WASM)
 3. `src/pen.js` — opcode `0xC5` in `scanpolicy` + `applypolicy`
-4. `src/put.js` — `opt.tls` auto-prove and `msg.put["&"]` attachment
-5. `lib/builder/zktls.js` — Zig → WASM + bundle `lib/zk/tls/index.js` → `lib/zktls.js` + minify → `lib/zktls.min.js`
-6. `package.json` — `buildZKTLS`, `zktls:setup`, `testZKTLS` scripts
-7. `test/zktls.js` — round-trip tests for prove + verify
+4. `src/put.js` — `opt.tls` auto-prove, `msg.put["&"]` attachment, store attestation in `node._["&"]`
+5. `src/get.js` — `.tls(cb)` chain method reads `_["&"]` from resolved node, calls `cb(att, val)`
+6. `lib/builder/zktls.js` — Zig → WASM + bundle `lib/zk/tls/index.js` → `lib/zktls.js` + minify → `lib/zktls.min.js`
+7. `package.json` — `buildZKTLS`, `zktls:setup`, `testZKTLS` scripts
+8. `test/zktls.js` — round-trip tests for prove + verify + read via `.tls()`
