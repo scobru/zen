@@ -18,22 +18,50 @@ ZEN is a decentralised, peer-verified graph. When a node writes a price, a balan
 
 The fundamental constraint: the oracle is the TLS client. They hold the session key. A proof that merely shows correct AES decryption is **not sufficient** — the oracle could construct a fake `(key, ciphertext)` pair for any plaintext they choose.
 
-Truly trustless proof requires binding the session key to the server's identity:
+**TLS 1.3 uses two distinct key types that must not be confused:**
+
+| Key | Source | Role |
+|-----|--------|------|
+| `server_cert_pub` | Leaf cert (X.509) | Authenticates server identity; used only in `CertificateVerify` |
+| `server_ephem_pub` | `ServerHello.key_share` | Used in ECDH to derive session key; ephemeral, rotated per session |
+
+Truly trustless proof requires a chain of five bindings — each closing a different attack vector:
 
 ```
-server_pub ← cert_chain_verify(server_cert, embedded_root_CAs)   ← public
-shared_secret = ECDH(oracle_ephem_priv, server_pub)               ← ZK
-session_key  = HKDF(shared_secret, handshake_transcript)          ← ZK
-plaintext    = AES_GCM_decrypt(session_key, ciphertext)           ← ZK
-claim_value  = extract(plaintext, selector)                        ← ZK
+/* 1. Cert chain: server_cert_pub is CA-authorised for origin.host */
+server_cert_pub ← cert_chain_verify(server_cert, embedded_root_CAs)       ← public
+hostname        ← extract_SAN(server_cert)                                 ← ZK constraint
+hostname        = origin_host                                               ← public
+
+/* 2. CertificateVerify: server_ephem_pub is bound to server_cert identity */
+context_cv      = "TLS 1.3, server CertificateVerify\0" || transcript_hash_cv
+ECDSA_verify(server_cert_pub, context_cv, cert_verify_sig) = true          ← ZK
+
+/* 3. Ephemeral ECDH: session key derived from server_ephem_pub */
+HS              = ECDH(oracle_ephem_priv, server_ephem_pub)                ← ZK
+
+/* 4. Key schedule: exact RFC 8446 HKDF-Expand-Label */
+write_key, write_iv = TLS13_key_schedule(HS, transcript_hash_full)         ← ZK
+
+/* 5. AEAD decrypt + auth tag + extraction */
+per_record_iv   = write_iv XOR (0^4 || seq_no_64be)
+AAD             = 0x17 0x03 0x03 <ciphertext_len_uint16be>
+plaintext       = AES_128_GCM_decrypt(write_key, per_record_iv, ciphertext, AAD)  ← ZK
+                  (auth tag verified as circuit constraint)
+request_url     ← AES_128_GCM_decrypt(client_write_key, request_ciphertext, ...)  ← ZK
+request_url     = origin_path                                               ← public
+claim_value     = extract(plaintext, selector)                              ← ZK
 ```
 
-Public inputs: `server_cert`, `ciphertext`, `handshake_transcript_hash`, `root_CA_pubkeys`, `claim_value`, `selector`  
-Private inputs: `oracle_ephem_priv`, `plaintext`
+Public inputs: `SHA256(server_cert)`, `SHA256(response_ciphertext)`, `SHA256(request_ciphertext)`,
+`transcript_hash_cv`, `origin_host_hash`, `origin_path_hash`, `selector_hash`, `claim_value`, `timestamp`
 
-If the oracle uses a fake server, `cert_chain_verify` fails. If they tamper with ciphertext, AES-GCM's auth tag fails. If they claim a wrong value, extraction fails. The proof is unforgeable.
+Private inputs: `oracle_ephem_priv`, `server_ephem_pub`, `server_hello_bytes`, `cert_verify_sig`,
+`plaintext`, `request_plaintext`
 
-This is a large circuit (~5.75 M constraints). ZEN zkTLS implements this as a single `tls13` circuit — the only approach that is genuinely trustless for arbitrary HTTPS APIs.
+If the oracle uses a fake server → binding 1 fails (`cert_chain_verify`). If they MITM-swap `server_ephem_pub` → binding 2 fails (`CertificateVerify`). If they alter ciphertext → binding 5 fails (AES-GCM auth tag). If they fetch a different URL → binding 5 fails (request_url constraint). If they claim a wrong value → extraction constraint fails.
+
+This is a large circuit (~9 M constraints for RSA-cert servers, ~15 M for ECDSA-cert servers). ZEN zkTLS implements this as a single `tls13` circuit — the only approach that is genuinely trustless for arbitrary HTTPS APIs.
 
 ---
 
@@ -95,97 +123,217 @@ PEN opcode `0xC0` (SGN) + `0xC1` (CRT) already enforce this. Any peer verifies i
 
 zkTLS provides a single circuit: `tls13`. Targets any HTTPS server. No server cooperation needed. Embeds well-known root CA public keys in the circuit. Oracle cannot impersonate a legitimate server.
 
-**What the circuit proves:**
+**What the circuit proves (7 steps):**
 
 ```
-server_pub                           ← cert_chain_verify(cert, root_CAs)
-HS = ECDH(oracle_ephem_priv, server_pub)
-K  = HKDF_expand(HKDF_extract(HS, ""), transcript_hash || "key exp")
-plaintext = AES_128_GCM_decrypt(K, iv, ciphertext, aad)
-extract(plaintext, selector) = claim_value
+/* Step 1 — Certificate chain + cert validity window */
+server_cert_pub = cert_chain_verify(server_cert, embedded_root_CAs)
+  where: sig_verify(root_CA_pub, intermediate.tbs, intermediate.sig) = true
+         sig_verify(intermediate.pub, leaf.tbs, leaf.sig) = true
+         server_cert_pub = leaf.spki
+         leaf.notBefore ≤ timestamp ≤ leaf.notAfter           ← cert validity (P3)
+
+/* Step 2 — Hostname: cert belongs to claimed domain (SAN/CN in circuit) */
+hostname_in_cert = extract_SAN_or_CN(leaf.tbs)                 ← in-circuit DER extraction
+hostname_in_cert = origin_host                                  ← public input             (P1)
+
+/* Step 3 — CertificateVerify: server_ephem_pub ↔ server cert identity */
+/* server_hello_bytes is private witness; circuit hashes it to bind server_ephem_pub
+   into the transcript before verifying CertificateVerify signature */
+server_ephem_pub   = parse_key_share(server_hello_bytes)        ← in-circuit extraction
+transcript_hash_cv = SHA256(client_hello_bytes || server_hello_bytes
+                            || enc_exts_bytes || cert_bytes)    ← in-circuit hash   (P0)
+context_cv         = "TLS 1.3, server CertificateVerify\0" || transcript_hash_cv
+sig_verify(server_cert_pub, context_cv, cert_verify_sig) = true ← ECDSA/RSA-PSS     (P0)
+
+/* Step 4 — Ephemeral ECDH */
+HS = ECDH(oracle_ephem_priv, server_ephem_pub)                  ← private × private
+
+/* Step 5 — Key schedule: exact RFC 8446 §7.1 HKDF-Expand-Label */
+early_secret     = HKDF-Extract(0x00^32, 0x00^32)
+derived_hs       = HKDF-Expand-Label(early_secret, "derived", SHA256(""), 32)
+handshake_secret = HKDF-Extract(derived_hs, HS)
+transcript_hash_full = SHA256(... || server_finished_bytes)     ← up to server Finished
+s_hs_traffic     = HKDF-Expand-Label(handshake_secret, "s hs traffic", transcript_hash_cv, 32)
+master_secret    = HKDF-Extract(
+                     HKDF-Expand-Label(handshake_secret, "derived", SHA256(""), 32), 0x00^32)
+s_ap_traffic     = HKDF-Expand-Label(master_secret, "s ap traffic", transcript_hash_full, 32)
+c_ap_traffic     = HKDF-Expand-Label(master_secret, "c ap traffic", transcript_hash_full, 32)
+server_write_key = HKDF-Expand-Label(s_ap_traffic, "key", "", 16)   // AES-128
+server_write_iv  = HKDF-Expand-Label(s_ap_traffic, "iv",  "", 12)
+client_write_key = HKDF-Expand-Label(c_ap_traffic, "key", "", 16)   // for request
+client_write_iv  = HKDF-Expand-Label(c_ap_traffic, "iv",  "", 12)   //   binding
+
+/* Step 6 — AES-128-GCM: AEAD with auth tag + sequence number in IV */
+/* Response (server → oracle): */
+resp_per_record_iv = server_write_iv XOR (0x00^4 || resp_seq_no_uint64_be)
+resp_AAD           = 0x17 0x03 0x03 <resp_ciphertext_len_uint16_be>   // 5-byte TLS record header
+resp_plaintext, resp_tag_valid = AES_128_GCM_decrypt(
+    server_write_key, resp_per_record_iv, response_ciphertext, resp_AAD)
+resp_tag_valid = true                                           ← circuit constraint    (P2)
+
+/* Request (oracle → server) — binds HTTP URL to proof: */
+req_per_record_iv  = client_write_iv XOR (0x00^4 || req_seq_no_uint64_be)
+req_AAD            = 0x17 0x03 0x03 <req_ciphertext_len_uint16_be>
+req_plaintext, req_tag_valid = AES_128_GCM_decrypt(
+    client_write_key, req_per_record_iv, request_ciphertext, req_AAD)
+req_tag_valid = true                                            ← circuit constraint
+request_path = parse_http_request_path(req_plaintext)
+request_path = origin_path                                      ← public input          (P0)
+
+/* Step 7 — Extraction */
+extract(resp_plaintext, selector) = claim_value                 ← public input
 ```
 
-Public inputs: `server_cert_chain`, `ciphertext`, `transcript_hash`, `claim_value`, `selector_hash`  
-Private inputs: `oracle_ephem_priv`, `plaintext`
+Public inputs (8 elements in `p.i`, all BN254 scalars — see §6 attestation format):
 
-**Trust model:** Fully trustless. Oracle cannot fake data without forging a root-CA-signed certificate for the target host. Verification does not require trusting the oracle in any way.
+| `p.i` index | Value | Notes |
+|---|---|---|
+| 0 | `SHA256(server_cert)` | Verifier hashes `att.s.c` to check |
+| 1 | `SHA256(response_ciphertext)` | Verifier hashes `att.s.r` to check |
+| 2 | `SHA256(request_ciphertext)` | Binds request URL; verifier hashes `att.s.q` |
+| 3 | `transcript_hash_cv` | 32-byte hash; verifier checks against `att.s.h` |
+| 4 | `SHA256(origin_host)` | Hostname binding; verifier hashes `att.o.h` |
+| 5 | `SHA256(origin_path)` | URL path binding; verifier hashes `att.o["/"]` |
+| 6 | `selector_hash` | Hash of extraction path; verifier recomputes from `att.x["/"]` |
+| 7 | `claim_value` | Proven value as BN254 scalar (UTF-8 codepoints) |
+
+Private inputs: `oracle_ephem_priv`, `server_ephem_pub`, `server_hello_bytes`,
+`client_hello_bytes`, `enc_exts_bytes`, `cert_bytes`, `server_finished_bytes`,
+`cert_verify_sig`, `resp_plaintext`, `req_plaintext`, `resp_seq_no`, `req_seq_no`
+
+> `timestamp` (`att[">"]`) is **signed** in the attestation envelope (oracle's ZEN key pair) but is NOT a `p.i` element — it is authenticated by the oracle's ECDSA signature over the full attestation JSON, not by the SNARK. Verifiers must enforce `sign: true` in the PEN soul when timestamp freshness is security-critical.
+
+**Trust model:** Trustless conditional on:
+1. At least one Hermez ptau participant destroyed their toxic waste
+2. No root CA in the embedded bundle is currently compromised
+3. The verifier enforces the PEN `sign: true` policy (for timestamp freshness)
 
 **Constraint estimate:**
 
 | Component | Constraints |
 |-----------|-------------|
 | P-256 ECDH scalar multiplication (emulated, BN254 field) | ~4 500 000 |
-| HKDF-SHA256 key schedule | ~120 000 |
-| AES-128-GCM decrypt (1 TLS record, ~1 KB payload) | ~350 000 |
-| X.509 cert chain verify (2-cert chain) | ~700 000 |
+| RSA-PSS CertificateVerify (2048-bit, e=65537) | ~3 000 000 |
+| HKDF-SHA256 key schedule (RFC 8446 HKDF-Expand-Label, both traffic secrets) | ~130 000 |
+| AES-128-GCM response decrypt + auth tag (~1 KB) | ~350 000 |
+| AES-128-GCM request decrypt + URL extraction (~100 B) | ~80 000 |
+| X.509 cert chain verify (2-cert RSA chain) | ~700 000 |
+| Hostname binding (SAN/CN DER extraction) | ~50 000 |
+| Cert validity window (notBefore/notAfter) | ~20 000 |
+| transcript_hash_cv recomputation (SHA-256 of handshake bytes) | ~120 000 |
 | JSON / regex extraction | ~80 000 |
-| **Total (1 KB response)** | **~5 750 000** |
+| **Total (RSA-2048 cert, 1 KB response)** | **~9 030 000** |
 
-- Proof generation: ~3–8 min server-side (Node.js BigInt, or GPU accelerated)
+> If the server uses a P-256 ECDSA cert, CertificateVerify costs ~9 000 000 instead → total ~15 030 000.
+
+- Proof generation: ~5–15 min server-side (Node.js BigInt); ~30–60 s GPU-accelerated
 - Proof size: 192 bytes
 - Verification: < 1 ms
 
-> **Trusted setup:** Requires `hermez_final_23.ptau` (2²³, ~4.2 GB) from the Hermez public ceremony. Download once, generate `lib/zktls_tls13.zkey` + `vk.json` locally.
+> **Trusted setup:** Requires `powersOfTau28_hez_final_24.ptau` (2²⁴, ~8.5 GB) from the Hermez public ceremony ([download](https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_24.ptau)). Download once, generate `lib/zktls_tls13.zkey` + `vk.json` locally.
 
 ---
 
 ## 6. Attestation format
 
-Every attestation is a plain JSON object, stored in `msg.put["~z"]` on the ZEN wire and optionally persisted in the graph.
+Every attestation is a plain JSON object, stored in `msg.put["&"]` on the ZEN wire and optionally persisted in the graph.
 
-The attestation carries both the ZK proof **and the public witness data** the verifier needs to reconstruct the public inputs. Without `server_cert`, `ciphertext`, and `transcript_hash`, a verifier cannot confirm the oracle did not substitute different data.
+All keys are single characters. `&` is the wire-level key on `msg.put` (pictographic for "and/alongside" — the proof accompanies the written value; unused in ZEN's protocol namespace: `~` is user namespace, `@` is reply-to, `#` is soul, `^` is PoW nonce, `$` is reserved for ownership). The attestation carries both the ZK proof **and the public witness data** the verifier needs to reconstruct all `p.i` public inputs.
+
+**Single-char key legend:**
+
+| Key | Full name | Level |
+|-----|-----------|-------|
+| `c` | circuit | top |
+| `o` | origin | top |
+| `o.h` | host | origin |
+| `o["/"]` | path | origin (`/` = path, pictographic) |
+| `o.m` | method | origin |
+| `x` | extract | top |
+| `x.t` | type | extract |
+| `x["/"]` | path | extract |
+| `v` | value/claim | top |
+| `v.v` | value | claim |
+| `v.t` | type | claim |
+| `s` | session (TLS data) | top |
+| `s.c` | server cert | session |
+| `s.r` | response ciphertext | session |
+| `s.q` | request (query) ciphertext | session |
+| `s.h` | transcript hash (cv) | session |
+| `p` | proof | top |
+| `p.a` | pi_a | proof |
+| `p.b` | pi_b | proof |
+| `p.c` | pi_c | proof |
+| `p.i` | public inputs array | proof |
+| `>` | timestamp | top (`>` = ZEN time convention) |
+| `e` | expiry (ttl) | top |
 
 ```json
 {
-  "circuit": "tls13",
-  "origin": {
-    "host": "api.coingecko.com",
-    "path": "/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
-    "method": "GET"
+  "c": "tls13",
+  "o": { "h": "api.coingecko.com", "/": "/api/v3/simple/price?ids=bitcoin&vs_currencies=usd", "m": "GET" },
+  "x": { "t": "json", "/": ".bitcoin.usd" },
+  "v": { "v": "42150.73", "t": "number" },
+  "s": {
+    "c": "<base64 DER cert chain, ~2 KB>",
+    "r": "<base64 raw TLS ApplicationData record (server→oracle), ~1 KB>",
+    "q": "<base64 raw TLS ApplicationData record (oracle→server), ~200 B>",
+    "h": "<base62 32-byte SHA-256 of handshake up to Certificate>"
   },
-  "extract": {
-    "type": "json",
-    "path": ".bitcoin.usd"
+  "p": {
+    "a": "<base62 G1 point>",
+    "b": "<base62 G2 point>",
+    "c": "<base62 G1 point>",
+    "i": [
+      "<base62 — SHA256(s.c)>",
+      "<base62 — SHA256(s.r)>",
+      "<base62 — SHA256(s.q)>",
+      "<base62 — s.h>",
+      "<base62 — SHA256(o.h)>",
+      "<base62 — SHA256(o[\"/\"])>",
+      "<base62 — selector_hash>",
+      "<base62 — claim_value>"
+    ]
   },
-  "claim": {
-    "value": "42150.73",
-    "type": "number"
-  },
-  "tls": {
-    "server_cert": "<base64 DER cert chain, ~2 KB>",
-    "ciphertext":  "<base64 raw TLS record ciphertext, ~1 KB>",
-    "transcript_hash": "<base62 32-byte handshake transcript hash>"
-  },
-  "proof": {
-    "pi_a": "<base62 G1 point>",
-    "pi_b": "<base62 G2 point>",
-    "pi_c": "<base62 G1 point>",
-    "pub":  ["<base62 BN254 field element>", "..."]
-  },
-  "timestamp": 1714060800,
-  "ttl": 3600
+  ">": 1714060800,
+  "e": 3600
 }
 ```
 
-**`proof.pub` encodes (in order):** `SHA256(server_cert)`, `SHA256(ciphertext)`, `transcript_hash`, `selector_hash`, `claim_value` — all as BN254 scalar field elements. The verifier hashes `tls.server_cert` and `tls.ciphertext`, then checks these match `proof.pub[0]` and `proof.pub[1]` before running the pairing check.
+**Verifier `p.i` reconstruction (before pairing check):**
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `circuit` | ✓ | `"tls13"` or custom registered name |
-| `origin.host` | ✓ | HTTPS server hostname |
-| `origin.path` | ✓ | Request path + query string |
-| `origin.method` | — | HTTP method, default `"GET"` |
-| `extract.type` | ✓ | `"json"`, `"regex"`, or `"text"` |
-| `extract.path` | ✓ | Dot-notation JSON path or regex with one capture group |
-| `claim.value` | ✓ | The proven extracted value (as string) |
-| `claim.type` | — | `"string"`, `"number"`, `"boolean"` |
-| `tls.server_cert` | ✓ | Base64 DER-encoded server cert chain (verifier hashes to check pub[0]) |
-| `tls.ciphertext` | ✓ | Base64 raw TLS record ciphertext (verifier hashes to check pub[1]) |
-| `tls.transcript_hash` | ✓ | Base62 32-byte handshake transcript hash (verifier checks pub[2]) |
-| `proof.pi_a/b/c` | ✓ | Groth16 proof points (base62 encoded) |
-| `proof.pub` | ✓ | Groth16 public inputs array (base62 BN254 scalars) |
-| `timestamp` | ✓ | Unix seconds when fetch occurred |
-| `ttl` | — | Attestation freshness window (seconds) |
+| `p.i` index | Verifier computes | Verifier checks against |
+|---|---|---|
+| 0 | `SHA256(base64_decode(att.s.c))` | `att.p.i[0]` |
+| 1 | `SHA256(base64_decode(att.s.r))` | `att.p.i[1]` |
+| 2 | `SHA256(base64_decode(att.s.q))` | `att.p.i[2]` |
+| 3 | `base62_decode(att.s.h)` | `att.p.i[3]` |
+| 4 | `SHA256(att.o.h)` | `att.p.i[4]` |
+| 5 | `SHA256(att.o["/"])` | `att.p.i[5]` |
+| 6 | recompute `selector_hash` from `att.x["/"]` | `att.p.i[6]` |
+| 7 | `encode_claim(att.v.v)` | `att.p.i[7]` |
+
+If any check fails, the verifier rejects before calling `groth16_verify` in WASM.
+
+| Key | Required | Description |
+|-----|----------|-------------|
+| `c` | ✓ | `"tls13"` or custom registered name |
+| `o.h` | ✓ | HTTPS server hostname |
+| `o["/"]` | ✓ | Request path + query string |
+| `o.m` | — | HTTP method, default `"GET"` |
+| `x.t` | ✓ | `"json"`, `"regex"`, or `"text"` |
+| `x["/"]` | ✓ | Dot-notation JSON path or regex with one capture group |
+| `v.v` | ✓ | The proven extracted value (as string) |
+| `v.t` | — | `"string"`, `"number"`, `"boolean"` |
+| `s.c` | ✓ | Base64 DER-encoded server cert chain |
+| `s.r` | ✓ | Base64 raw TLS ApplicationData record (server → oracle) |
+| `s.q` | ✓ | Base64 raw TLS ApplicationData record (oracle → server, HTTP request) |
+| `s.h` | ✓ | Base62 32-byte SHA-256 of handshake up to Certificate (for CertificateVerify) |
+| `p.a/b/c` | ✓ | Groth16 proof points (base62 encoded) |
+| `p.i` | ✓ | 8-element Groth16 public inputs array (base62 BN254 scalars) |
+| `>` | ✓ | Unix seconds when fetch occurred (signed in oracle's ZEN envelope, not in `p.i`) |
+| `e` | — | Attestation freshness window (seconds) |
 
 ---
 
@@ -240,27 +388,37 @@ Node.js's built-in `tls` module does not expose ephemeral ECDH private keys — 
 
 ```
 Oracle                                    Server
-  │──── ClientHello (oracle_ephem_pub) ─────▶│
-  │◀─── ServerHello (server_ephem_pub) ──────│
-  │◀─── {Certificate, CertVerify, Finished}──│  ← captures cert chain
+  │──── ClientHello (oracle_ephem_pub) ─────▶│  ← captures client_hello_bytes
+  │◀─── ServerHello (server_ephem_pub) ──────│  ← captures server_hello_bytes
+  │◀─── {EncExtensions, Certificate,         │  ← captures enc_exts_bytes, cert_bytes,
+  │      CertificateVerify, Finished} ───────│    cert_verify_sig, server_finished_bytes
   │                                           │
-  │  oracle computes:                         │
+  │  oracle computes (RFC 8446 §7.1):         │
+  │    transcript_hash_cv = SHA256(ClientHello || ServerHello || EncExts || Cert)
   │    HS = ECDH(oracle_ephem_priv, server_ephem_pub)
-  │    transcript_hash = SHA256(all handshake messages so far)
-  │    session_key = HKDF(HS, transcript_hash, "key exp")
+  │    [full HKDF-Expand-Label key schedule]
+  │    client_write_key, server_write_key, ivs derived
   │                                           │
   │──── {Finished} ─────────────────────────▶│
-  │◀─── {ApplicationData (ciphertext)} ──────│  ← captures raw ciphertext
+  │──── {ApplicationData (HTTP request)} ────▶│  ← captures request_ciphertext
+  │◀─── {ApplicationData (HTTP response)} ───│  ← captures response_ciphertext
 ```
 
-The TLS 1.3 client (~800 lines inside `lib/zktls.js`) reuses ZEN's existing P-256 curve implementation (`src/curves/p256.js`) for the ECDH step. After the session completes, the oracle holds:
+After the session completes, the oracle holds all private witness data for the circuit:
 
-| Captured value | Used as |
+| Captured value | Circuit role |
 |----------------|---------|
-| `oracle_ephem_priv` | ZK private input |
-| `server_cert` (DER chain) | Public input (`proof.pub[0]` = SHA256 hash) |
-| `ciphertext` (raw TLS record) | Public input (`proof.pub[1]` = SHA256 hash) |
-| `transcript_hash` | Public input (`proof.pub[2]`) |
+| `oracle_ephem_priv` | Private input — ECDH scalar |
+| `server_ephem_pub` | Private input — extracted from `server_hello_bytes` inside circuit |
+| `client_hello_bytes` | Private input — hashed in circuit to bind `transcript_hash_cv` |
+| `server_hello_bytes` | Private input — hashed in circuit; `server_ephem_pub` extracted here |
+| `enc_exts_bytes`, `cert_bytes` | Private inputs — hashed in circuit for `transcript_hash_cv` |
+| `cert_verify_sig` | Private input — verified against `server_cert_pub` and `transcript_hash_cv` |
+| `server_finished_bytes` | Private input — completes `transcript_hash_full` for key schedule |
+| `server_cert` (DER chain) | Public input — stored as `att.s.c`; `att.p.i[0]` = SHA256 hash |
+| `response_ciphertext` (raw TLS record) | Public input — stored as `att.s.r`; `att.p.i[1]` = SHA256 hash |
+| `request_ciphertext` (raw TLS record) | Public input — stored as `att.s.q`; `att.p.i[2]` = SHA256 hash |
+| `transcript_hash_cv` | Public input — stored as `att.s.h`; `att.p.i[3]` |
 
 This approach is fully self-contained — no OS-level key logging, no external proxy, no platform-specific hooks.
 
@@ -285,10 +443,10 @@ Policy fields:
 
 | Field | Effect |
 |-------|--------|
-| `host` | Must match `attestation.origin.host` |
-| `path` | Prefix match. `'/api/v3/*'` accepts any path under `/api/v3/`. |
-| `maxAge` | Reject if `Date.now()/1000 - attestation.timestamp > maxAge` |
-| `claimType` | `claim.value` must parse as this type |
+| `host` | Must match `att.o.h` |
+| `path` | Prefix match against `att.o["/"]`. `'/api/v3/*'` accepts any path under `/api/v3/`. |
+| `maxAge` | Reject if `Date.now()/1000 - att[">"] > maxAge` |
+| `claimType` | `att.v.v` must parse as this type |
 
 ---
 
@@ -316,7 +474,7 @@ const soul = ZEN.pen({
 **How enforcement works:**
 1. Write arrives at a `!`-prefixed soul.
 2. PEN evaluates the predicate expression (key, val, etc.) via `pen.wasm`.
-3. The ZEN bridge reads `msg.put["~z"]` (the attestation).
+3. The ZEN bridge reads `msg.put["&"]` (the attestation).
 4. `zktls.verify(attestation, policy.tls)` is called.
 5. If verification fails → write is rejected, dropped silently (same as any HAM/policy reject).
 
@@ -362,7 +520,7 @@ const att = await zktls.prove({
 
 // Write — passes attestation in opt.tls
 const zen = new ZEN({ peers: ['ws://relay.example.com'] })
-zen.get(soul).get('btcUsd').put(att.claim.value, null, {
+zen.get(soul).get('btcUsd').put(att.v.v, null, {
   authenticator: pair,
   tls: att,
 })
@@ -380,8 +538,8 @@ zen.get(soul).get('btcUsd').put(null, null, {
     extract: { type: 'json', path: '.bitcoin.usd' },
   }
 })
-// data is set automatically to att.claim.value
-// msg.put["~z"] is set automatically to the attestation
+// att.v.v is set automatically as the written value
+// msg.put["&"] is set automatically to the attestation
 ```
 
 ---
@@ -395,9 +553,9 @@ zktls.register('my-circuit', {
   // ctx: { url, method, headers, response (raw string), origin, extract, claim }
   async prove(ctx) {
     // Generate proof data. Return any JSON-serialisable object.
-    return { pi_a: '...', pi_b: '...', pi_c: '...', pub: ['...'] }
+    return { a: '...', b: '...', c: '...', i: ['...'] }
   },
-  // att: full Attestation object including att.proof
+  // att: full Attestation object including att.p
   async verify(att, policy) {
     // Call lib/zktls.wasm or do pure JS verification.
     // Return true or false.
@@ -406,7 +564,7 @@ zktls.register('my-circuit', {
 })
 ```
 
-Custom circuits use the same wire format (`msg.put["~z"]`) and the same PEN opcode (`0xC5`). The `circuit` field in the attestation routes to the correct registered handler.
+Custom circuits use the same wire format (`msg.put["&"]`) and the same PEN opcode (`0xC5`). The `c` field in the attestation routes to the correct registered handler.
 
 ---
 
@@ -444,9 +602,20 @@ console.log(ok) // true
 
 The `tls13` circuit uses Groth16, which requires a one-time **trusted setup**. ZEN zkTLS uses the public **Hermez Powers of Tau** ceremony (2021, ~1000 participants, toxic waste demonstrably destroyed):
 
-| Circuit | Required ptau | File size |
-|---------|--------------|-----------|
-| `tls13` | `hermez_final_23.ptau` (2²³) | 4.2 GB |
+| Circuit | Constraints | Required ptau | File size |
+|---------|-------------|--------------|-----------|
+| `tls13` (RSA-2048 cert) | ~9 030 000 | `powersOfTau28_hez_final_24.ptau` (2²⁴) | ~8.5 GB |
+| `tls13` (P-256 ECDSA cert) | ~15 030 000 | `powersOfTau28_hez_final_24.ptau` (2²⁴) | ~8.5 GB |
+
+> 2²³ (~8.4 M) is insufficient for the full circuit with CertificateVerify. Use `powersOfTau28_hez_final_24.ptau` (2²⁴ = 16.7 M constraints capacity).
+
+**Official download** (hosted by Polygon/zkEVM on Google Cloud Storage, documented in [snarkjs README §7](https://github.com/iden3/snarkjs#7-prepare-phase-2)):
+
+```bash
+wget https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_24.ptau
+# BLAKE2b-512: fa404d140d5819d39984833ca5ec3632cd4995f81e82db402371a4de7c2eae86
+#              87c62bc632a95b0c6aadba3fb02680a94e09174b7233ccd26d78baca2647c733
+```
 
 The ptau file is downloaded once and used to generate the circuit-specific `.zkey` (proving key):
 
@@ -454,32 +623,47 @@ The ptau file is downloaded once and used to generate the circuit-specific `.zke
 npm run zktls:setup   # generates lib/zktls_tls13.zkey + embeds vk in lib/zktls.wasm
 ```
 
-The `.zkey` file (~2–3 GB) is only needed on oracle nodes (provers). The verification key (`vk.json`, ~2 KB) is extracted from the `.zkey` and embedded in `lib/zktls.wasm` at build time — all verifying peers need only the WASM.
+The `.zkey` file (~4–6 GB) is only needed on oracle nodes (provers). The verification key (`vk.json`, ~2 KB) is extracted from the `.zkey` and embedded in `lib/zktls.wasm` at build time — all verifying peers need only the WASM.
 
 ---
 
 ## 14. Security model
 
-| Threat | Defense |
-|--------|---------|
-| Oracle uses a fake server | Server's cert must chain to embedded root CA — forgery requires compromising a root CA |
-| Oracle alters ciphertext | AES-GCM authentication tag check is inside the circuit |
-| Oracle claims wrong ECDH session key | ZK-ECDH in circuit — oracle cannot use a key inconsistent with `server_pub` from cert |
-| Oracle substitutes a different server's cert | `server_cert` is a public input; verifier checks it matches the expected host |
-| Oracle replays old data | `timestamp` + `ttl` + PEN `maxAge` policy |
-| Root CA compromise | Update embedded root CA list and re-deploy `lib/zktls.wasm` |
+| Threat | Defense | Layer |
+|--------|---------|-------|
+| Oracle uses a fake server | Server cert must chain to embedded root CA — forgery requires compromising a root CA | Circuit (Step 1) |
+| Oracle claims wrong domain (cert for `evil.com`) | `extract_SAN_or_CN(cert) = origin_host` is a circuit constraint; hostname mismatch → proof invalid | Circuit (Step 2) |
+| Oracle swaps `server_ephem_pub` (MITM) | `CertificateVerify` signature over `transcript_hash_cv` (which contains ServerHello with real `server_ephem_pub`) is verified in-circuit against `server_cert_pub` — swap without server's cert private key → sig fail | Circuit (Step 3) |
+| Oracle alters response ciphertext | AES-GCM auth tag check is inside circuit; `SHA256(ciphertext)` is `p.i[1]` — mismatch → reject before pairing | Circuit (Step 6) |
+| Oracle fetches different URL | HTTP request decrypted in circuit under same session key; `request_path = origin_path` is a circuit constraint | Circuit (Step 6) |
+| Oracle claims wrong extracted value | `extract(resp_plaintext, selector) = claim_value` is a circuit constraint | Circuit (Step 7) |
+| Oracle replays old data | Oracle's ZEN envelope signature covers `timestamp`; PEN `sign: true` + `maxAge` enforces freshness | Attestation signature |
+| Expired certificate | `notBefore ≤ timestamp ≤ notAfter` is a circuit constraint; expired cert → proof invalid | Circuit (Step 1) |
+| Root CA compromise | Update embedded root CA list → rebuild `lib/zktls.wasm` → redeploy | Re-deployment |
+| Groth16 toxic waste attack | Use Hermez public ceremony (~1000 participants); `vk.json` pinned in WASM — any tampering detectable | Trusted setup |
+| Revoked certificate (CRL/OCSP) | Not checkable in static circuit; mitigated by short `maxAge` + oracle key rotation | Policy (partial) |
 
-### Groth16 trusted setup
+### What the proof guarantees (and does not guarantee)
 
-If the ptau ceremony's toxic waste is not destroyed, an attacker who holds it can forge proofs for any circuit. Mitigation:
-- Use the Hermez public ceremony (~1000 participants, toxic waste demonstrably destroyed).
-- Verification keys (`vk.json`) are public and pinned in `lib/zktls.wasm` — any tampering is detectable.
+**Guarantees (circuit-enforced):**
+- Response plaintext was AES-128-GCM decrypted from `response_ciphertext` with auth tag intact
+- Session key was derived from ECDH with `server_ephem_pub` that is bound to `server_cert` via `CertificateVerify`
+- `server_cert` chains to an embedded root CA and its SAN/CN matches `origin.host`
+- `server_cert` was within its validity window at `timestamp`
+- HTTP request decrypted from `request_ciphertext` has path matching `origin.path`
+- `v.v` is the correct extraction of `x["/"]` from the response
+
+**Does NOT guarantee (outside circuit):**
+- Certificate has not been revoked (CRL/OCSP not in circuit)
+- `timestamp` is genuine (signed by oracle's ZEN key — requires PEN `sign: true` to enforce)
+- The root CA bundle is not stale (operational concern — requires WASM rebuild on CA change)
+- Oracle machine was not compromised at proving time (attacker with `.zkey` + oracle machine can forge any proof)
 
 ---
 
 ## 15. lib/zktls.wasm internals
 
-Compiled from `lib/zktls.zig`. Standalone, zero imports.
+Compiled from `lib/zk/tls/*.zig`. Standalone, zero imports.
 
 **Exports:**
 
@@ -492,16 +676,17 @@ Compiled from `lib/zktls.zig`. Standalone, zero imports.
 
 **Internal modules (Zig):**
 
-| Module | Lines (est.) | Purpose |
-|--------|-------------|---------|
-| `bn254_fp.zig` | ~200 | BN254 Fp field (254-bit Montgomery mul) |
-| `bn254_fp2.zig` | ~100 | Fp2 extension (quadratic) |
-| `bn254_fp6.zig` | ~120 | Fp6 tower (cubic over Fp2) |
-| `bn254_fp12.zig` | ~120 | Fp12 tower (quadratic over Fp6) |
-| `bn254_g1.zig` | ~80 | G1 group ops (affine + Jacobian) |
-| `bn254_g2.zig` | ~80 | G2 group ops |
-| `bn254_pairing.zig` | ~150 | Ate pairing + Miller loop + final expo |
-| `groth16.zig` | ~60 | Groth16 verifier (3 pairings + 1 MSM) |
+| File | Lines (est.) | Purpose |
+|------|-------------|-------|
+| `lib/zk/tls/main.zig` | — | Zig root — `@import`s all sub-modules; compile entry point |
+| `lib/zk/tls/bn254_fp.zig` | ~200 | BN254 Fp field (254-bit Montgomery mul) |
+| `lib/zk/tls/bn254_fp2.zig` | ~100 | Fp2 extension (quadratic) |
+| `lib/zk/tls/bn254_fp6.zig` | ~120 | Fp6 tower (cubic over Fp2) |
+| `lib/zk/tls/bn254_fp12.zig` | ~120 | Fp12 tower (quadratic over Fp6) |
+| `lib/zk/tls/bn254_g1.zig` | ~80 | G1 group ops (affine + Jacobian) |
+| `lib/zk/tls/bn254_g2.zig` | ~80 | G2 group ops |
+| `lib/zk/tls/bn254_pairing.zig` | ~150 | Ate pairing + Miller loop + final expo |
+| `lib/zk/tls/groth16.zig` | ~60 | Groth16 verifier (3 pairings + 1 MSM) |
 
 **Expected size:** ~35–45 KB compiled (`-O ReleaseSmall`).
 
@@ -511,46 +696,34 @@ Compiled from `lib/zktls.zig`. Standalone, zero imports.
 
 ## 16. `lib/zktls.js` internals
 
-Single file (~2800 lines). No external dependencies. No Circom. R1CS constraint matrices are written directly as JS objects. Reuses ZEN's existing P-256 curve (`src/curves/p256.js`) for the TLS ECDH step.
+Modular source under `lib/zk/tls/`. No external dependencies. No Circom. R1CS constraint matrices are written directly as JS objects. Reuses ZEN's existing P-256 curve (`src/curves/p256.js`) for the TLS ECDH step.
 
-```js
-// Internal structure (all in lib/zktls.js):
-// ── TLS 1.3 client ───────────────────────────── ~800 lines
-//    Minimal TLS 1.3 handshake (ClientHello → ServerHello → Finished)
-//    Captures: oracle_ephem_priv, server_cert, ciphertext, transcript_hash
-//    Reuses src/curves/p256.js for ephemeral ECDH key generation
-//    HKDF-SHA256 key schedule, AES-128-GCM record decryption
-// ── BN254 BigInt arithmetic ──────────────────── ~200 lines
-//    Montgomery mul, Fp add/sub/mul/inv, point ops
-// ── Groth16 prover ───────────────────────────── ~400 lines
-//    NTT (number-theoretic transform), MSM (multi-scalar mul)
-//    Polynomial commitment, proof assembly
-// ── R1CS: tls13 circuit ──────────────────────── ~400 lines
-//    Constraint matrices for ECDH + HKDF + AES-GCM + X.509
-// ── Witness generation ───────────────────────── ~300 lines
-//    Maps TLS session state → BN254 field elements (private + public inputs)
-// ── Setup utilities ──────────────────────────── ~200 lines
-//    Phase 2 setup: (r1cs, ptau) → zkey
-//    vk extraction: zkey → vk.json (embeds in zktls.wasm)
-// ── WASM verifier loader ─────────────────────── ~100 lines
-//    Load zktls.wasm, SHA256(server_cert/ciphertext), call groth16_verify
-// ── Public API ───────────────────────────────── ~150 lines
-//    prove / verify / setup / register
-```
+| Source file | Lines (est.) | Purpose |
+|-------------|-------------|-------|
+| `lib/zk/tls/tls.js` | ~900 | TLS 1.3 client — handshake, session key capture, record layer |
+| `lib/zk/tls/bn254.js` | ~200 | BN254 BigInt arithmetic (Montgomery, Fp, point ops) |
+| `lib/zk/tls/groth16.js` | ~400 | Groth16 prover (NTT, MSM, polynomial commitment) |
+| `lib/zk/tls/r1cs.js` | ~600 | R1CS constraint matrices for circuit `tls13` |
+| `lib/zk/tls/witness.js` | ~400 | Witness generation (TLS session state → BN254 field elements) |
+| `lib/zk/tls/setup.js` | ~200 | Phase 2 setup utilities (`ptau → zkey`, vk extraction) |
+| `lib/zk/tls/verify.js` | ~100 | WASM verifier loader (reconstruct `p.i`, call `groth16_verify`) |
+| `lib/zk/tls/index.js` | ~150 | Public API entry point (`prove / verify / setup / register`) |
+
+`lib/zktls.js` is the build output (bundled with the `defmod/reqmod` pattern from `lib/builder/zen.js`). `lib/zktls.min.js` is the production file. Edit source files under `lib/zk/tls/` and rebuild.
 
 Calling pattern by role:
 
 ```js
 // Any peer — verify only (loads ~35–45 KB WASM, no zkey needed):
-import zktls from './lib/zktls.js'
+import zktls from './lib/zktls.min.js'
 const ok = await zktls.verify(attestation, policy)
 
 // Any peer acting as oracle — prove + verify:
 const att = await zktls.prove({ url, extract, ... })
 // .zkey loaded lazily from disk on first prove() call
 
-// One-time trusted setup (run once after downloading hermez_final_23.ptau):
-await zktls.setup('tls13', './hermez_final_23.ptau', './lib/zktls_tls13.zkey')
+// One-time trusted setup (run once after downloading powersOfTau28_hez_final_24.ptau):
+await zktls.setup('tls13', './powersOfTau28_hez_final_24.ptau', './lib/zktls_tls13.zkey')
 ```
 
 ---
@@ -558,18 +731,24 @@ await zktls.setup('tls13', './hermez_final_23.ptau', './lib/zktls_tls13.zkey')
 ## 17. Building
 
 ```bash
-# Build WASM verifier (requires Zig on PATH)
+# Build WASM verifier + bundle JS modules + minify
 npm run buildZKTLS
+# produces: lib/zktls.wasm  lib/zktls.js (bundle)  lib/zktls.min.js (production)
 
 # Generate trusted setup for tls13 circuit
-# (downloads hermez_final_23.ptau ~4.2 GB, one time)
+# (downloads powersOfTau28_hez_final_24.ptau ~8.5 GB, one time)
 npm run zktls:setup
 
 # Run zkTLS tests
 npm run testZKTLS
 ```
 
-`lib/builder/zktls.js` compiles `lib/zktls.zig` to `lib/zktls.wasm` and embeds the `vk.json` files. Pattern is identical to `lib/builder/pen.js`.
+`lib/builder/zktls.js` does three things in sequence, all in one script:
+1. Compiles `lib/zk/tls/*.zig` → `lib/zktls.wasm` (entry: `lib/zk/tls/main.zig`; pattern from `lib/builder/pen.js`)
+2. Traverses `lib/zk/tls/index.js` imports and bundles into `lib/zktls.js` using the same `defmod/reqmod` pattern as `lib/builder/zen.js`
+3. Minifies `lib/zktls.js` → `lib/zktls.min.js` (`uglifyjs --module -c -m`)
+
+`lib/zktls.js` is a build output — edit source files under `lib/zk/tls/` and rebuild.
 
 ---
 
@@ -577,11 +756,20 @@ npm run testZKTLS
 
 | File | Role |
 |------|------|
-| `lib/zktls.js` | Single file: prove + verify + setup + R1CS (tls13) |
+| `lib/zk/tls/index.js` | Entry point + public API (`prove / verify / setup / register`) |
+| `lib/zk/tls/tls.js` | TLS 1.3 client — handshake, session key capture, record layer |
+| `lib/zk/tls/bn254.js` | BN254 BigInt arithmetic (Montgomery, Fp, point ops) |
+| `lib/zk/tls/groth16.js` | Groth16 prover (NTT, MSM, polynomial commitment) |
+| `lib/zk/tls/r1cs.js` | R1CS constraint matrices for circuit `tls13` |
+| `lib/zk/tls/witness.js` | Witness generation (TLS session state → BN254 field elements) |
+| `lib/zk/tls/setup.js` | Phase 2 setup utilities (`ptau → zkey`, vk extraction) |
+| `lib/zk/tls/verify.js` | WASM verifier loader (reconstruct `p.i`, call `groth16_verify`) |
+| `lib/zktls.js` | **Build output** — bundled from `lib/zk/tls/`; do not edit directly |
+| `lib/zktls.min.js` | **Production file** — minified bundle; used in browser and Node |
 | `lib/zktls.wasm` | BN254 Groth16 verifier (Zig, ~35–45 KB, standalone) |
-| `lib/zktls.zig` | Source of `lib/zktls.wasm` |
-| `lib/builder/zktls.js` | Build script (zig → wasm, embeds vk.json) |
-| `lib/zktls_tls13.zkey` | Proving key for tls13 circuit (oracle node, ~2–3 GB) |
+| `lib/zk/tls/*.zig` | Zig source modules — compile to `lib/zktls.wasm` (entry: `lib/zk/tls/main.zig`) |
+| `lib/builder/zktls.js` | Build script (Zig → WASM, bundle JS modules, minify) |
+| `lib/zktls_tls13.zkey` | Proving key for tls13 circuit (oracle node, ~4–6 GB) |
 | `test/zktls.js` | Unit tests (verifier, prove/verify round-trips) |
 
 `.zkey` files are not committed to the repo. They are generated locally by running `zktls.setup()` after downloading the Hermez `.ptau` file. The verifier key (`vk.json`) is extracted from the `.zkey` and embedded into `lib/zktls.wasm` at build time — peers do not need the `.zkey` to verify.
@@ -592,10 +780,10 @@ npm run testZKTLS
 
 Single-phase implementation targeting the `tls13` circuit — the only circuit needed for trustless general HTTPS data.
 
-1. `lib/zktls.js` — BN254 BigInt, Groth16 prover, R1CS for tls13, witness gen, verifier loader, public API
-2. `lib/zktls.zig` — BN254 field tower + Groth16 verifier (Zig → WASM)
+1. `lib/zk/tls/*.js` — modular source (tls, bn254, groth16, r1cs, witness, setup, verify, index)
+2. `lib/zk/tls/*.zig` — BN254 field tower + Groth16 verifier (Zig → WASM)
 3. `src/pen.js` — opcode `0xC5` in `scanpolicy` + `applypolicy`
-4. `src/put.js` — `opt.tls` auto-prove and `msg.put["~z"]` attachment
-5. `lib/builder/zktls.js` — build script (zig → wasm, embeds vk.json)
+4. `src/put.js` — `opt.tls` auto-prove and `msg.put["&"]` attachment
+5. `lib/builder/zktls.js` — Zig → WASM + bundle `lib/zk/tls/index.js` → `lib/zktls.js` + minify → `lib/zktls.min.js`
 6. `package.json` — `buildZKTLS`, `zktls:setup`, `testZKTLS` scripts
 7. `test/zktls.js` — round-trip tests for prove + verify
