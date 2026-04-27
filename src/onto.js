@@ -1,7 +1,5 @@
-let __defaultExport;
-
 // On event emitter generic javascript utility.
-__defaultExport = function onto(tag, arg, as) {
+export default function onto(tag, arg, as) {
   if (!tag) {
     return { to: onto };
   }
@@ -52,6 +50,4 @@ __defaultExport = function onto(tag, arg, as) {
     tag.next(arg);
   }
   return tag;
-};
-
-export default __defaultExport;
+}

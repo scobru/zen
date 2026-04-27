@@ -11,7 +11,7 @@ import hash from "./hash.js";
 import certify from "./certify.js";
 import keyid from "./keyid.js";
 import recover from "./recover.js";
-import security from "./runtime.js";
+import security from "./security.js";
 import graph from "./graph.js";
 
 var hasOwn = Object.prototype.hasOwnProperty;

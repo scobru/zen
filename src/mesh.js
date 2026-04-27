@@ -1,8 +1,6 @@
 import "./shim.js";
 import jsonAsync from "./json.js";
 
-let __defaultExport;
-
 var noop = function () {};
 var pair = jsonAsync.createJsonPair(function (d) {
   return json.sucks(d);
@@ -181,7 +179,6 @@ function Mesh(root) {
   hear.c = hear.d = 0;
 
   {
-    var SMIA = 0;
     var loop;
     mesh.hash = function (msg, peer) {
       var h, s, t;
@@ -260,7 +257,7 @@ function Mesh(root) {
           return;
         } // in dups but no peer hints that this was ack to ourself, ignore.
         console.STAT &&
-          console.STAT(+new Date(), ++SMIA, "total no peer to ack to"); // TODO: Delete this now. Dropping lost ACKs is protocol fine now.
+          console.STAT(+new Date(), "total no peer to ack to"); // Dropping lost ACKs is protocol fine now.
         return false;
       } // TODO: Temporary? If ack via trace has been lost, acks will go to all peers, which trashes browser bandwidth. Not relaying the ack will force sender to ask for ack again. Note, this is technically wrong for mesh behavior.
       if (ack && !msg.put && !hash && ((dup.s.get(ack) || "").it || "")["##"]) {
@@ -618,8 +615,4 @@ var empty = {},
   ok = true,
   u;
 
-try {
-  __defaultExport = Mesh;
-} catch (e) {}
-
-export default __defaultExport;
+export default Mesh;

@@ -4,7 +4,7 @@ import bridge from "./crypto.js";
 let _wasmReady = false;
 bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});
 
-function _biTo32(n) {
+function bito(n) {
   const hex = n.toString(16).padStart(64, "0");
   const out = new Uint8Array(32);
   for (let i = 0; i < 32; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
@@ -29,7 +29,7 @@ function biToB62(n) {
     throw new Error("biToB62: input must be non-negative BigInt");
   }
   if (_wasmReady) {
-    const out = bridge.b62Encode(_biTo32(n));
+    const out = bridge.b62Encode(bito(n));
     let s = "";
     for (let i = 0; i < 44; i++) s += String.fromCharCode(out[i]);
     return s;
@@ -145,3 +145,4 @@ const base62 = {
   PUB_LEN,
 };
 export default base62;
+export { bito };

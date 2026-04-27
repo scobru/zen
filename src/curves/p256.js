@@ -4,6 +4,8 @@ import shim from "../shim.js";
 import base62 from "../base62.js";
 import sha256 from "../sha256.js";
 import settings from "../settings.js";
+import aeskey from "../aeskey.js";
+import hash from "../hash.js";
 import createCurveCore from "./utils.js";
 import bridge from "../crypto.js";
 
@@ -36,6 +38,7 @@ const core = createCurveCore({
   base62,
   settings,
   sha256,
+  extras: { aeskey, hash },
 });
 
 // Wire WASM fast-path once the bridge is ready.

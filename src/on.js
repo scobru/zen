@@ -113,6 +113,12 @@ Zen.chain.once = function (cb, opt) {
             return;
           }
         }
+        if (!f && tmp && "object" == typeof tmp && Object.keys(tmp).length === 1 && "_" in tmp) {
+          one[id] = setTimeout(function () {
+            once(1);
+          }, opt.wait || 99); // Node initialized with soul metadata but fields not yet loaded from disk.
+          return;
+        }
         //console.log("AND VANISHED", data);
         if (eve.stun) {
           return;

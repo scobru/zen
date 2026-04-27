@@ -8,7 +8,7 @@ import __array from "./array.js";
 // https://github.com/feross/safe-buffer#update
 var ZenArray = __array;
 function SafeBuffer(...props) {
-  console.warn("new SafeBuffer() is depreciated, please use SafeBuffer.from()");
+  console.warn("new SafeBuffer() is deprecated, please use SafeBuffer.from()");
   return SafeBuffer.from(...props);
 }
 SafeBuffer.prototype = Object.create(Array.prototype);
@@ -50,15 +50,11 @@ Object.assign(SafeBuffer, {
           (_, i) => (bytes[i] = dec.charCodeAt(i)),
         );
         buf = ZenArray.from(bytes);
-      } else if (enc === "binary") {
-        // deprecated by above comment
-        buf = ZenArray.from(input); // some btoas were mishandled.
       } else {
         console.info("SafeBuffer.from unknown encoding: " + enc);
       }
       return buf;
     }
-    const byteLength = input.byteLength; // what is going on here? FOR MARTTI
     const length = input.byteLength ? input.byteLength : input.length;
     if (length) {
       let buf;

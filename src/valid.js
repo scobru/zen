@@ -1,10 +1,8 @@
-let __defaultExport;
-
 // Valid values are a subset of JSON: null, binary, number (!Infinity), text,
 // or a soul relation. Arrays need special algorithms to handle concurrency,
 // so they are not supported directly. Use an extension that supports them if
 // needed but research their problems first.
-__defaultExport = function (v) {
+export default function (v) {
   // "deletes", nulling out keys.
   return (
     v === null ||
@@ -15,6 +13,4 @@ __defaultExport = function (v) {
     ("number" === typeof v && v != Infinity && v != -Infinity && v === v) ||
     (!!v && "string" == typeof v["#"] && Object.keys(v).length === 1 && v["#"])
   );
-};
-
-export default __defaultExport;
+}

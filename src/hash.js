@@ -52,8 +52,6 @@ async function digest(data, name) {
   return sha256(data, n || undefined);
 }
 
-export { normhash };
-
 function intToB62(n) {
   const A = base62.ALPHA;
   if (n === 0) return A[0];

@@ -3,16 +3,9 @@
 import keccak256 from "./keccak256.js";
 import ripemd160 from "./ripemd160.js";
 import shim from "./shim.js";
+import { bito } from "./base62.js";
 
 // ── shared helpers ────────────────────────────────────────────────────────────
-
-function bigIntToBytes32(n) {
-  let hex = n.toString(16).padStart(64, "0");
-  const out = new Uint8Array(32);
-  for (let i = 0; i < 32; i++)
-    out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-  return out;
-}
 
 function toHex(bytes) {
   return Array.from(bytes)
@@ -64,8 +57,8 @@ async function base58Check(payload) {
 // ── EVM format ────────────────────────────────────────────────────────────────
 
 async function evmAddress(pub) {
-  const xBytes = bigIntToBytes32(pub.x);
-  const yBytes = bigIntToBytes32(pub.y);
+  const xBytes = bito(pub.x);
+  const yBytes = bito(pub.y);
   const raw = new Uint8Array(64);
   raw.set(xBytes, 0);
   raw.set(yBytes, 32);
@@ -83,15 +76,15 @@ async function evmAddress(pub) {
 }
 
 function evmPrivHex(priv) {
-  return "0x" + toHex(bigIntToBytes32(priv));
+  return "0x" + toHex(bito(priv));
 }
 
 function evmEncPub(pub) {
   // Uncompressed pubkey: 0x04 + 32-byte x + 32-byte y
   const out = new Uint8Array(65);
   out[0] = 0x04;
-  out.set(bigIntToBytes32(pub.x), 1);
-  out.set(bigIntToBytes32(pub.y), 33);
+  out.set(bito(pub.x), 1);
+  out.set(bito(pub.y), 33);
   return "0x" + toHex(out);
 }
 
@@ -100,7 +93,7 @@ function evmEncPub(pub) {
 function compressedPubBytes(pub) {
   const out = new Uint8Array(33);
   out[0] = pub.y & 1n ? 0x03 : 0x02;
-  out.set(bigIntToBytes32(pub.x), 1);
+  out.set(bito(pub.x), 1);
   return out;
 }
 
@@ -117,7 +110,7 @@ async function btcAddress(pub) {
 
 async function btcWIF(priv) {
   // WIF mainnet compressed: Base58Check(0x80 + 32-byte-priv + 0x01)
-  const privBytes = bigIntToBytes32(priv);
+  const privBytes = bito(priv);
   const payload = new Uint8Array(34);
   payload[0] = 0x80;
   payload.set(privBytes, 1);

@@ -5,7 +5,6 @@ import __onto from "./onto.js";
 import __dup from "./dup.js";
 import __ask from "./ask.js";
 
-let __defaultExport;
 
 function Zen(o) {
   if (o instanceof Zen) {
@@ -234,9 +233,7 @@ Zen.ask = __ask;
       return;
     }
     if (state < was) {
-      /*old;*/ if (true || !ctx.miss) {
-        return;
-      }
+      return;
     } // but some chains have a cache miss that need to re-fire. // TODO: Improve in future. // for AXE this would reduce rebroadcast, but ZEN does it on message forwarding. // TURNS OUT CACHE MISS WAS NOT NEEDED FOR NEW CHAINS ANYMORE!!! DANGER DANGER DANGER, ALWAYS RETURN! (or am I missing something?)
     if (!ctx.faith) {
       // TODO: BUG? Can this be used for cache miss as well? // Yes this was a bug, need to check cache miss for RAD tests, but should we care about the faith check now? Probably not.
@@ -603,7 +600,6 @@ try {
     MODULE.exports = Zen;
   }
 } catch (e) {}
-__defaultExport = Zen;
 
 (Zen.window || {}).console = (Zen.window || {}).console || {
   log: function () {},
@@ -619,4 +615,4 @@ __defaultExport = Zen;
     );
   };
 
-export default __defaultExport;
+export default Zen;

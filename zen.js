@@ -74,7 +74,7 @@ defmod('./src/buffer.js', function(module, exp){
   // https://github.com/feross/safe-buffer#update
   var ZenArray = __array;
   function SafeBuffer(...props) {
-    console.warn("new SafeBuffer() is depreciated, please use SafeBuffer.from()");
+    console.warn("new SafeBuffer() is deprecated, please use SafeBuffer.from()");
     return SafeBuffer.from(...props);
   }
   SafeBuffer.prototype = Object.create(Array.prototype);
@@ -116,15 +116,11 @@ defmod('./src/buffer.js', function(module, exp){
             (_, i) => (bytes[i] = dec.charCodeAt(i)),
           );
           buf = ZenArray.from(bytes);
-        } else if (enc === "binary") {
-          // deprecated by above comment
-          buf = ZenArray.from(input); // some btoas were mishandled.
         } else {
           console.info("SafeBuffer.from unknown encoding: " + enc);
         }
         return buf;
       }
-      const byteLength = input.byteLength; // what is going on here? FOR MARTTI
       const length = input.byteLength ? input.byteLength : input.length;
       if (length) {
         let buf;
@@ -368,17 +364,6 @@ defmod('./src/shim.js', function(module, exp){
       }
       return true;
     };
-  Object.keys =
-    Object.keys ||
-    function (o) {
-      var l = [];
-      for (var k in o) {
-        if (has.call(o, k)) {
-          l.push(k);
-        }
-      }
-      return l;
-    };
 
   function createImmediateFallback(sT, undefinedValue) {
     if (typeof MessageChannel == "" + undefinedValue) {
@@ -522,13 +507,11 @@ defmod('./src/shim.js', function(module, exp){
 });
 
 defmod('./src/valid.js', function(module, exp){
-  let __defaultExport;
-
   // Valid values are a subset of JSON: null, binary, number (!Infinity), text,
   // or a soul relation. Arrays need special algorithms to handle concurrency,
   // so they are not supported directly. Use an extension that supports them if
   // needed but research their problems first.
-  __defaultExport = function (v) {
+  exp.default = function (v) {
     // "deletes", nulling out keys.
     return (
       v === null ||
@@ -539,15 +522,11 @@ defmod('./src/valid.js', function(module, exp){
       ("number" === typeof v && v != Infinity && v != -Infinity && v === v) ||
       (!!v && "string" == typeof v["#"] && Object.keys(v).length === 1 && v["#"])
     );
-  };
-
-  exp.default = __defaultExport;
+  }
 });
 
 defmod('./src/state.js', function(module, exp){
   reqmod('./src/shim.js');
-  let __defaultExport;
-
   function State() {
     var t = +new Date();
     if (last < t) {
@@ -586,16 +565,12 @@ defmod('./src/state.js', function(module, exp){
     }
     return n;
   };
-  __defaultExport = State;
-
-  exp.default = __defaultExport;
+  exp.default = State;
 });
 
 defmod('./src/onto.js', function(module, exp){
-  let __defaultExport;
-
   // On event emitter generic javascript utility.
-  __defaultExport = function onto(tag, arg, as) {
+  function onto(tag, arg, as) {
     if (!tag) {
       return { to: onto };
     }
@@ -646,15 +621,13 @@ defmod('./src/onto.js', function(module, exp){
       tag.next(arg);
     }
     return tag;
-  };
+  }
 
-  exp.default = __defaultExport;
+  exp.default = onto;
 });
 
 defmod('./src/dup.js', function(module, exp){
   reqmod('./src/shim.js');
-  let __defaultExport;
-
   function Dup(opt) {
     var dup = { s: new Map() },
       s = dup.s;
@@ -698,16 +671,13 @@ defmod('./src/dup.js', function(module, exp){
     };
     return dup;
   }
-  __defaultExport = Dup;
 
-  exp.default = __defaultExport;
+  exp.default = Dup;
 });
 
 defmod('./src/ask.js', function(module, exp){
   reqmod('./src/onto.js');
-  let __defaultExport;
-
-  __defaultExport = function ask(cb, as) {
+  function ask(cb, as) {
     if (!this.on) {
       return;
     }
@@ -743,13 +713,9 @@ defmod('./src/ask.js', function(module, exp){
       }, lack);
     return id;
   };
-  var random =
-    String.random ||
-    function () {
-      return Math.random().toString(36).slice(2);
-    };
+  var random = String.random;
 
-  exp.default = __defaultExport;
+  exp.default = ask;
 });
 
 defmod('./src/root.js', function(module, exp){
@@ -759,8 +725,6 @@ defmod('./src/root.js', function(module, exp){
   var __onto = reqmod('./src/onto.js').default;
   var __dup = reqmod('./src/dup.js').default;
   var __ask = reqmod('./src/ask.js').default;
-  let __defaultExport;
-
   function Zen(o) {
     if (o instanceof Zen) {
       return (this._ = { $: this }).$;
@@ -988,9 +952,7 @@ defmod('./src/root.js', function(module, exp){
         return;
       }
       if (state < was) {
-        /*old;*/ if (true || !ctx.miss) {
-          return;
-        }
+        return;
       } // but some chains have a cache miss that need to re-fire. // TODO: Improve in future. // for AXE this would reduce rebroadcast, but ZEN does it on message forwarding. // TURNS OUT CACHE MISS WAS NOT NEEDED FOR NEW CHAINS ANYMORE!!! DANGER DANGER DANGER, ALWAYS RETURN! (or am I missing something?)
       if (!ctx.faith) {
         // TODO: BUG? Can this be used for cache miss as well? // Yes this was a bug, need to check cache miss for RAD tests, but should we care about the faith check now? Probably not.
@@ -1357,7 +1319,6 @@ defmod('./src/root.js', function(module, exp){
       MODULE.exports = Zen;
     }
   } catch (e) {}
-  __defaultExport = Zen;
 
   (Zen.window || {}).console = (Zen.window || {}).console || {
     log: function () {},
@@ -1373,7 +1334,7 @@ defmod('./src/root.js', function(module, exp){
       );
     };
 
-  exp.default = __defaultExport;
+  exp.default = Zen;
 });
 
 defmod('./src/crypto.js', function(module, exp){
@@ -1647,7 +1608,7 @@ defmod('./src/base62.js', function(module, exp){
   let _wasmReady = false;
   bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});
 
-  function _biTo32(n) {
+  function bito(n) {
     const hex = n.toString(16).padStart(64, "0");
     const out = new Uint8Array(32);
     for (let i = 0; i < 32; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
@@ -1672,7 +1633,7 @@ defmod('./src/base62.js', function(module, exp){
       throw new Error("biToB62: input must be non-negative BigInt");
     }
     if (_wasmReady) {
-      const out = bridge.b62Encode(_biTo32(n));
+      const out = bridge.b62Encode(bito(n));
       let s = "";
       for (let i = 0; i < 44; i++) s += String.fromCharCode(out[i]);
       return s;
@@ -1788,6 +1749,9 @@ defmod('./src/base62.js', function(module, exp){
     PUB_LEN,
   };
   exp.default = base62;
+
+
+  exp.bito = bito;
 });
 
 defmod('./src/settings.js', function(module, exp){
@@ -1993,8 +1957,6 @@ defmod('./src/hash.js', function(module, exp){
     return sha256(data, n || undefined);
   }
 
-
-
   function intToB62(n) {
     const A = base62.ALPHA;
     if (n === 0) return A[0];
@@ -2120,7 +2082,6 @@ defmod('./src/hash.js', function(module, exp){
     }
   }
 
-  exp.normhash = normhash;
   exp.default = hash;
 });
 
@@ -2372,22 +2333,6 @@ defmod('./src/curves/utils.js', function(module, exp){
       return out;
     }
 
-    function utf8Bytes(data) {
-      if (typeof data === "string") {
-        return new shim.TextEncoder().encode(data);
-      }
-      if (data instanceof Uint8Array) {
-        return data;
-      }
-      if (data instanceof ArrayBuffer) {
-        return new Uint8Array(data);
-      }
-      if (data && data.buffer instanceof ArrayBuffer) {
-        return new Uint8Array(data.buffer, data.byteOffset || 0, data.byteLength);
-      }
-      return new shim.TextEncoder().encode(String(data));
-    }
-
     function decodeBase64Url(str) {
       const padded = str
         .replace(/-/g, "+")
@@ -2561,7 +2506,7 @@ defmod('./src/curves/utils.js', function(module, exp){
 
     async function hashToScalar(seed, label) {
       const digest = await shaBytes(
-        concatBytes(utf8Bytes(label), utf8Bytes(seed)),
+        concatBytes(shim.toBytes(label), shim.toBytes(seed)),
       );
       return (bytesToBigInt(digest) % (N - 1n)) + 1n;
     }
@@ -2624,7 +2569,6 @@ defmod('./src/curves/utils.js', function(module, exp){
         bytesToBigInt,
         bigIntToBytes,
         concatBytes,
-        utf8Bytes,
         decodeBase64Url,
         encodeBase64,
         parseScalar,
@@ -2713,6 +2657,8 @@ defmod('./src/curves/p256.js', function(module, exp){
   var base62 = reqmod('./src/base62.js').default;
   var sha256 = reqmod('./src/sha256.js').default;
   var settings = reqmod('./src/settings.js').default;
+  var aeskey = reqmod('./src/aeskey.js').default;
+  var hash = reqmod('./src/hash.js').default;
   var createCurveCore = reqmod('./src/curves/utils.js').default;
   var bridge = reqmod('./src/crypto.js').default;
   const P = BigInt(
@@ -2744,6 +2690,7 @@ defmod('./src/curves/p256.js', function(module, exp){
     base62,
     settings,
     sha256,
+    extras: { aeskey, hash },
   });
 
   // Wire WASM fast-path once the bridge is ready.
@@ -3746,7 +3693,7 @@ defmod('./src/security.js', function(module, exp){
 
 defmod('./src/pen.js', function(module, exp){
   var SecurityMod = reqmod('./src/security.js').default;
-  let __defaultExport;
+  var base62 = reqmod('./src/base62.js').default;
   const __penWasmURL = new URL("./pen.wasm", import.meta.url);
   {
     var runtime = SecurityMod;
@@ -3906,16 +3853,14 @@ defmod('./src/pen.js', function(module, exp){
     // Soul format: '$' + pen.pack(bytecode)
     // e.g. '$abc123...' (variable length base62)
 
-    var B62_ALPHA =
-      "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     var B62_MAP = {};
-    for (var _i = 0; _i < B62_ALPHA.length; _i++) B62_MAP[B62_ALPHA[_i]] = _i;
+    for (var _i = 0; _i < base62.ALPHA.length; _i++) B62_MAP[base62.ALPHA[_i]] = _i;
 
     function b62enc(n) {
-      if (n === 0n) return B62_ALPHA[0];
+      if (n === 0n) return base62.ALPHA[0];
       var s = "";
       while (n > 0n) {
-        s = B62_ALPHA[Number(n % 62n)] + s;
+        s = base62.ALPHA[Number(n % 62n)] + s;
         n = n / 62n;
       }
       return s;
@@ -4709,11 +4654,8 @@ defmod('./src/pen.js', function(module, exp){
     pen.candle = function (opts) {
       return runtime.candle(opts);
     };
-    try {
-      __defaultExport = pen;
-    } catch (e) {}
   }
-  exp.default = __defaultExport;
+  exp.default = pen;
 });
 
 defmod('./src/ripemd160.js', function(module, exp){
@@ -4856,15 +4798,8 @@ defmod('./src/format.js', function(module, exp){
   var keccak256 = reqmod('./src/keccak256.js').default;
   var ripemd160 = reqmod('./src/ripemd160.js').default;
   var shim = reqmod('./src/shim.js').default;
+  var { bito } = reqmod('./src/base62.js');
   // ── shared helpers ────────────────────────────────────────────────────────────
-
-  function bigIntToBytes32(n) {
-    let hex = n.toString(16).padStart(64, "0");
-    const out = new Uint8Array(32);
-    for (let i = 0; i < 32; i++)
-      out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-    return out;
-  }
 
   function toHex(bytes) {
     return Array.from(bytes)
@@ -4916,8 +4851,8 @@ defmod('./src/format.js', function(module, exp){
   // ── EVM format ────────────────────────────────────────────────────────────────
 
   async function evmAddress(pub) {
-    const xBytes = bigIntToBytes32(pub.x);
-    const yBytes = bigIntToBytes32(pub.y);
+    const xBytes = bito(pub.x);
+    const yBytes = bito(pub.y);
     const raw = new Uint8Array(64);
     raw.set(xBytes, 0);
     raw.set(yBytes, 32);
@@ -4935,15 +4870,15 @@ defmod('./src/format.js', function(module, exp){
   }
 
   function evmPrivHex(priv) {
-    return "0x" + toHex(bigIntToBytes32(priv));
+    return "0x" + toHex(bito(priv));
   }
 
   function evmEncPub(pub) {
     // Uncompressed pubkey: 0x04 + 32-byte x + 32-byte y
     const out = new Uint8Array(65);
     out[0] = 0x04;
-    out.set(bigIntToBytes32(pub.x), 1);
-    out.set(bigIntToBytes32(pub.y), 33);
+    out.set(bito(pub.x), 1);
+    out.set(bito(pub.y), 33);
     return "0x" + toHex(out);
   }
 
@@ -4952,7 +4887,7 @@ defmod('./src/format.js', function(module, exp){
   function compressedPubBytes(pub) {
     const out = new Uint8Array(33);
     out[0] = pub.y & 1n ? 0x03 : 0x02;
-    out.set(bigIntToBytes32(pub.x), 1);
+    out.set(bito(pub.x), 1);
     return out;
   }
 
@@ -4969,7 +4904,7 @@ defmod('./src/format.js', function(module, exp){
 
   async function btcWIF(priv) {
     // WIF mainnet compressed: Base58Check(0x80 + 32-byte-priv + 0x01)
-    const privBytes = bigIntToBytes32(priv);
+    const privBytes = bito(priv);
     const payload = new Uint8Array(34);
     payload[0] = 0x80;
     payload.set(privBytes, 1);
@@ -5131,9 +5066,6 @@ defmod('./src/pair.js', function(module, exp){
         if (!spriv && opt.seed) {
           spriv = await c.hashToScalar(opt.seed, "ZEN|" + labelCurve + "|sign|");
         }
-        if (!spriv && opt.seed) {
-          spriv = await c.hashToScalar(opt.seed, "ZEN|" + labelCurve + "|sign|");
-        }
         if (!epriv && opt.seed) {
           epriv = await c.hashToScalar(
             opt.seed,
@@ -5179,11 +5111,12 @@ defmod('./src/pair.js', function(module, exp){
 });
 
 defmod('./src/encrypt.js', function(module, exp){
-  var core = reqmod('./src/curves/secp256k1.js').default;
+  var crv = reqmod('./src/curves.js').default;
   var { cryptoErr } = reqmod('./src/err.js');
   async function encrypt(data, pair, cb, opt) {
     try {
       opt = opt || {};
+      const c = crv((pair && typeof pair === "object" && pair.curve) || "secp256k1");
       const key = (pair || opt).epriv || pair;
       if (data === undefined) {
         throw new Error("`undefined` not allowed.");
@@ -5192,23 +5125,23 @@ defmod('./src/encrypt.js', function(module, exp){
         throw new Error("No encryption key.");
       }
       const message =
-        typeof data === "string" ? data : await core.shim.stringify(data);
-      const rand = { s: core.shim.random(9), iv: core.shim.random(15) };
-      const aes = await core.aeskey(key, rand.s, opt);
-      const ct = await core.shim.subtle.encrypt(
+        typeof data === "string" ? data : await c.shim.stringify(data);
+      const rand = { s: c.shim.random(9), iv: c.shim.random(15) };
+      const aes = await c.aeskey(key, rand.s, opt);
+      const ct = await c.shim.subtle.encrypt(
         {
           name: opt.name || "AES-GCM",
           iv: new Uint8Array(rand.iv),
         },
         aes,
-        new core.shim.TextEncoder().encode(message),
+        new c.shim.TextEncoder().encode(message),
       );
       const out = {
-        ct: core.shim.Buffer.from(ct, "binary").toString(opt.encode || "base64"),
+        ct: c.shim.Buffer.from(ct, "binary").toString(opt.encode || "base64"),
         iv: rand.iv.toString(opt.encode || "base64"),
         s: rand.s.toString(opt.encode || "base64"),
       };
-      return core.finalize(out, opt, cb);
+      return c.finalize(out, opt, cb);
     } catch (e) {
       return cryptoErr(e, cb);
     }
@@ -5221,21 +5154,22 @@ defmod('./src/encrypt.js', function(module, exp){
 });
 
 defmod('./src/decrypt.js', function(module, exp){
-  var core = reqmod('./src/curves/secp256k1.js').default;
+  var crv = reqmod('./src/curves.js').default;
   var { cryptoErr, cbOk } = reqmod('./src/err.js');
   async function decrypt(data, pair, cb, opt) {
     try {
       opt = opt || {};
+      const c = crv((pair && typeof pair === "object" && pair.curve) || "secp256k1");
       const key = (pair || opt).epriv || pair;
       if (!key) {
         throw new Error("No decryption key.");
       }
-      const parsed = await core.settings.parse(data);
-      const salt = core.shim.Buffer.from(parsed.s, opt.encode || "base64");
-      const iv = core.shim.Buffer.from(parsed.iv, opt.encode || "base64");
-      const ct = core.shim.Buffer.from(parsed.ct, opt.encode || "base64");
-      const aes = await core.aeskey(key, salt, opt);
-      const decrypted = await core.shim.subtle.decrypt(
+      const parsed = await c.settings.parse(data);
+      const salt = c.shim.Buffer.from(parsed.s, opt.encode || "base64");
+      const iv = c.shim.Buffer.from(parsed.iv, opt.encode || "base64");
+      const ct = c.shim.Buffer.from(parsed.ct, opt.encode || "base64");
+      const aes = await c.aeskey(key, salt, opt);
+      const decrypted = await c.shim.subtle.decrypt(
         {
           name: opt.name || "AES-GCM",
           iv: new Uint8Array(iv),
@@ -5244,8 +5178,8 @@ defmod('./src/decrypt.js', function(module, exp){
         aes,
         new Uint8Array(ct),
       );
-      const out = await core.settings.parse(
-        new core.shim.TextDecoder("utf8").decode(decrypted),
+      const out = await c.settings.parse(
+        new c.shim.TextDecoder("utf8").decode(decrypted),
       );
       return cbOk(cb, out);
     } catch (e) {
@@ -5429,22 +5363,27 @@ defmod('./src/certify.js', function(module, exp){
 
 defmod('./src/keyid.js', function(module, exp){
   var shim = reqmod('./src/shim.js').default;
-  var base62 = reqmod('./src/base62.js').default;
+  var crv = reqmod('./src/curves.js').default;
   async function sha1hash(bytes) {
     const crypto = shim.ossl || shim.subtle;
     return crypto.digest({ name: "SHA-1" }, new Uint8Array(bytes));
   }
 
-  async function keyid(pub) {
-    const xy = base62.pubToJwkXY(pub);
-    const pb = shim.Buffer.concat(
-      [xy.x, xy.y].map(function (t) {
-        return shim.Buffer.from(
-          atob(t.replace(/-/g, "+").replace(/_/g, "/")),
-          "binary",
-        );
-      }),
-    );
+  async function keyid(pub, curve) {
+    const c = crv(curve || "secp256k1");
+    let point;
+    try {
+      point = c.parsePub(pub);
+    } catch (e) {
+      // try p256 if secp256k1 fails
+      point = crv("p256").parsePub(pub);
+    }
+    const xBytes = c.bigIntToBytes(point.x, 32);
+    const yBytes = c.bigIntToBytes(point.y, 32);
+    const pb = shim.Buffer.concat([
+      shim.Buffer.from(xBytes),
+      shim.Buffer.from(yBytes),
+    ]);
     const id = shim.Buffer.concat([
       shim.Buffer.from([0x99, pb.length / 0x100, pb.length % 0x100]),
       pb,
@@ -5456,17 +5395,7 @@ defmod('./src/keyid.js', function(module, exp){
   exp.default = keyid;
 });
 
-defmod('./src/runtime.js', function(module, exp){
-  var security = reqmod('./src/security.js').default;
-
-  exp.default = security;
-
-  exp.security = security;
-});
-
 defmod('./src/book.js', function(module, exp){
-  let __defaultExport;
-
   // TODO: BUG! Unbuild will make these globals... CHANGE unbuild to wrap files in a function.
   // Book is a replacement for JS objects, maps, dictionaries.
   var sT = setTimeout,
@@ -5886,11 +5815,7 @@ defmod('./src/book.js', function(module, exp){
     return o;
   }
 
-  try {
-    __defaultExport = B;
-  } catch (e) {}
-
-  exp.default = __defaultExport;
+  exp.default = B;
 });
 
 defmod('./src/chain.js', function(module, exp){
@@ -7122,6 +7047,12 @@ defmod('./src/on.js', function(module, exp){
               return;
             }
           }
+          if (!f && tmp && "object" == typeof tmp && Object.keys(tmp).length === 1 && "_" in tmp) {
+            one[id] = setTimeout(function () {
+              once(1);
+            }, opt.wait || 99); // Node initialized with soul metadata but fields not yet loaded from disk.
+            return;
+          }
           //console.log("AND VANISHED", data);
           if (eve.stun) {
             return;
@@ -7336,8 +7267,6 @@ defmod('./src/set.js', function(module, exp){
 defmod('./src/mesh.js', function(module, exp){
   reqmod('./src/shim.js');
   var jsonAsync = reqmod('./src/json.js').default;
-  let __defaultExport;
-
   var noop = function () {};
   var pair = jsonAsync.createJsonPair(function (d) {
     return json.sucks(d);
@@ -7516,7 +7445,6 @@ defmod('./src/mesh.js', function(module, exp){
     hear.c = hear.d = 0;
 
     {
-      var SMIA = 0;
       var loop;
       mesh.hash = function (msg, peer) {
         var h, s, t;
@@ -7595,7 +7523,7 @@ defmod('./src/mesh.js', function(module, exp){
             return;
           } // in dups but no peer hints that this was ack to ourself, ignore.
           console.STAT &&
-            console.STAT(+new Date(), ++SMIA, "total no peer to ack to"); // TODO: Delete this now. Dropping lost ACKs is protocol fine now.
+            console.STAT(+new Date(), "total no peer to ack to"); // Dropping lost ACKs is protocol fine now.
           return false;
         } // TODO: Temporary? If ack via trace has been lost, acks will go to all peers, which trashes browser bandwidth. Not relaying the ack will force sender to ask for ack again. Note, this is technically wrong for mesh behavior.
         if (ack && !msg.put && !hash && ((dup.s.get(ack) || "").it || "")["##"]) {
@@ -7953,11 +7881,7 @@ defmod('./src/mesh.js', function(module, exp){
     ok = true,
     u;
 
-  try {
-    __defaultExport = Mesh;
-  } catch (e) {}
-
-  exp.default = __defaultExport;
+  exp.default = Mesh;
 });
 
 defmod('./src/websocket.js', function(module, exp){
@@ -8244,7 +8168,7 @@ defmod('./src/index.js', function(module, exp){
   var certify = reqmod('./src/certify.js').default;
   var keyid = reqmod('./src/keyid.js').default;
   var recover = reqmod('./src/recover.js').default;
-  var security = reqmod('./src/runtime.js').default;
+  var security = reqmod('./src/security.js').default;
   var graph = reqmod('./src/graph.js').default;
   var hasOwn = Object.prototype.hasOwnProperty;
   var STATIC_SKIP = { length: 1, name: 1, prototype: 1 };

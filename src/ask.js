@@ -1,8 +1,6 @@
 import "./onto.js";
 
-let __defaultExport;
-
-__defaultExport = function ask(cb, as) {
+function ask(cb, as) {
   if (!this.on) {
     return;
   }
@@ -38,10 +36,6 @@ __defaultExport = function ask(cb, as) {
     }, lack);
   return id;
 };
-var random =
-  String.random ||
-  function () {
-    return Math.random().toString(36).slice(2);
-  };
+var random = String.random;
 
-export default __defaultExport;
+export default ask;

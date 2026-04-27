@@ -141,17 +141,6 @@ Object.empty =
     }
     return true;
   };
-Object.keys =
-  Object.keys ||
-  function (o) {
-    var l = [];
-    for (var k in o) {
-      if (has.call(o, k)) {
-        l.push(k);
-      }
-    }
-    return l;
-  };
 
 function createImmediateFallback(sT, undefinedValue) {
   if (typeof MessageChannel == "" + undefinedValue) {

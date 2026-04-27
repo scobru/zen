@@ -245,22 +245,6 @@ function createCurveCore(config) {
     return out;
   }
 
-  function utf8Bytes(data) {
-    if (typeof data === "string") {
-      return new shim.TextEncoder().encode(data);
-    }
-    if (data instanceof Uint8Array) {
-      return data;
-    }
-    if (data instanceof ArrayBuffer) {
-      return new Uint8Array(data);
-    }
-    if (data && data.buffer instanceof ArrayBuffer) {
-      return new Uint8Array(data.buffer, data.byteOffset || 0, data.byteLength);
-    }
-    return new shim.TextEncoder().encode(String(data));
-  }
-
   function decodeBase64Url(str) {
     const padded = str
       .replace(/-/g, "+")
@@ -434,7 +418,7 @@ function createCurveCore(config) {
 
   async function hashToScalar(seed, label) {
     const digest = await shaBytes(
-      concatBytes(utf8Bytes(label), utf8Bytes(seed)),
+      concatBytes(shim.toBytes(label), shim.toBytes(seed)),
     );
     return (bytesToBigInt(digest) % (N - 1n)) + 1n;
   }
@@ -497,7 +481,6 @@ function createCurveCore(config) {
       bytesToBigInt,
       bigIntToBytes,
       concatBytes,
-      utf8Bytes,
       decodeBase64Url,
       encodeBase64,
       parseScalar,

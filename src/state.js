@@ -1,7 +1,5 @@
 import "./shim.js";
 
-let __defaultExport;
-
 function State() {
   var t = +new Date();
   if (last < t) {
@@ -40,6 +38,4 @@ State.ify = function (n, k, s, v, soul) {
   }
   return n;
 };
-__defaultExport = State;
-
-export default __defaultExport;
+export default State;

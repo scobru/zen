@@ -88,9 +88,6 @@ async function pair(cb, opt) {
       if (!spriv && opt.seed) {
         spriv = await c.hashToScalar(opt.seed, "ZEN|" + labelCurve + "|sign|");
       }
-      if (!spriv && opt.seed) {
-        spriv = await c.hashToScalar(opt.seed, "ZEN|" + labelCurve + "|sign|");
-      }
       if (!epriv && opt.seed) {
         epriv = await c.hashToScalar(
           opt.seed,

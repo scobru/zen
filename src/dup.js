@@ -1,7 +1,5 @@
 import "./shim.js";
 
-let __defaultExport;
-
 function Dup(opt) {
   var dup = { s: new Map() },
     s = dup.s;
@@ -45,6 +43,5 @@ function Dup(opt) {
   };
   return dup;
 }
-__defaultExport = Dup;
 
-export default __defaultExport;
+export default Dup;

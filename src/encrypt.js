@@ -1,9 +1,10 @@
-import core from "./curves/secp256k1.js";
+import crv from "./curves.js";
 import { cryptoErr } from "./err.js";
 
 async function encrypt(data, pair, cb, opt) {
   try {
     opt = opt || {};
+    const c = crv((pair && typeof pair === "object" && pair.curve) || "secp256k1");
     const key = (pair || opt).epriv || pair;
     if (data === undefined) {
       throw new Error("`undefined` not allowed.");
@@ -12,23 +13,23 @@ async function encrypt(data, pair, cb, opt) {
       throw new Error("No encryption key.");
     }
     const message =
-      typeof data === "string" ? data : await core.shim.stringify(data);
-    const rand = { s: core.shim.random(9), iv: core.shim.random(15) };
-    const aes = await core.aeskey(key, rand.s, opt);
-    const ct = await core.shim.subtle.encrypt(
+      typeof data === "string" ? data : await c.shim.stringify(data);
+    const rand = { s: c.shim.random(9), iv: c.shim.random(15) };
+    const aes = await c.aeskey(key, rand.s, opt);
+    const ct = await c.shim.subtle.encrypt(
       {
         name: opt.name || "AES-GCM",
         iv: new Uint8Array(rand.iv),
       },
       aes,
-      new core.shim.TextEncoder().encode(message),
+      new c.shim.TextEncoder().encode(message),
     );
     const out = {
-      ct: core.shim.Buffer.from(ct, "binary").toString(opt.encode || "base64"),
+      ct: c.shim.Buffer.from(ct, "binary").toString(opt.encode || "base64"),
       iv: rand.iv.toString(opt.encode || "base64"),
       s: rand.s.toString(opt.encode || "base64"),
     };
-    return core.finalize(out, opt, cb);
+    return c.finalize(out, opt, cb);
   } catch (e) {
     return cryptoErr(e, cb);
   }

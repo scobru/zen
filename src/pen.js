@@ -1,6 +1,6 @@
 import SecurityMod from "./security.js";
+import base62 from "./base62.js";
 
-let __defaultExport;
 const __penWasmURL = new URL("./pen.wasm", import.meta.url);
 {
   var runtime = SecurityMod;
@@ -160,16 +160,14 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
   // Soul format: '$' + pen.pack(bytecode)
   // e.g. '$abc123...' (variable length base62)
 
-  var B62_ALPHA =
-    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   var B62_MAP = {};
-  for (var _i = 0; _i < B62_ALPHA.length; _i++) B62_MAP[B62_ALPHA[_i]] = _i;
+  for (var _i = 0; _i < base62.ALPHA.length; _i++) B62_MAP[base62.ALPHA[_i]] = _i;
 
   function b62enc(n) {
-    if (n === 0n) return B62_ALPHA[0];
+    if (n === 0n) return base62.ALPHA[0];
     var s = "";
     while (n > 0n) {
-      s = B62_ALPHA[Number(n % 62n)] + s;
+      s = base62.ALPHA[Number(n % 62n)] + s;
       n = n / 62n;
     }
     return s;
@@ -963,8 +961,5 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
   pen.candle = function (opts) {
     return runtime.candle(opts);
   };
-  try {
-    __defaultExport = pen;
-  } catch (e) {}
 }
-export default __defaultExport;
+export default pen;

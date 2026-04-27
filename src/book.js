@@ -1,5 +1,3 @@
-let __defaultExport;
-
 // TODO: BUG! Unbuild will make these globals... CHANGE unbuild to wrap files in a function.
 // Book is a replacement for JS objects, maps, dictionaries.
 var sT = setTimeout,
@@ -419,8 +417,4 @@ function decord(t) {
   return o;
 }
 
-try {
-  __defaultExport = B;
-} catch (e) {}
-
-export default __defaultExport;
+export default B;
