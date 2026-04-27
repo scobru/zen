@@ -8232,7 +8232,6 @@ defmod('./src/graph.js', function(module, exp){
 
 defmod('./src/index.js', function(module, exp){
   var PEN = reqmod('./src/pen.js').default;
-  var secp256k1 = reqmod('./src/curves/secp256k1.js').default;
   var settings = reqmod('./src/settings.js').default;
   var pair = reqmod('./src/pair.js').default;
   var sign = reqmod('./src/sign.js').default;
@@ -8247,10 +8246,10 @@ defmod('./src/index.js', function(module, exp){
   var recover = reqmod('./src/recover.js').default;
   var security = reqmod('./src/runtime.js').default;
   var graph = reqmod('./src/graph.js').default;
+  var secp256k1 = reqmod('./src/curves/secp256k1.js').default;
   var hasOwn = Object.prototype.hasOwnProperty;
   var STATIC_SKIP = { length: 1, name: 1, prototype: 1 };
   var CHAIN_SKIP = { constructor: 1 };
-  var ZEN_SKIP = {};
   async function finalizeSigned(result, opt, cb) {
     try {
       if (!(opt || {}).raw) {
@@ -8268,25 +8267,9 @@ defmod('./src/index.js', function(module, exp){
       return result;
     }
   }
-  var SECP256K1 = {
-    curve: secp256k1.curve,
-    base62: secp256k1.base62,
-    isOnCurve: secp256k1.isOnCurve,
-    parsePub: secp256k1.parsePub,
-    pointToPub: secp256k1.pointToPub,
-    pair: pair,
-    sign: sign,
-    verify: verify,
-    encrypt: encrypt,
-    decrypt: decrypt,
-    secret: secret,
-    hash: hash,
-    certify: certify,
-  };
-
   function mirrorStatics(target, source) {
     Object.getOwnPropertyNames(source).forEach(function (name) {
-      if (STATIC_SKIP[name] || ZEN_SKIP[name] || hasOwn.call(target, name)) {
+      if (STATIC_SKIP[name] || hasOwn.call(target, name)) {
         return;
       }
       var desc = Object.getOwnPropertyDescriptor(source, name);
@@ -8299,7 +8282,7 @@ defmod('./src/index.js', function(module, exp){
 
   function mirrorMethods(target, source, pick) {
     Object.getOwnPropertyNames(source).forEach(function (name) {
-      if (ZEN_SKIP[name] || (pick && !pick(name)) || hasOwn.call(target, name)) {
+      if ((pick && !pick(name)) || hasOwn.call(target, name)) {
         return;
       }
       var desc = Object.getOwnPropertyDescriptor(source, name);
@@ -8337,17 +8320,8 @@ defmod('./src/index.js', function(module, exp){
 
   class ZEN {
     constructor(opt = {}) {
-      this.OPT = opt;
-      this._graphInstance =
-        opt.graph || opt.zen || opt.ZEN || opt.GUN || opt.gun || null;
-      this._graphOpt = this._graphInstance
-        ? null
-        : opt.graphOpt ||
-          opt.zenOpt ||
-          opt.ZENOpt ||
-          opt.GUNOpt ||
-          opt.gunOpt ||
-          opt;
+      this._opt = opt;
+      this._graphInstance = opt.graph || null;
     }
 
     static pen(spec = {}) {
@@ -8440,14 +8414,15 @@ defmod('./src/index.js', function(module, exp){
 
     get _graph() {
       if (!this._graphInstance) {
-        this._graphInstance = graph.create(this._graphOpt || {});
+        this._graphInstance = graph.create(this._opt);
       }
       return this._graphInstance;
     }
 
     get SECP256K1() {
-      return SECP256K1;
+      return secp256k1;
     }
+
     get ready() {
       return PEN.ready;
     }
@@ -8524,7 +8499,6 @@ defmod('./src/index.js', function(module, exp){
   });
   mirrorChain(ZEN.prototype, graph.chain);
 
-  ZEN.SECP256K1 = SECP256K1;
   ZEN.Buffer = shim.Buffer;
   ZEN.random = shim.random;
   ZEN.keyid = keyid;
@@ -8532,6 +8506,7 @@ defmod('./src/index.js', function(module, exp){
   ZEN.security = security;
   ZEN.check = security.check;
   ZEN.opt = security.opt;
+  ZEN.SECP256K1 = secp256k1;
 
 
   exp.default = ZEN;

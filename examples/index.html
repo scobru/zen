@@ -1,6 +1,10 @@
 <!doctype html>
-<p>This is the examples folder.</p>
-<p>
-  The most basic example is <a href="./basic/note.html">./basic/note.html</a>!
-</p>
-<p>Home page temporarily disabled.</p>
+<head>
+  <script type="module">
+    import ZEN from "http://localhost:8420/zen.js"
+    const zen = new ZEN({
+      peers: ["http://localhost:8420/zen/"]
+    });
+    globalThis.zen = zen
+  </script>
+</head>

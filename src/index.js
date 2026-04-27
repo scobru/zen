@@ -1,5 +1,4 @@
 import PEN from "./pen.js";
-import secp256k1 from "./curves/secp256k1.js";
 import settings from "./settings.js";
 import pair from "./pair.js";
 import sign from "./sign.js";
@@ -14,11 +13,11 @@ import keyid from "./keyid.js";
 import recover from "./recover.js";
 import security from "./runtime.js";
 import graph from "./graph.js";
+import secp256k1 from "./curves/secp256k1.js";
 
 var hasOwn = Object.prototype.hasOwnProperty;
 var STATIC_SKIP = { length: 1, name: 1, prototype: 1 };
 var CHAIN_SKIP = { constructor: 1 };
-var ZEN_SKIP = {};
 async function finalizeSigned(result, opt, cb) {
   try {
     if (!(opt || {}).raw) {
@@ -36,25 +35,9 @@ async function finalizeSigned(result, opt, cb) {
     return result;
   }
 }
-var SECP256K1 = {
-  curve: secp256k1.curve,
-  base62: secp256k1.base62,
-  isOnCurve: secp256k1.isOnCurve,
-  parsePub: secp256k1.parsePub,
-  pointToPub: secp256k1.pointToPub,
-  pair: pair,
-  sign: sign,
-  verify: verify,
-  encrypt: encrypt,
-  decrypt: decrypt,
-  secret: secret,
-  hash: hash,
-  certify: certify,
-};
-
 function mirrorStatics(target, source) {
   Object.getOwnPropertyNames(source).forEach(function (name) {
-    if (STATIC_SKIP[name] || ZEN_SKIP[name] || hasOwn.call(target, name)) {
+    if (STATIC_SKIP[name] || hasOwn.call(target, name)) {
       return;
     }
     var desc = Object.getOwnPropertyDescriptor(source, name);
@@ -67,7 +50,7 @@ function mirrorStatics(target, source) {
 
 function mirrorMethods(target, source, pick) {
   Object.getOwnPropertyNames(source).forEach(function (name) {
-    if (ZEN_SKIP[name] || (pick && !pick(name)) || hasOwn.call(target, name)) {
+    if ((pick && !pick(name)) || hasOwn.call(target, name)) {
       return;
     }
     var desc = Object.getOwnPropertyDescriptor(source, name);
@@ -105,17 +88,8 @@ function mirrorChain(target, source) {
 
 class ZEN {
   constructor(opt = {}) {
-    this.OPT = opt;
-    this._graphInstance =
-      opt.graph || opt.zen || opt.ZEN || opt.GUN || opt.gun || null;
-    this._graphOpt = this._graphInstance
-      ? null
-      : opt.graphOpt ||
-        opt.zenOpt ||
-        opt.ZENOpt ||
-        opt.GUNOpt ||
-        opt.gunOpt ||
-        opt;
+    this._opt = opt;
+    this._graphInstance = opt.graph || null;
   }
 
   static pen(spec = {}) {
@@ -208,14 +182,15 @@ class ZEN {
 
   get _graph() {
     if (!this._graphInstance) {
-      this._graphInstance = graph.create(this._graphOpt || {});
+      this._graphInstance = graph.create(this._opt);
     }
     return this._graphInstance;
   }
 
   get SECP256K1() {
-    return SECP256K1;
+    return secp256k1;
   }
+
   get ready() {
     return PEN.ready;
   }
@@ -292,7 +267,6 @@ mirrorMethods(ZEN.prototype, PEN, function (name) {
 });
 mirrorChain(ZEN.prototype, graph.chain);
 
-ZEN.SECP256K1 = SECP256K1;
 ZEN.Buffer = shim.Buffer;
 ZEN.random = shim.random;
 ZEN.keyid = keyid;
@@ -300,6 +274,7 @@ ZEN.graph = graph;
 ZEN.security = security;
 ZEN.check = security.check;
 ZEN.opt = security.opt;
+ZEN.SECP256K1 = secp256k1;
 
 export { ZEN };
 export default ZEN;

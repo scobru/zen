@@ -49,8 +49,9 @@ if (isMain && cluster.isPrimary) {
     opt.server = http.createServer(ZEN.serve(__dirname));
   }
 
-  zen = ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
-  console.log("Relay peer started on port " + opt.port + " with /zen");
+  zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
+  zen.chain(); // initialize the relay
+  console.log("ZEN relay peer started on port " + opt.port + " with /zen");
 }
 
 export default zen;

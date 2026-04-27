@@ -6,8 +6,7 @@ import http from "http";
 import https from "https";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
-import ZEN from "../lib/server.js";
-import serve from "../lib/serve.js";
+import ZEN from "../index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -37,7 +36,7 @@ if (isMain && cluster.isPrimary) {
     opt.port = 443;
     opt.key = fs.readFileSync(env.HTTPS_KEY);
     opt.cert = fs.readFileSync(env.HTTPS_CERT);
-    opt.server = https.createServer(opt, serve(__dirname));
+    opt.server = https.createServer(opt, ZEN.serve(__dirname));
     http
       .createServer((req, res) => {
         res.writeHead(301, {
@@ -47,11 +46,11 @@ if (isMain && cluster.isPrimary) {
       })
       .listen(80);
   } else {
-    opt.server = http.createServer(serve(__dirname));
+    opt.server = http.createServer(ZEN.serve(__dirname));
   }
 
   zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
-  zen._graph; // initialize the relay
+  zen.chain(); // initialize the relay
   console.log("ZEN relay peer started on port " + opt.port + " with /zen");
 }
 

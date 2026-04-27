@@ -9,7 +9,7 @@
   "ios": "browser.ios.js",
   "android": "browser.android.js",
   "scripts": {
-    "start": "node --prof examples/zen-http.js",
+    "start": "node --prof examples/http.js",
     "debug": "node --prof-process --preprocess -j isolate*.log > v8data.json && rm isolate*.log && echo 'drag & drop ./v8data.json into https://mapbox.github.io/flamebearer/'",
     "https": "HTTPS_KEY=test/https/server.key HTTPS_CERT=test/https/server.crt npm start",
     "build": "npm run buildRelease",
@@ -25,7 +25,7 @@
     "e2e": "mocha e2e/distributed.js",
     "docker": "hooks/build",
     "uglify": "node lib/uglify.js",
-    "minifyZEN": "uglifyjs zen.js --module -o zen.min.js -c -m",
+    "minifyZEN": "terser zen.js --module -o zen.min.js --compress --mangle",
     "buildZEN": "npm run buildPEN && npm run buildCrypto && node lib/builder/zen.js && npm run minifyZEN",
     "buildRelease": "npm run buildZEN && npm run uglify",
     "buildPEN": "node lib/builder/pen.js",
@@ -98,6 +98,6 @@
     "ip": "^1.1.5",
     "mocha": "^6.2.0",
     "prettier": "^3.8.3",
-    "uglify-js": "^3.6.0"
+    "terser": "^5.46.2"
   }
 }
