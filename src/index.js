@@ -13,7 +13,6 @@ import keyid from "./keyid.js";
 import recover from "./recover.js";
 import security from "./runtime.js";
 import graph from "./graph.js";
-import secp256k1 from "./curves/secp256k1.js";
 
 var hasOwn = Object.prototype.hasOwnProperty;
 var STATIC_SKIP = { length: 1, name: 1, prototype: 1 };
@@ -187,10 +186,6 @@ class ZEN {
     return this._graphInstance;
   }
 
-  get SECP256K1() {
-    return secp256k1;
-  }
-
   get ready() {
     return PEN.ready;
   }
@@ -274,7 +269,6 @@ ZEN.graph = graph;
 ZEN.security = security;
 ZEN.check = security.check;
 ZEN.opt = security.opt;
-ZEN.SECP256K1 = secp256k1;
 
 export { ZEN };
 export default ZEN;

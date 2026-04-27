@@ -66,7 +66,6 @@ describe("testZEN", function () {
     ].forEach(function (name) {
       assert.strictEqual(typeof zen[name], "function", name);
     });
-    assert.strictEqual(zen.SECP256K1.curve, "secp256k1");
     assert.strictEqual(typeof zen.certify, "function");
   });
 

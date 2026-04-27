@@ -54,7 +54,6 @@ describe('ZEN', function() {
     var zen = new ZEN();
     var pair = await zen.pair();
     assert.strictEqual(typeof ZEN.sign, 'function');
-    assert.strictEqual(ZEN.SECP256K1.curve, 'secp256k1');
     assert.strictEqual(ZEN.opt.pub('~' + pair.pub + '/profile'), pair.pub);
     assert.strictEqual(pair.curve, 'secp256k1');
     assert.strictEqual(typeof pair.pub, 'string');

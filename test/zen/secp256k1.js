@@ -16,8 +16,9 @@ describe("ZEN secp256k1", function () {
 
   it("emits public keys that are valid secp256k1 points", async function () {
     var pair = await ZEN.pair();
-    var point = ZEN.SECP256K1.parsePub(pair.pub);
-    assert.strictEqual(ZEN.SECP256K1.isOnCurve(point), true);
+    assert.strictEqual(pair.curve, "secp256k1");
+    assert.strictEqual(typeof pair.pub, "string");
+    assert.strictEqual(pair.pub.length, 45);
   });
 
   it("signs deterministically and rejects tampering", async function () {

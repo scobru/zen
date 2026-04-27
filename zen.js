@@ -8246,7 +8246,6 @@ defmod('./src/index.js', function(module, exp){
   var recover = reqmod('./src/recover.js').default;
   var security = reqmod('./src/runtime.js').default;
   var graph = reqmod('./src/graph.js').default;
-  var secp256k1 = reqmod('./src/curves/secp256k1.js').default;
   var hasOwn = Object.prototype.hasOwnProperty;
   var STATIC_SKIP = { length: 1, name: 1, prototype: 1 };
   var CHAIN_SKIP = { constructor: 1 };
@@ -8419,10 +8418,6 @@ defmod('./src/index.js', function(module, exp){
       return this._graphInstance;
     }
 
-    get SECP256K1() {
-      return secp256k1;
-    }
-
     get ready() {
       return PEN.ready;
     }
@@ -8506,7 +8501,6 @@ defmod('./src/index.js', function(module, exp){
   ZEN.security = security;
   ZEN.check = security.check;
   ZEN.opt = security.opt;
-  ZEN.SECP256K1 = secp256k1;
 
 
   exp.default = ZEN;
