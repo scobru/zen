@@ -3,7 +3,6 @@
   "type": "module",
   "version": "1.0.5",
   "description": "A realtime, decentralized, offline-first, graph data synchronization engine.",
-  "types": "index.d.ts",
   "main": "index.js",
   "scripts": {
     "start": "node --prof relay.js",
