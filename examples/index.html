@@ -1,9 +1,9 @@
 <!doctype html>
 <head>
   <script type="module">
-    import ZEN from "http://localhost:8420/zen.min.js"
+    const { default: ZEN } = await import("/zen.min.js");
     const zen = new ZEN({
-      peers: ["http://localhost:8420/zen/"]
+      peers: [`${location.origin}/zen/`]
     });
     globalThis.zen = zen
   </script>
