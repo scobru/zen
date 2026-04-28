@@ -39,7 +39,7 @@ ZEN uses **native ES modules** (`import`/`export`) throughout `/src`. A custom N
 - `state.js` — HAM state timestamp generation
 - `valid.js` — Value type validation
 - `shim.js` — Buffer, TextEncoder, async JSON, `String.random`, `setTimeout.turn`
-- `security.js` — Re-exports `src/runtime.js` (SEA-style middleware bridge)
+- `security.js` — Re-exports `src/runtime.js` (runtime middleware bridge)
 
 ### Crypto Modules (`/src`)
 

@@ -246,7 +246,7 @@ describe("ZEN", function () {
         ).to.not.be.ok();
         expect(String.match("user/mark/nadal", { "*": "user/" })).to.be.ok();
         expect(
-          String.match("email/mark@gunDB.io", { "*": "user/" }),
+          String.match("email/mark@zen.eco", { "*": "user/" }),
         ).to.not.be.ok();
         expect(
           String.match("user/mark/nadal", { ">": "user/j", "<": "user/o" }),

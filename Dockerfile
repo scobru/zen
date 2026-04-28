@@ -15,11 +15,11 @@ ARG VCS_REF
 ARG VCS_URL
 ARG VERSION
 LABEL org.label-schema.build-date=$BUILD_DATE \
-  org.label-schema.name="Gun - Offline First, Javascript Graph Database" \
-  org.label-schema.url="http://zen.js.org" \
+  org.label-schema.name="ZEN - Realtime Decentralized Graph Database" \
+  org.label-schema.url="https://zen.eco" \
   org.label-schema.vcs-ref=$VCS_REF \
   org.label-schema.vcs-url=$VCS_URL \
-  org.label-schema.vendor="The Gun Database Team" \
+  org.label-schema.vendor="akaoio" \
   org.label-schema.version=$VERSION \
   org.label-schema.schema-version="1.0"
 ARG SHA
@@ -30,6 +30,5 @@ RUN npm rebuild -q
 ADD . .
 RUN echo "{ \"sha\": \"$SHA\" }" > version.json
 RUN cat version.json
-EXPOSE 8080
 EXPOSE 8420
 CMD ["npm","start"]

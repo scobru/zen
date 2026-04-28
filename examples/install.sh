@@ -30,8 +30,8 @@ sudo yum install systemctl -y
 git clone https://github.com/isaacs/nave.git
 ./nave/nave.sh usemain stable
 
-# If you just want nodejs and npm but not gun, stop here.
-#npm install gun@latest
+# If you just want nodejs and npm but not zen, stop here.
+#npm install zen@latest
 #cd ./node_modules/zen
 mkdir node_modules
 git clone https://github.com/akaoio/zen.git

@@ -692,7 +692,7 @@ const __penWasmURL = new URL("./pen.wasm", import.meta.url);
     }
 
     // For sign:true, verify and unpack BEFORE running the predicate so that:
-    //   - ctx.val is the verified plaintext (not the raw SEA blob)
+    //   - ctx.val is the verified plaintext (not the raw signed blob)
     //   - msg.put[":"] and msg.put["="] are set consistently with check.auth
     if (policy.sign) {
       var chk = runtime.check;

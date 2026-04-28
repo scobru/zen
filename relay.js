@@ -52,7 +52,6 @@ if (isMain && cluster.isPrimary) {
     process.exit(1);
   });
   zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
-  zen.chain();
   console.log("ZEN relay peer started on port " + opt.port + " with /zen");
 }
 
