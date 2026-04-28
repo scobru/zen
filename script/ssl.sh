@@ -51,7 +51,7 @@ OPTIONAL:
     --acme-dir PATH            ACME installation directory (default: ~/.acme.sh)
     --reload-cmd COMMAND       Command to run after certificate installation
     --standalone               Use standalone mode (temporary web server on port 80)
-    --dns [PROVIDER]          Use DNS validation. Options: manual, cloudflare, route53, digitalocean
+    --dns [PROVIDER]          Use DNS validation. Options: manual, cloudflare, route53, digitalocean, godaddy
     --dns-api-key KEY         DNS provider API key (required for automatic DNS)
     --dns-api-secret SECRET   DNS provider API secret (for some providers)
     --dns-email EMAIL         DNS provider email (for Cloudflare)
@@ -76,6 +76,9 @@ EXAMPLES:
 
     # DNS validation with Route53 (automatic)
     $0 --domain example.com --email admin@example.com --dns route53 --dns-api-key AWS_KEY --dns-api-secret AWS_SECRET
+
+    # DNS validation with GoDaddy (automatic)
+    $0 --domain example.com --email admin@example.com --dns godaddy --dns-api-key GD_KEY --dns-api-secret GD_SECRET
 
     # Manual DNS validation (IPv6-only servers)
     $0 --domain example.com --email admin@example.com --dns
@@ -236,6 +239,20 @@ sanitize_command() {
     echo "$cmd" | sed 's/[;&|`$(){}\[\]\\]//g'
 }
 
+get_acme_domain_dir() {
+    if [[ -d "$ACME_DIR/${DOMAIN}_ecc" ]]; then
+        echo "$ACME_DIR/${DOMAIN}_ecc"
+        return 0
+    fi
+
+    if [[ -d "$ACME_DIR/$DOMAIN" ]]; then
+        echo "$ACME_DIR/$DOMAIN"
+        return 0
+    fi
+
+    return 1
+}
+
 # Use environment variables if not set by flags (with defaults)
 DOMAIN="${DOMAIN:-}"
 EMAIL="${EMAIL:-}"
@@ -297,89 +314,102 @@ install_acme() {
     fi
 
     log_info "Installing acme.sh..."
-    
+
+    local temp_dir
+
     # Remove existing installation if force install
     if [[ "$FORCE_INSTALL" == "true" && -d "$ACME_DIR" ]]; then
         log_info "Force install: removing existing acme.sh installation"
         execute rm -rf "$ACME_DIR"
     fi
-    
+
     # Create temporary directory for download
-    TEMP_DIR=$(mktemp -d)
-    
+    temp_dir=$(mktemp -d)
+
+    cleanup_temp_dir() {
+        [[ -d "$temp_dir" ]] && rm -rf "$temp_dir"
+    }
+
+    trap cleanup_temp_dir RETURN
+
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "[DRY RUN] Would download and install acme.sh"
         return 0
     fi
-    
+
     # Download and install acme.sh
-    execute git clone https://github.com/acmesh-official/acme.sh.git "$TEMP_DIR/acme.sh"
-    
-    # Build install command
-    INSTALL_CMD="$TEMP_DIR/acme.sh/acme.sh --install --home $ACME_DIR --accountemail $EMAIL"
+    execute git clone https://github.com/acmesh-official/acme.sh.git "$temp_dir/acme.sh"
+
+    # Build install command from within the cloned repo because acme.sh expects
+    # its support files to be available relative to the current working directory.
+    INSTALL_CMD="cd \"$temp_dir/acme.sh\" && ./acme.sh --install --home \"$ACME_DIR\" --accountemail \"$EMAIL\""
     if [[ "$AUTO_UPGRADE" == "false" ]]; then
         INSTALL_CMD="$INSTALL_CMD --noupgrade"
     fi
-    
+
     execute bash -c "$INSTALL_CMD"
-    
-    # Cleanup
-    execute rm -rf "$TEMP_DIR"
-    
+
     log_info "acme.sh installed successfully"
 }
 
 # Issue certificate
 issue_certificate() {
     log_info "Issuing certificate for domain: $DOMAIN"
-    
+
     # Build acme.sh command
     if [[ "$STANDALONE" == "true" ]]; then
-        ACME_CMD="$ACME_DIR/acme.sh --server letsencrypt --issue -d $DOMAIN --standalone"
+        ACME_CMD="\"$ACME_DIR/acme.sh\" --home \"$ACME_DIR\" --server letsencrypt --issue -d \"$DOMAIN\" --keylength ec-256 --standalone"
         log_info "Using standalone mode (temporary web server on port 80)"
     elif [[ "$DNS_MODE" == "true" ]]; then
         # Setup DNS provider environment variables
         if [[ "$DNS_PROVIDER" == "cloudflare" ]]; then
             [[ -n "$DNS_API_KEY" ]] && export CF_Key="$DNS_API_KEY"
             [[ -n "$DNS_EMAIL" ]] && export CF_Email="$DNS_EMAIL"
-            ACME_CMD="$ACME_DIR/acme.sh --server letsencrypt --issue -d $DOMAIN --dns dns_cf"
+            ACME_CMD="\"$ACME_DIR/acme.sh\" --home \"$ACME_DIR\" --server letsencrypt --issue -d \"$DOMAIN\" --keylength ec-256 --dns dns_cf"
             log_info "Using Cloudflare automatic DNS validation"
         elif [[ "$DNS_PROVIDER" == "route53" ]]; then
             [[ -n "$DNS_API_KEY" ]] && export AWS_ACCESS_KEY_ID="$DNS_API_KEY"
             [[ -n "$DNS_API_SECRET" ]] && export AWS_SECRET_ACCESS_KEY="$DNS_API_SECRET"
-            ACME_CMD="$ACME_DIR/acme.sh --server letsencrypt --issue -d $DOMAIN --dns dns_aws"
+            ACME_CMD="\"$ACME_DIR/acme.sh\" --home \"$ACME_DIR\" --server letsencrypt --issue -d \"$DOMAIN\" --keylength ec-256 --dns dns_aws"
             log_info "Using Route53 automatic DNS validation"
         elif [[ "$DNS_PROVIDER" == "digitalocean" ]]; then
             [[ -n "$DNS_API_KEY" ]] && export DO_API_KEY="$DNS_API_KEY"
-            ACME_CMD="$ACME_DIR/acme.sh --server letsencrypt --issue -d $DOMAIN --dns dns_dgon"
+            ACME_CMD="\"$ACME_DIR/acme.sh\" --home \"$ACME_DIR\" --server letsencrypt --issue -d \"$DOMAIN\" --keylength ec-256 --dns dns_dgon"
             log_info "Using DigitalOcean automatic DNS validation"
+        elif [[ "$DNS_PROVIDER" == "godaddy" ]]; then
+            [[ -n "$DNS_API_KEY" ]] && export GD_Key="$DNS_API_KEY"
+            [[ -n "$DNS_API_SECRET" ]] && export GD_Secret="$DNS_API_SECRET"
+            ACME_CMD="\"$ACME_DIR/acme.sh\" --home \"$ACME_DIR\" --server letsencrypt --issue -d \"$DOMAIN\" --keylength ec-256 --dns dns_gd"
+            log_info "Using GoDaddy automatic DNS validation"
         else
-            ACME_CMD="$ACME_DIR/acme.sh --server letsencrypt --issue -d $DOMAIN --dns --yes-I-know-dns-manual-mode-enough-go-ahead-please"
+            ACME_CMD="\"$ACME_DIR/acme.sh\" --home \"$ACME_DIR\" --server letsencrypt --issue -d \"$DOMAIN\" --keylength ec-256 --dns --yes-I-know-dns-manual-mode-enough-go-ahead-please"
             log_info "Using DNS validation mode (manual TXT record)"
         fi
     else
-        ACME_CMD="$ACME_DIR/acme.sh --server letsencrypt --issue -d $DOMAIN -w $WEBROOT"
+        ACME_CMD="\"$ACME_DIR/acme.sh\" --home \"$ACME_DIR\" --server letsencrypt --issue -d \"$DOMAIN\" --keylength ec-256 -w \"$WEBROOT\""
         log_info "Using webroot mode with path: $WEBROOT"
     fi
-    
+
     if [[ "$STAGING" == "true" ]]; then
         ACME_CMD="$ACME_CMD --staging"
         log_warn "Using Let's Encrypt staging environment (test certificates)"
     fi
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "[DRY RUN] Would issue certificate with: $ACME_CMD"
         return 0
     fi
-    
+
     # Execute certificate issuance with proper error handling
     log_debug "Executing: $ACME_CMD"
-    
+
     if execute bash -c "$ACME_CMD"; then
         log_info "Certificate issued successfully"
-        
+
         # Verify certificate was actually created
-        if [[ ! -f "$ACME_DIR/$DOMAIN/fullchain.cer" ]]; then
+        local cert_dir
+        cert_dir="$(get_acme_domain_dir)" || true
+        if [[ -z "$cert_dir" || ! -f "$cert_dir/fullchain.cer" ]]; then
             log_error "Certificate issuance reported success but files not found"
             exit 1
         fi
@@ -399,19 +429,24 @@ install_certificate() {
     log_info "Installing certificate to:"
     log_info "  Key file: $KEY_FILE"
     log_info "  Cert file: $CERT_FILE"
-    
+
     # Create directories if they don't exist
     execute mkdir -p "$(dirname "$KEY_FILE")"
     execute mkdir -p "$(dirname "$CERT_FILE")"
-    
+
+    local cert_type_flag=""
+    if [[ -d "$ACME_DIR/${DOMAIN}_ecc" ]]; then
+        cert_type_flag=" --ecc"
+    fi
+
     # Build install command
-    INSTALL_CMD="$ACME_DIR/acme.sh --install-cert -d $DOMAIN --key-file $KEY_FILE --fullchain-file $CERT_FILE"
-    
+    INSTALL_CMD="\"$ACME_DIR/acme.sh\" --home \"$ACME_DIR\" --install-cert -d \"$DOMAIN\"$cert_type_flag --key-file \"$KEY_FILE\" --fullchain-file \"$CERT_FILE\""
+
     if [[ -n "$RELOAD_CMD" ]]; then
         INSTALL_CMD="$INSTALL_CMD --reloadcmd \"$RELOAD_CMD\""
         log_info "  Reload command: $RELOAD_CMD"
     fi
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "[DRY RUN] Would install certificate with: $INSTALL_CMD"
         return 0
@@ -458,8 +493,8 @@ verify_certificate() {
 show_renewal_info() {
     log_info "Certificate renewal information:"
     log_info "  Certificates are automatically renewed by acme.sh"
-    log_info "  Check renewal status: $ACME_DIR/acme.sh --list"
-    log_info "  Manual renewal: $ACME_DIR/acme.sh --renew -d $DOMAIN"
+    log_info "  Check renewal status: $ACME_DIR/acme.sh --home $ACME_DIR --list"
+    log_info "  Manual renewal: $ACME_DIR/acme.sh --home $ACME_DIR --renew -d $DOMAIN"
     if [[ -n "$RELOAD_CMD" ]]; then
         log_info "  Service will be reloaded automatically: $RELOAD_CMD"
     fi
@@ -468,17 +503,21 @@ show_renewal_info() {
 # Cleanup function for failed SSL operations
 cleanup_ssl() {
     log_warn "SSL setup failed, cleaning up..."
-    
+
     # Remove failed certificate attempt
     if [[ -d "$ACME_DIR/$DOMAIN" ]]; then
         rm -rf "$ACME_DIR/$DOMAIN"
         log_info "Removed failed certificate directory"
     fi
-    
+    if [[ -d "$ACME_DIR/${DOMAIN}_ecc" ]]; then
+        rm -rf "$ACME_DIR/${DOMAIN}_ecc"
+        log_info "Removed failed certificate directory"
+    fi
+
     # Remove incomplete certificate files
     [[ -f "$KEY_FILE" && ! -s "$KEY_FILE" ]] && rm -f "$KEY_FILE"
     [[ -f "$CERT_FILE" && ! -s "$CERT_FILE" ]] && rm -f "$CERT_FILE"
-    
+
     log_error "SSL setup failed and cleaned up"
     exit 1
 }
@@ -524,6 +563,12 @@ main() {
             digitalocean)
                 if [[ -z "$DNS_API_KEY" ]]; then
                     log_error "DigitalOcean requires --dns-api-key"
+                    exit 1
+                fi
+                ;;
+            godaddy)
+                if [[ -z "$DNS_API_KEY" || -z "$DNS_API_SECRET" ]]; then
+                    log_error "GoDaddy requires --dns-api-key and --dns-api-secret"
                     exit 1
                 fi
                 ;;
