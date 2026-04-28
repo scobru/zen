@@ -8244,7 +8244,7 @@ defmod('./src/index.js', function(module, exp){
   class ZEN {
     constructor(opt = {}) {
       this._opt = opt;
-      this._graphInstance = opt.graph || null;
+      this._graphInstance = opt.graph || graph.create(opt);
     }
 
     static pen(spec = {}) {
@@ -8336,9 +8336,6 @@ defmod('./src/index.js', function(module, exp){
     }
 
     get _graph() {
-      if (!this._graphInstance) {
-        this._graphInstance = graph.create(this._opt);
-      }
       return this._graphInstance;
     }
 

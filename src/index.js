@@ -88,7 +88,7 @@ function mirrorChain(target, source) {
 class ZEN {
   constructor(opt = {}) {
     this._opt = opt;
-    this._graphInstance = opt.graph || null;
+    this._graphInstance = opt.graph || graph.create(opt);
   }
 
   static pen(spec = {}) {
@@ -180,9 +180,6 @@ class ZEN {
   }
 
   get _graph() {
-    if (!this._graphInstance) {
-      this._graphInstance = graph.create(this._opt);
-    }
     return this._graphInstance;
   }
 
