@@ -313,20 +313,17 @@ install_acme() {
     fi
     
     # Download and install acme.sh
-    cd "$TEMP_DIR"
-    execute git clone https://github.com/acmesh-official/acme.sh.git
-    cd acme.sh
+    execute git clone https://github.com/acmesh-official/acme.sh.git "$TEMP_DIR/acme.sh"
     
     # Build install command
-    INSTALL_CMD="./acme.sh --install --home $ACME_DIR --accountemail $EMAIL"
+    INSTALL_CMD="$TEMP_DIR/acme.sh/acme.sh --install --home $ACME_DIR --accountemail $EMAIL"
     if [[ "$AUTO_UPGRADE" == "false" ]]; then
         INSTALL_CMD="$INSTALL_CMD --noupgrade"
     fi
     
-    execute $INSTALL_CMD
+    execute bash -c "$INSTALL_CMD"
     
     # Cleanup
-    cd ~
     execute rm -rf "$TEMP_DIR"
     
     log_info "acme.sh installed successfully"

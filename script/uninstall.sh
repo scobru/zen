@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# GUN Uninstallation Script
-# This script removes GUN installation, systemd service, and optionally Node.js
+# ZEN Uninstallation Script
+# This script removes ZEN installation, systemd service, and optionally Node.js
 # Usage: ./uninstall.sh [OPTIONS]
 
 set -e
@@ -26,14 +26,14 @@ NC='\033[0m' # No Color
 # Help function
 show_help() {
     cat << EOF
-GUN Uninstallation Script
+ZEN Uninstallation Script
 
 USAGE:
     $0 [OPTIONS]
 
 OPTIONS:
     -s, --service NAME         Systemd service name to remove (default: relay)
-    -d, --dir DIRECTORY        GUN installation directory (default: ~/zen)
+    -d, --dir DIRECTORY        ZEN installation directory (default: ~/zen)
     --remove-nodejs            Also remove Node.js and npm
     --remove-certs             Remove SSL certificates (key.pem, cert.pem)
     --remove-acme              Remove acme.sh installation
@@ -46,14 +46,14 @@ ENVIRONMENT VARIABLES:
     SERVICE_NAME, INSTALL_DIR
 
 EXAMPLES:
-    # Basic uninstallation (removes GUN and service only)
+    # Basic uninstallation (removes ZEN and service only)
     $0
 
     # Complete removal including Node.js and certificates
     $0 --remove-nodejs --remove-certs --remove-acme
 
     # Remove with custom service name and directory
-    $0 --service my-gun-relay --dir /opt/zen
+    $0 --service my-zen-relay --dir /opt/zen
 
     # Dry run to see what would be removed
     $0 --remove-nodejs --remove-certs --dry-run
@@ -248,14 +248,14 @@ remove_service() {
     log_info "Service removed successfully"
 }
 
-# Remove GUN installation
-remove_gun() {
+# Remove ZEN installation
+remove_zen() {
     if [[ ! -d "$INSTALL_DIR" ]]; then
-        log_info "GUN installation directory not found: $INSTALL_DIR"
+        log_info "ZEN installation directory not found: $INSTALL_DIR"
         return
     fi
     
-    log_info "Removing GUN installation: $INSTALL_DIR"
+    log_info "Removing ZEN installation: $INSTALL_DIR"
     
     # Additional safety checks before removal
     if [[ ! -d "$INSTALL_DIR" ]]; then
@@ -263,16 +263,16 @@ remove_gun() {
         return
     fi
     
-    # Verify it looks like a GUN installation
-    if [[ ! -f "$INSTALL_DIR/package.json" ]] || ! grep -q '"name".*"gun"\|"@akaoio/zen"' "$INSTALL_DIR/package.json" 2>/dev/null; then
-        log_warn "Directory does not appear to be a GUN installation: $INSTALL_DIR"
+    # Verify it looks like a ZEN installation
+    if [[ ! -f "$INSTALL_DIR/package.json" ]] || ! grep -q '"name".*"zen"\|"@akaoio/zen"' "$INSTALL_DIR/package.json" 2>/dev/null; then
+        log_warn "Directory does not appear to be a ZEN installation: $INSTALL_DIR"
         if ! confirm "Remove directory anyway?"; then
             log_info "Keeping directory"
             return
         fi
     fi
     
-    if confirm "Remove GUN installation directory $INSTALL_DIR?"; then
+    if confirm "Remove ZEN installation directory $INSTALL_DIR?"; then
         # Stop any processes using the directory first
         local pids=$(lsof +D "$INSTALL_DIR" 2>/dev/null | awk 'NR>1 {print $2}' | sort -u || true)
         if [[ -n "$pids" ]]; then
@@ -288,9 +288,9 @@ remove_gun() {
         fi
         
         execute rm -rf "$INSTALL_DIR"
-        log_info "GUN installation removed"
+        log_info "ZEN installation removed"
     else
-        log_info "Keeping GUN installation directory"
+        log_info "Keeping ZEN installation directory"
     fi
 }
 
@@ -393,7 +393,7 @@ remove_config() {
     
     log_info "Removing configuration and data files..."
     
-    # Common GUN data directories
+    # Common ZEN data directories
     DATA_DIRS=("${INSTALL_DIR%/*}/data" "${INSTALL_DIR%/*}/radata" "./data" "./radata")
     
     for data_dir in "${DATA_DIRS[@]}"; do
@@ -439,7 +439,7 @@ show_removal_plan() {
 
 # Main uninstallation process
 main() {
-    log_info "Starting GUN uninstallation..."
+    log_info "Starting ZEN uninstallation..."
     
     show_removal_plan
     
@@ -452,19 +452,19 @@ main() {
     
     check_sudo
     remove_service
-    remove_gun
+    remove_zen
     remove_nodejs
     remove_certificates
     remove_acme
     remove_config
     reset_limits
     
-    log_info "GUN uninstallation completed!"
+    log_info "ZEN uninstallation completed!"
     
     if [[ "$DRY_RUN" != "true" ]]; then
         log_info "You may want to:"
         log_info "  - Remove any remaining Node.js global packages manually"
-        log_info "  - Check for any remaining GUN-related files in your system"
+        log_info "  - Check for any remaining ZEN-related files in your system"
         log_info "  - Restart your system if you removed Node.js"
     fi
 }

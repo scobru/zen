@@ -219,7 +219,7 @@ if (isMain && cluster.isPrimary) {
     console.log("HTTP server will start on port " + opt.port);
   }
 
-  zen = ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
+  zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
   console.log("Relay peer started on port " + opt.port + " with /zen");
 }
 
