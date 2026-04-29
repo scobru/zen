@@ -99,10 +99,14 @@ run git -C "$INSTALL_DIR" pull origin "$VERSION"
 NEW_COMMIT=$(git -C "$INSTALL_DIR" rev-parse HEAD)
 
 if [[ "$PREV_COMMIT" == "$NEW_COMMIT" ]]; then
-    log_info "Already up to date ($NEW_COMMIT)"
-else
-    log_info "Updated: ${PREV_COMMIT:0:7} → ${NEW_COMMIT:0:7}"
+    log_info "Already up to date ($(git -C "$INSTALL_DIR" log -1 --format='%h %s'))"
+    trap - ERR
+    log_info "ZEN update completed (no changes)."
+    exit 0
 fi
+
+log_info "Updated: ${PREV_COMMIT:0:7} → ${NEW_COMMIT:0:7}"
+log_info "$(git -C "$INSTALL_DIR" log -1 --format='  %s (%cr)' HEAD)"
 
 # Install/update dependencies
 run npm --prefix "$INSTALL_DIR" install --omit=dev

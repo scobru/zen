@@ -288,7 +288,40 @@ install_cli() {
     fi
 }
 
-rollback() {
+install_autoupdate() {
+    [[ "$SKIP_SERVICE" == "true" ]] && { log_info "Skipping auto-update timer (--skip-service)"; return; }
+
+    log_info "Installing auto-update timer: ${SERVICE_NAME}-update"
+
+    local node_bin
+    node_bin="$(command -v node)"
+    local update_svc="/etc/systemd/system/${SERVICE_NAME}-update.service"
+    local update_tmr="/etc/systemd/system/${SERVICE_NAME}-update.timer"
+
+    local svc_content tmr_content
+    svc_content="$(sed \
+        -e "s|__ZEN_USER__|$(whoami)|g" \
+        -e "s|__ZEN_DIR__|$INSTALL_DIR|g" \
+        -e "s|__ZEN_SERVICE__|$SERVICE_NAME|g" \
+        "$INSTALL_DIR/script/zen-update.service")"
+    tmr_content="$(sed \
+        -e "s|__ZEN_SERVICE__|$SERVICE_NAME|g" \
+        "$INSTALL_DIR/script/zen-update.timer")"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would write $update_svc"
+        log_info "[DRY RUN] Would write $update_tmr"
+        return
+    fi
+
+    echo "$svc_content" | $SUDO tee "$update_svc" > /dev/null
+    echo "$tmr_content" | $SUDO tee "$update_tmr" > /dev/null
+    $SUDO systemctl daemon-reload
+    $SUDO systemctl enable --now "${SERVICE_NAME}-update.timer"
+    log_info "Auto-update timer enabled (checks every hour, restarts only on new commits)"
+}
+
+
     log_warn "Installation failed, rolling back..."
     if [[ -f "/etc/systemd/system/${SERVICE_NAME}.service" ]]; then
         $SUDO systemctl stop "$SERVICE_NAME" 2>/dev/null || true
@@ -343,6 +376,7 @@ main() {
     create_service
     configure_limits
     start_service
+    install_autoupdate
     install_cli
 
     trap - ERR

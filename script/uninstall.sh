@@ -214,6 +214,23 @@ confirm() {
     esac
 }
 
+# Stop and remove auto-update timer
+remove_autoupdate_timer() {
+    local tmr="${SERVICE_NAME}-update.timer"
+    local svc="${SERVICE_NAME}-update.service"
+
+    for unit in "$tmr" "$svc"; do
+        local f="/etc/systemd/system/$unit"
+        if [[ -f "$f" ]]; then
+            systemctl is-active --quiet "$unit" 2>/dev/null && execute $SUDO systemctl stop "$unit" || true
+            systemctl is-enabled --quiet "$unit" 2>/dev/null && execute $SUDO systemctl disable "$unit" || true
+            execute $SUDO rm -f "$f"
+            log_info "Removed: $f"
+        fi
+    done
+    execute $SUDO systemctl daemon-reload 2>/dev/null || true
+}
+
 # Stop and remove systemd service
 remove_service() {
     SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
@@ -475,6 +492,7 @@ main() {
     
     check_sudo
     remove_service
+    remove_autoupdate_timer
     remove_cli
     remove_zen
     remove_nodejs

@@ -87,9 +87,28 @@ cmd_status() {
     fi
 
     echo ""
+    echo -e "${BOLD}Auto-update  (${service_name}-update.timer)${NC}"
+    echo "$sep"
+    if command -v systemctl &>/dev/null && systemctl list-unit-files --type=timer 2>/dev/null | grep -q "${service_name}-update.timer"; then
+        local tmr_active
+        tmr_active="$(systemctl is-active "${service_name}-update.timer" 2>/dev/null || echo "inactive")"
+        local col="${GREEN}"; [[ "$tmr_active" != "active" ]] && col="${YELLOW}"
+        echo -e "  status     ${col}${tmr_active}${NC}"
+        local next
+        next="$(systemctl show "${service_name}-update.timer" --property=NextElapseUSecRealtime 2>/dev/null \
+            | sed 's/NextElapseUSecRealtime=//' | grep -v '^$' || true)"
+        local last
+        last="$(systemctl show "${service_name}-update.service" --property=ExecMainExitTimestamp 2>/dev/null \
+            | sed 's/ExecMainExitTimestamp=//' | grep -v '^$\|^0$' || true)"
+        [[ -n "$next" && "$next" != "0" ]] && echo "  next       $(systemctl show "${service_name}-update.timer" --property=NextElapseUSecRealtime 2>/dev/null | sed 's/NextElapseUSecRealtime=//')" || true
+        [[ -n "$last" ]] && echo "  last run   $last"
+    else
+        echo -e "  ${YELLOW}timer not installed${NC}  (re-run install.sh to enable)"
+    fi
+
+    echo ""
     echo -e "${BOLD}Paths  (XDG)${NC}"
     echo "$sep"
-    echo "  config     $ZEN_CONFIG_DIR"
     echo "  data       $ZEN_DATA_DIR"
     echo "  state      $ZEN_STATE_DIR"
 
