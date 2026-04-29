@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import ZEN from "../index.js";
 import * as xdg from "../lib/xdg.js";
-import { disc, DOMF, PORTF } from "../lib/discover.js";
+import { disc, hwid, DOMF, PORTF } from "../lib/discover.js";
 import { scanbg, mkpat } from "../lib/scan.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -108,6 +108,7 @@ if (main && cluster.isPrimary) {
     }, 5000);
   });
 } else if (main) {
+  (async () => {
   const env = process.env;
   let port;
   let hport;
@@ -173,6 +174,18 @@ if (main && cluster.isPrimary) {
       sscan();
       schd();
     }
+  }
+
+  // ── /peers JSON endpoint (CORS-enabled, consumed by browser AXE) ─────────
+  let srv;
+  function hndl(req, res) {
+    ldom(req);
+    if (req.method === "GET" && (req.url === "/peers" || req.url === "/peers/")) {
+      res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+      res.end(JSON.stringify([...kprs]));
+      return;
+    }
+    srv(req, res);
   }
 
   // ── peer discovery ────────────────────────────────────────────────────────
@@ -278,11 +291,8 @@ if (main && cluster.isPrimary) {
       process.exit(1);
     }
 
-    const srv = ZEN.serve(__dirname);
-    opt.server = https.createServer(opt, (req, res) => {
-      ldom(req);
-      srv(req, res);
-    });
+    srv = ZEN.serve(__dirname);
+    opt.server = https.createServer(opt, hndl);
 
     if (hport == 443 || env.HTTP_REDIRECT === "true") {
       try {
@@ -316,15 +326,26 @@ if (main && cluster.isPrimary) {
     opt.port = ahp;
     console.log("HTTPS server will start on port " + ahp);
   } else {
-    const srv = ZEN.serve(__dirname);
-    opt.server = http.createServer((req, res) => {
-      ldom(req);
-      srv(req, res);
-    });
+    srv = ZEN.serve(__dirname);
+    opt.server = http.createServer(hndl);
     console.log("HTTP server will start on port " + opt.port);
   }
 
-  zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
+  // ── deterministic peer ID from hardware entropy ───────────────────────────
+  let ppid = null;
+  const hraw = hwid();
+  if (hraw) {
+    try {
+      const seed = await ZEN.hash(hraw, null, null, { encode: "base62" });
+      const ppair = await ZEN.pair(null, { seed });
+      ppid = ppair.pub;
+      console.log("Peer ID (stable):", ppid.slice(0, 9) + "...");
+    } catch (e) {
+      console.log("Warning: pid derivation failed:", e.message);
+    }
+  }
+
+  zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers, ...(ppid && { pid: ppid }) });
   console.log("Relay peer started on port " + opt.port + " with /zen");
 
   // ── PEX: peer exchange via direct DAM message (not public graph) ──────────
@@ -332,6 +353,8 @@ if (main && cluster.isPrimary) {
   const surl = domain
     ? ((opt.key ? "wss" : "ws") + "://" + domain + ":" + port + "/zen")
     : null;
+
+  if (surl) kprs.add(surl); // include self in /peers responses
 
   const root = zen._graph._;
 
@@ -387,6 +410,7 @@ if (main && cluster.isPrimary) {
     }, 30000);
     btmr.unref();
   });
+  })().catch(err => { console.error("Fatal:", err); process.exit(1); });
 }
 
 export default zen;
