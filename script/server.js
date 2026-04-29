@@ -10,7 +10,7 @@ import { dirname } from "node:path";
 import ZEN from "../index.js";
 import * as xdg from "../lib/xdg.js";
 import { discover, DOMAIN_FILE, PORT_FILE } from "../lib/discover.js";
-import { scanBackground } from "../lib/scan.js";
+import { scanBackground, parseDomainPattern } from "../lib/scan.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -175,38 +175,54 @@ if (isMain && cluster.isPrimary) {
     }
   }
 
-  // Background peer scan — called once domain is known
-  const knownPeers = new Set(peers);
+  // ── peer discovery ────────────────────────────────────────────────────────
+  const knownPeers  = new Set(peers);  // all URLs ever seen
+  const scannedPats = new Set();       // patterns scanned this cycle
   let scanTimer = null;
-  const SCAN_INTERVAL = 10 * 60 * 1000; // 10 minutes
+  const SCAN_INTERVAL = 10 * 60 * 1000; // 10 min periodic rescan
+
+  function patternKey(host) {
+    const p = parseDomainPattern((host || "").split(":")[0]);
+    return p ? (p.prefix + "*" + p.tail + p.suffix) : host;
+  }
 
   function addPeer(url) {
     if (knownPeers.has(url)) return;
     knownPeers.add(url);
     console.log("Discovered peer:", url);
-    if (zen && zen._.opt) {
-      if (!Array.isArray(zen._.opt.peers)) zen._.opt.peers = [];
-      if (!zen._.opt.peers.includes(url)) zen._.opt.peers.push(url);
+    // Inject into AXE peer list
+    const root = zen && zen._graph && zen._graph._;
+    if (root && root.opt) {
+      if (!Array.isArray(root.opt.peers)) root.opt.peers = [];
+      if (!root.opt.peers.includes(url)) root.opt.peers.push(url);
     }
-    // Connect immediately via AXE mesh if available
-    if (zen && zen._.opt && zen._.opt.mesh) {
-      try { zen._.opt.mesh.say({ dam: "hi" }); } catch {}
-    }
+    // Share with all connected peers via graph
+    try { zen.get("~peers").get(url).put(Date.now()); } catch {}
+    // Expand scan to this peer's domain pattern
+    try { scanDomain(new URL(url).hostname); } catch {}
+  }
+
+  function scanDomain(host) {
+    if (!host) return;
+    const key = patternKey(host);
+    if (scannedPats.has(key)) return;
+    scannedPats.add(key);
+    console.log("Scanning pattern:", key);
+    scanBackground(host, { port, onFound: addPeer });
   }
 
   function startScan() {
-    if (!domain) return;
-    console.log("Scanning for peers with domain pattern:", domain);
-    scanBackground(domain, { port, onFound: addPeer });
+    if (domain) scanDomain(domain);
   }
 
   function scheduleScan() {
     clearTimeout(scanTimer);
     scanTimer = setTimeout(() => {
+      scannedPats.clear(); // new cycle — re-probe all known patterns
       startScan();
       scheduleScan();
     }, SCAN_INTERVAL);
-    scanTimer.unref(); // don't block process exit
+    scanTimer.unref();
   }
 
   if (
@@ -288,17 +304,35 @@ if (isMain && cluster.isPrimary) {
   zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
   console.log("Relay peer started on port " + opt.port + " with /zen");
 
+  // Subscribe to peer exchange via graph — learn peers other nodes have found
+  zen.get("~peers").map().on((t, url) => {
+    if (t && typeof url === "string" && /^wss?:\/\//.test(url)) addPeer(url);
+  });
+
+  // Announce self so others can discover us
+  if (domain) {
+    const selfProto = (opt.key) ? "wss" : "ws";
+    const selfUrl   = selfProto + "://" + domain + ":" + port + "/zen";
+    setTimeout(() => {
+      try { zen.get("~peers").get(selfUrl).put(Date.now()); } catch {}
+    }, 2000);
+  }
+
   // Start scan immediately if domain already known, else wait for first request
   if (domain) { startScan(); scheduleScan(); }
   else console.log("Domain not configured — will scan after first request");
 
   // Reactive rescan: when a peer disconnects, rescan after a 30s debounce
   let byeTimer = null;
-  zen.on("bye", () => {
+  const root = zen._graph._;
+  root.on("bye", function () {
+    this.to.next.apply(this.to, arguments);
     clearTimeout(byeTimer);
     byeTimer = setTimeout(() => {
+      scannedPats.clear();
       console.log("Peer disconnected — rescanning...");
       startScan();
+      scheduleScan();
     }, 30000);
     byeTimer.unref();
   });
