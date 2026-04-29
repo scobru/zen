@@ -304,19 +304,45 @@ if (isMain && cluster.isPrimary) {
   zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
   console.log("Relay peer started on port " + opt.port + " with /zen");
 
-  // Announce self so others can discover us
-  let selfUrl = null;
-  if (domain) {
-    const selfProto = (opt.key) ? "wss" : "ws";
-    selfUrl = selfProto + "://" + domain + ":" + port + "/zen";
-    setTimeout(() => {
-      try { zen.get("~peers").get(selfUrl).put(Date.now()); } catch {}
-    }, 2000);
-  }
+  // ── PEX: peer exchange via direct DAM message (not public graph) ──────────
+  // mesh.hear["pex"] + root.on("hi") — only shared with already-connected peers
+  const selfUrl = domain
+    ? ((opt.key ? "wss" : "ws") + "://" + domain + ":" + port + "/zen")
+    : null;
 
-  // Subscribe to peer exchange via graph — learn peers other nodes have found
-  zen.get("~peers").map().on((t, url) => {
-    if (t && typeof url === "string" && /^wss?:\/\//.test(url) && url !== selfUrl) addPeer(url);
+  const root = zen._graph._;
+
+  // Wait for AXE to attach opt.mesh (it runs synchronously but after ZEN init)
+  setImmediate(() => {
+    const mesh = root.opt && root.opt.mesh;
+    if (!mesh) return;
+
+    // Handle incoming peer lists from other nodes
+    mesh.hear["pex"] = function (msg, _peer) {
+      if (!Array.isArray(msg.peers)) return;
+      msg.peers.forEach((url) => {
+        if (typeof url === "string" && /^wss?:\/\//.test(url) && url !== selfUrl) {
+          addPeer(url);
+        }
+      });
+    };
+
+    // On new peer connection: send our known peer list to them
+    root.on("hi", function (peer) {
+      this.to.next(peer);
+      const list = Array.from(knownPeers).filter((u) => u !== selfUrl);
+      if (list.length) {
+        setTimeout(() => {
+          try { mesh.say({ dam: "pex", peers: list }, peer); } catch {}
+        }, 500);
+      }
+      // Also send self URL so they can add us by domain
+      if (selfUrl) {
+        setTimeout(() => {
+          try { mesh.say({ dam: "pex", peers: [selfUrl] }, peer); } catch {}
+        }, 600);
+      }
+    });
   });
 
   // Start scan immediately if domain already known, else wait for first request
@@ -325,7 +351,6 @@ if (isMain && cluster.isPrimary) {
 
   // Reactive rescan: when a peer disconnects, rescan after a 30s debounce
   let byeTimer = null;
-  const root = zen._graph._;
   root.on("bye", function () {
     this.to.next.apply(this.to, arguments);
     clearTimeout(byeTimer);
