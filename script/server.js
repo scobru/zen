@@ -178,9 +178,13 @@ if (isMain && cluster.isPrimary) {
   // ── peer discovery ────────────────────────────────────────────────────────
   const knownPeers  = new Set(peers);  // all URLs ever seen
   const scannedPats = new Set();       // patterns scanned this cycle
-  let scanTimer = null;
-  let pexMesh   = null;                // set after AXE attaches
-  const SCAN_INTERVAL = 10 * 60 * 1000; // 10 min periodic rescan
+  let scanTimer     = null;
+  let pexMesh       = null;            // set after AXE attaches
+  let foundInCycle  = false;           // tracks if addPeer fired this scan cycle
+  const SCAN_INTERVAL     = 10 * 60 * 1000;   // 10 min base interval
+  const MAX_SCAN_INTERVAL = 2 * 60 * 60 * 1000; // 2 hr cap
+  const MAX_UPSTREAMS     = 10;        // max outbound peer connections from scan
+  let   scanInterval      = SCAN_INTERVAL;
 
   function patternKey(host) {
     const p = parseDomainPattern((host || "").split(":")[0]);
@@ -190,16 +194,21 @@ if (isMain && cluster.isPrimary) {
   function addPeer(url) {
     if (knownPeers.has(url)) return;
     knownPeers.add(url);
+    foundInCycle = true;
     console.log("Discovered peer:", url);
-    // Inject into AXE peer list so it connects
     const r = zen && zen._graph && zen._graph._;
-    if (r && r.opt) {
+    // Connect only if under upstream limit (prevents full mesh / bandwidth waste)
+    const upstreamCount = r && r.axe ? Object.keys(r.axe.up || {}).length : 0;
+    if (pexMesh && upstreamCount < MAX_UPSTREAMS) {
+      try { pexMesh.hi({ id: url, url, retry: 9 }); } catch {}
+    } else if (!pexMesh && r && r.opt) {
+      // mesh not yet attached — queue in peer list for AXE to connect later
       if (!Array.isArray(r.opt.peers)) r.opt.peers = [];
       if (!r.opt.peers.includes(url)) r.opt.peers.push(url);
     }
     // Broadcast immediately to all currently connected peers
     if (pexMesh) {
-      try { pexMesh.say({ dam: "pex", peers: [url] }, r.opt.peers); } catch {}
+      try { pexMesh.say({ dam: "pex", peers: [url] }, r && r.opt && r.opt.peers); } catch {}
     }
     // Expand scan to this peer's domain pattern
     try { scanDomain(new URL(url).hostname); } catch {}
@@ -221,10 +230,21 @@ if (isMain && cluster.isPrimary) {
   function scheduleScan() {
     clearTimeout(scanTimer);
     scanTimer = setTimeout(() => {
+      foundInCycle = false;
       scannedPats.clear(); // new cycle — re-probe all known patterns
       startScan();
-      scheduleScan();
-    }, SCAN_INTERVAL);
+      // After 2 min (scan finishes well within that), check if we found anything
+      const check = setTimeout(() => {
+        if (!foundInCycle) {
+          scanInterval = Math.min(scanInterval * 2, MAX_SCAN_INTERVAL);
+          console.log(`Scan: no new peers — next scan in ${Math.round(scanInterval / 60000)}m`);
+        } else {
+          scanInterval = SCAN_INTERVAL; // reset backoff on any discovery
+        }
+        scheduleScan();
+      }, 2 * 60 * 1000);
+      if (check.unref) check.unref();
+    }, scanInterval);
     scanTimer.unref();
   }
 
@@ -359,6 +379,7 @@ if (isMain && cluster.isPrimary) {
     this.to.next.apply(this.to, arguments);
     clearTimeout(byeTimer);
     byeTimer = setTimeout(() => {
+      scanInterval = SCAN_INTERVAL; // reset backoff — need to find replacements
       scannedPats.clear();
       console.log("Peer disconnected — rescanning...");
       startScan();
