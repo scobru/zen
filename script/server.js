@@ -171,22 +171,42 @@ if (isMain && cluster.isPrimary) {
       try { xdg.ensure(zenCfgDir); fs.writeFileSync(DOMAIN_FILE, domain + "\n"); } catch {}
       console.log("Domain latched from request:", domain);
       startScan();
+      scheduleScan();
     }
   }
 
   // Background peer scan — called once domain is known
+  const knownPeers = new Set(peers);
+  let scanTimer = null;
+  const SCAN_INTERVAL = 10 * 60 * 1000; // 10 minutes
+
+  function addPeer(url) {
+    if (knownPeers.has(url)) return;
+    knownPeers.add(url);
+    console.log("Discovered peer:", url);
+    if (zen && zen._.opt) {
+      if (!Array.isArray(zen._.opt.peers)) zen._.opt.peers = [];
+      if (!zen._.opt.peers.includes(url)) zen._.opt.peers.push(url);
+    }
+    // Connect immediately via AXE mesh if available
+    if (zen && zen._.opt && zen._.opt.mesh) {
+      try { zen._.opt.mesh.say({ dam: "hi" }); } catch {}
+    }
+  }
+
   function startScan() {
     if (!domain) return;
     console.log("Scanning for peers with domain pattern:", domain);
-    scanBackground(domain, {
-      port,
-      onFound: (url) => {
-        console.log("Discovered peer:", url);
-        if (zen && zen._.opt && Array.isArray(zen._.opt.peers)) {
-          if (!zen._.opt.peers.includes(url)) zen._.opt.peers.push(url);
-        }
-      },
-    });
+    scanBackground(domain, { port, onFound: addPeer });
+  }
+
+  function scheduleScan() {
+    clearTimeout(scanTimer);
+    scanTimer = setTimeout(() => {
+      startScan();
+      scheduleScan();
+    }, SCAN_INTERVAL);
+    scanTimer.unref(); // don't block process exit
   }
 
   if (
@@ -269,8 +289,19 @@ if (isMain && cluster.isPrimary) {
   console.log("Relay peer started on port " + opt.port + " with /zen");
 
   // Start scan immediately if domain already known, else wait for first request
-  if (domain) startScan();
+  if (domain) { startScan(); scheduleScan(); }
   else console.log("Domain not configured — will scan after first request");
+
+  // Reactive rescan: when a peer disconnects, rescan after a 30s debounce
+  let byeTimer = null;
+  zen.on("bye", () => {
+    clearTimeout(byeTimer);
+    byeTimer = setTimeout(() => {
+      console.log("Peer disconnected — rescanning...");
+      startScan();
+    }, 30000);
+    byeTimer.unref();
+  });
 }
 
 export default zen;
