@@ -374,20 +374,33 @@ if (main && cluster.isPrimary) {
       });
     };
 
-    // On new peer connection: send our full known peer list to them
+    // On new peer connection: send our full known peer list + browser peer pids
     root.on("hi", function (peer) {
       this.to.next(peer);
       const list = Array.from(kprs).filter((u) => u !== surl);
-      if (list.length) {
-        setTimeout(() => {
-          try { mesh.say({ dam: "pex", peers: list }, peer); } catch {}
-        }, 500);
-      }
-      // Also send self URL
+      setTimeout(() => {
+        try {
+          // browser pids: connected peers that have a pid but no URL (pure browser WS clients)
+          const bpids = Object.values(root.opt.peers || {})
+            .filter(p => p && p.pid && !p.url && p.pid !== peer.pid)
+            .map(p => p.pid);
+          const pexMsg = { dam: "pex", peers: list };
+          if (bpids.length) pexMsg.bpids = bpids;
+          mesh.say(pexMsg, peer);
+          // announce this peer's pid to all existing peers so they can WebRTC to it
+          if (peer.pid && !peer.url) {
+            Object.values(root.opt.peers || {}).forEach(p => {
+              if (p && p.wire && p !== peer) {
+                try { mesh.say({ dam: "pex", peers: [], bpids: [peer.pid] }, p); } catch {}
+              }
+            });
+          }
+        } catch {}
+      }, 600);
       if (surl) {
         setTimeout(() => {
           try { mesh.say({ dam: "pex", peers: [surl] }, peer); } catch {}
-        }, 600);
+        }, 700);
       }
     });
   });
