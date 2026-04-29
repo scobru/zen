@@ -323,41 +323,41 @@ const result = await ZEN.hash(
 
 ### 3.5.2 Pen PoW compatibility
 
-ZEN's pen policy engine verifies PoW by reconstructing the proof from two registers and hashing it:
+ZEN's pen policy engine verifies PoW by reconstructing a **canonical block** from all four write fields and hashing it with the nonce:
 
 ```js
 // pen.js internals — how the verifier checks PoW:
-// R[0] = key (the graph key being written)
-// R[7] = nonce (from msg.put["^"] — stored separately, not in the key)
-var proof = R[0] + ":" + R[7];
+// The canonical block binds soul + key + val + state together.
+// R[7] = nonce (from msg.put["^"])
+var proof = JSON.stringify({
+  "#": soul,    // R[2] — soul of the node
+  ".": key,     // R[0] — graph key being written
+  ":": val,     // R[1] — value being written
+  ">": state,   // R[3] — HAM timestamp
+}) + ":" + nonce;
 hash(proof, null, cb, { name: "SHA-256", encode: "hex" })
 // passes if hash starts with pow.unit.repeat(pow.difficulty)
 ```
 
-Mining is compatible because:
-1. For string data `ZEN.hash(key, ...)` mines nonce such that `hash(key + ":" + nonce)` meets the prefix requirement.
-2. `result.proof` equals `key + ":" + nonce` — the exact string pen reconstructs at verify time.
-3. Same proof → same SHA-256 → same prefix check → **passes automatically**.
+Binding the nonce to the full canonical block (not just the key) prevents replay attacks across different keys, values, or time periods.
 
-The nonce is **not** embedded in the key. It travels as `msg.put["^"]` on the wire and is placed in R[7] before the policy runs.
+**Auto-mining** happens automatically inside `penStage` when you pass `pow` as a policy object in `opt`:
 
 ```js
-// Mine a key for a pen soul with pow: { field: 7, difficulty: 2 }
-const { nonce } = await ZEN.hash(myKey, null, null,
-  { name: "SHA-256", encode: "hex", pow: { unit: "0", difficulty: 2 } }
-);
-
-// Write with clean key — nonce goes via opt.pow, pen reads it from msg.put["^"]
-zen.get(penSoul).get(myKey).put(data, cb, { authenticator: pair, pow: nonce });
+// ZEN auto-mines the nonce — just pass the policy object:
+zen.get(penSoul).get(myKey).put(data, cb, {
+  authenticator: pair,
+  pow: { unit: "0", difficulty: 2 }  // ZEN mines and stores nonce in msg.put["^"]
+});
 ```
 
-> **Why not `opt.salt` as nonce?**
+The mined nonce is stored in `msg.put["^"]` and propagated to all peers. Peers re-verify by rebuilding the same canonical block.
+
+> **Why not `opt.pow: nonce` (a string)?**
 >
-> When `opt.name` is `"SHA-256"` (or any direct hash), the code takes the `ishash()` path
-> and calls `sha256(data)` directly. `opt.salt` is **never read** in that path — it only
-> exists in the PBKDF2 branch. Therefore, changing `opt.salt` has zero effect on the
-> SHA-256 output, and cannot be used as a nonce for pen-compatible PoW mining.
-> The nonce **must** be passed separately through `opt.pow` / `msg.put["^"]`.
+> `opt.pow` must be a **policy object** `{ unit, difficulty }` — never a nonce string.
+> The nonce is computed internally by ZEN during `penStage` and stored in `msg.put["^"]` (R[7]).
+> Passing a nonce string as `opt.pow` will not trigger mining and will be silently ignored.
 
 ---
 
@@ -418,16 +418,17 @@ const id = ZEN.keyid(pair.pub);
 
 ---
 
-## 3.8 Key encoding utilities
+## 3.8 Base62 encoding
 
-### `ZEN.pack(data)` and `ZEN.unpack(str)`
-
-ZEN uses base62 (`[A-Za-z0-9]`) for all key material. These utilities pack/unpack binary data to/from base62 strings.
+ZEN uses base62 (`[A-Za-z0-9]`) for all key material and bytecode. The encoding utilities are internal and live in `src/base62.js`. They are also exposed on the `pen` object for PEN bytecode operations (see §7.5 in Ch 7):
 
 ```js
-const packed   = ZEN.pack(uint8Array);   // → base62 string
-const unpacked = ZEN.unpack(str);        // → Uint8Array
+// PEN bytecode encoding (pen object — not ZEN static):
+const packed   = pen.pack(uint8Array);  // → base62 string
+const unpacked = pen.unpack(str);       // → Uint8Array
 ```
+
+These are **not** exported as `ZEN.pack` / `ZEN.unpack` on the ZEN class.
 
 ---
 

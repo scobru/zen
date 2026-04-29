@@ -36,6 +36,8 @@ const zen = new ZEN({ file: "data" });
 // Creates ./data.radata, ./data1.radata, etc.
 ```
 
+When running on Node.js **without** a `file` option, ZEN uses the **XDG Base Directory** default — see §5.12.
+
 To disable Radisk (in-memory only):
 
 ```js
@@ -52,12 +54,14 @@ const zen = new ZEN({ radisk: false });
 - Each shard file is a single string stored at `<dir>/<filename>`
 - Concurrent writes to the same file are coalesced by tracking in-flight puts
 
-The `file` constructor option sets the storage directory:
+The `file` constructor option **overrides** the default storage directory:
 
 ```js
 const zen = new ZEN({ file: "myapp-data" });
 // stores data in ./myapp-data/
 ```
+
+Without `file`, the default on Node.js is the XDG data directory (see §5.12).
 
 ---
 
@@ -176,12 +180,11 @@ The graph exists only in memory and is lost on page reload or process exit.
 Test data from previous runs can cause false positives. Always clean before running tests:
 
 ```bash
-node clean.js
-# or manually:
-# rm -rf *data* *radata*
+npm run clean
+npm test
 ```
 
-The project's `npm run clean` script does this automatically before each test suite.
+Tests that use Node.js storage (`lib/rfs.js`) automatically isolate to a local `radata/` directory when `GUN_TEST_TMP=1` is set. The `npm test` and `npm run test:core` scripts set this automatically.
 
 ---
 
@@ -197,3 +200,26 @@ data/               ← root Radisk directory
 ```
 
 Files are named by `encodeURIComponent` of the first character(s) of the stored key.
+
+---
+
+## 5.12 Production storage paths (XDG Base Directory)
+
+ZEN follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/) for production storage on Node.js. When you start ZEN **without** a `file` option, storage is placed under your home directory:
+
+| Purpose | Environment variable | Default path |
+|---------|---------------------|-------------|
+| Graph data (radata) | `XDG_DATA_HOME` | `~/.local/share/zen/radata/` |
+| Config + CLI metadata | `XDG_CONFIG_HOME` | `~/.config/zen/` |
+| Runtime state + stats | `XDG_STATE_HOME` | `~/.local/state/zen/` |
+
+These paths are computed by `lib/xdg.js`. Set the environment variables to override them.
+
+**Test isolation:** When `GUN_TEST_TMP=1` is set, `lib/rfs.js` uses a local relative `radata/` path instead of the XDG default. This keeps test runs isolated from production data.
+
+```bash
+# Run tests without touching production data:
+GUN_TEST_TMP=1 npm run test:core
+
+# Or use npm run clean + npm test (does both automatically)
+```

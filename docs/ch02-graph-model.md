@@ -222,12 +222,6 @@ zen.get("profile").once(function(data) {
 
 Fires exactly once, after a 99ms debounce (waits for all pending writes to settle). After firing, automatically unsubscribes.
 
-If you need a Promise:
-
-```js
-const { data, key } = await zen.get("profile").promOnce();
-```
-
 ---
 
 ## 2.9 `set(item, cb)` — add to a collection
@@ -301,34 +295,7 @@ zen.get("profile").get("name").on(function(data) {
 
 ---
 
-## 2.12 Promise API
-
-ZEN provides promise-based wrappers for every core method:
-
-| Method | Returns |
-|--------|---------|
-| `promOnce(limit, opt)` | `Promise<{ ref, data, key }>` |
-| `promPut(item, opt)` | `Promise<{ ref, ack }>` |
-| `promSet(item, opt)` | `Promise<{ ref, ack }>` |
-| `promOn(callback, option)` | `Promise<{ data, key }>` (first value) |
-
-```js
-const { data } = await zen.get("profile").promOnce();
-
-const { ack } = await zen.get("count").promPut(42);
-if (ack.err) console.error(ack.err);
-```
-
-`promOnce()` on a `.map()` chain collects all current items:
-
-```js
-const items = await zen.get("todos").map().promOnce(200);
-// items = [{ ref, data, key }, ...]
-```
-
----
-
-## 2.13 Instance isolation
+## 2.12 Instance isolation
 
 Two separate `ZEN` instances are completely isolated — they do not share memory:
 

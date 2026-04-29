@@ -12,7 +12,7 @@ npm install @akaoio/zen
 
 ZEN has **zero runtime dependencies** in the browser. The bundled `zen.js` file is self-contained.
 
-For Node.js you need Node ≥ 0.8.4. No native modules required.
+For Node.js you need Node ≥ 18. No native modules required.
 
 ---
 

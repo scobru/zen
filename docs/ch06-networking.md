@@ -132,13 +132,16 @@ The `universe()` router (in `src/root.js`) sits on both channels:
 
 ## 6.7 Running a relay server
 
-The simplest relay is just a ZEN instance with a WebSocket server:
+The simplest relay is just a ZEN instance with a WebSocket server. ZEN uses ES modules — use `import` syntax:
 
 ```js
+import http from "http";
 import ZEN from "@akaoio/zen";
 
+const server = http.createServer().listen(8420);
+
 const zen = new ZEN({
-  web: require("http").createServer().listen(8420),
+  web:  server,
   file: "relay-data",
 });
 
@@ -151,11 +154,15 @@ Clients connect with:
 const zen = new ZEN({ peers: ["ws://localhost:8420/zen"] });
 ```
 
-For production, use `examples/zen-http.js` as a starting point:
+For a production relay with SSL, logging, and auto-restart, use the included `relay.js` at the project root:
 
 ```bash
-node examples/zen-http.js
+node relay.js
+# or via systemd / PM2
+npm start        # node --prof relay.js (V8 profiling enabled)
 ```
+
+See `script/install.sh` for full production deployment (XDG paths, systemd service, SSL setup).
 
 ---
 
