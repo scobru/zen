@@ -9,6 +9,7 @@ set -euo pipefail
 # Default values
 VERSION="main"
 PORT="8420"
+DOMAIN=""
 PEERS=""
 RAD="true"
 HTTPS_KEY=""
@@ -55,6 +56,7 @@ USAGE:
 OPTIONS:
     -v, --version VERSION       Git branch/tag to checkout (default: main)
     -p, --port PORT             Port number for the server (default: 8420)
+    -D, --domain DOMAIN         Public domain name (e.g. peer1.akao.io)
     -P, --peers PEERS           Comma-separated list of peer URLs
     -d, --dir DIRECTORY         Installation directory (default: ~/zen)
     -s, --service NAME          Systemd service name (default: relay)
@@ -80,6 +82,7 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         -v|--version)   VERSION="$2";      shift 2 ;;
         -p|--port)      PORT="$2";         shift 2 ;;
+        -D|--domain)    DOMAIN="$2";       shift 2 ;;
         -P|--peers)     PEERS="$2";        shift 2 ;;
         -d|--dir)       INSTALL_DIR="$2";  shift 2 ;;
         -s|--service)   SERVICE_NAME="$2"; shift 2 ;;
@@ -172,6 +175,7 @@ create_service() {
     # Build env lines
     local env_lines=""
     [[ -n "$PORT" ]]       && env_lines+="Environment=PORT=$PORT\n"
+    [[ -n "$DOMAIN" ]]     && env_lines+="Environment=DOMAIN=$DOMAIN\n"
     [[ -n "$PEERS" ]]      && env_lines+="Environment=PEERS=$PEERS\n"
     [[ -n "$RAD" ]]        && env_lines+="Environment=RAD=$RAD\n"
     [[ -n "$HTTPS_KEY" ]]  && env_lines+="Environment=HTTPS_KEY=$HTTPS_KEY\n"
@@ -245,6 +249,8 @@ install_cli() {
     mkdir -p "$cfg_dir"
     echo "$INSTALL_DIR"  > "$cfg_dir/install_dir"
     echo "$SERVICE_NAME" > "$cfg_dir/service_name"
+    echo "$PORT"         > "$cfg_dir/port"
+    [[ -n "$DOMAIN" ]] && echo "$DOMAIN" > "$cfg_dir/domain"
 
     # Determine where to place the `zen` binary
     local bin_dir
@@ -302,12 +308,28 @@ main() {
     log_info "  Port:      $PORT"
     log_info "  Directory: $INSTALL_DIR"
     log_info "  Service:   $SERVICE_NAME"
+    [[ -n "$DOMAIN" ]]    && log_info "  Domain:    $DOMAIN"
     [[ -n "$PEERS" ]]     && log_info "  Peers:     $PEERS"
     [[ -n "$HTTPS_KEY" ]] && log_info "  HTTPS Key: $HTTPS_KEY"
     [[ -n "$HTTPS_CERT" ]] && log_info "  HTTPS Cert: $HTTPS_CERT"
 
     if [[ -d "$INSTALL_DIR" ]] && [[ "$(ls -A "$INSTALL_DIR" 2>/dev/null)" ]]; then
         confirm "Directory $INSTALL_DIR is not empty. Continue?" || { log_info "Cancelled"; exit 0; }
+    fi
+
+    # Interactive prompts when running in a terminal (no --skip-service means we're doing a real install)
+    if [[ -t 0 ]] && [[ "$SKIP_SERVICE" != "true" ]]; then
+        if [[ -z "$DOMAIN" ]]; then
+            read -rp "$(echo -e '\033[1;34m[ZEN]\033[0m') Your public domain or IP (e.g. peer1.example.com) [leave blank to auto-detect]: " _dom
+            DOMAIN="${_dom:-}"
+        fi
+        if [[ "$PORT" == "8420" ]]; then
+            read -rp "$(echo -e '\033[1;34m[ZEN]\033[0m') Server port [8420]: " _port
+            PORT="${_port:-8420}"
+            if [[ ! "$PORT" =~ ^[0-9]+$ ]] || (( PORT < 1 || PORT > 65535 )); then
+                log_error "Invalid port: $PORT"; exit 1
+            fi
+        fi
     fi
 
     local available_space

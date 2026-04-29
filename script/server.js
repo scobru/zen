@@ -9,6 +9,8 @@ import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import ZEN from "../index.js";
 import * as xdg from "../lib/xdg.js";
+import { discover, DOMAIN_FILE, PORT_FILE } from "../lib/discover.js";
+import { scanBackground } from "../lib/scan.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -110,11 +112,17 @@ if (isMain && cluster.isPrimary) {
   let port;
   let httpsPort;
   let peers;
+  let domain;
 
   try {
     port = validatePort(env.PORT || process.argv[2] || 8420);
     httpsPort = env.HTTPS_PORT ? validatePort(env.HTTPS_PORT) : null;
     peers = validatePeers(env.PEERS);
+    // Domain: env var > XDG config file
+    domain = env.DOMAIN || null;
+    if (!domain) {
+      try { domain = fs.readFileSync(DOMAIN_FILE, "utf8").trim() || null; } catch {}
+    }
   } catch (err) {
     console.error("Configuration Error:", err.message);
     process.exit(1);
@@ -152,6 +160,35 @@ if (isMain && cluster.isPrimary) {
     env.HTTPS_CERT = env.HTTPS_CERT || defaultCertFile;
   }
 
+  // Latch domain from first incoming request Host header if still unknown
+  let domainLatched = !!domain;
+  function latchDomain(req) {
+    if (domainLatched) return;
+    const host = (req.headers.host || "").split(":")[0];
+    if (host && host !== "localhost" && !/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+      domain = host;
+      domainLatched = true;
+      try { xdg.ensure(zenCfgDir); fs.writeFileSync(DOMAIN_FILE, domain + "\n"); } catch {}
+      console.log("Domain latched from request:", domain);
+      startScan();
+    }
+  }
+
+  // Background peer scan — called once domain is known
+  function startScan() {
+    if (!domain) return;
+    console.log("Scanning for peers with domain pattern:", domain);
+    scanBackground(domain, {
+      port,
+      onFound: (url) => {
+        console.log("Discovered peer:", url);
+        if (zen && zen._.opt && Array.isArray(zen._.opt.peers)) {
+          if (!zen._.opt.peers.includes(url)) zen._.opt.peers.push(url);
+        }
+      },
+    });
+  }
+
   if (
     env.HTTPS_KEY &&
     fs.existsSync(env.HTTPS_KEY) &&
@@ -182,12 +219,17 @@ if (isMain && cluster.isPrimary) {
       process.exit(1);
     }
 
-    opt.server = https.createServer(opt, ZEN.serve(__dirname));
+    const serveHandler = ZEN.serve(__dirname);
+    opt.server = https.createServer(opt, (req, res) => {
+      latchDomain(req);
+      serveHandler(req, res);
+    });
 
     if (httpsPort == 443 || env.HTTP_REDIRECT === "true") {
       try {
         http
           .createServer((req, res) => {
+            latchDomain(req);
             const redirectUrl =
               "https://" +
               req.headers.host.replace(":" + httpPort, ":" + httpsPort) +
@@ -215,12 +257,20 @@ if (isMain && cluster.isPrimary) {
     opt.port = actualHttpsPort;
     console.log("HTTPS server will start on port " + actualHttpsPort);
   } else {
-    opt.server = http.createServer(ZEN.serve(__dirname));
+    const serveHandler = ZEN.serve(__dirname);
+    opt.server = http.createServer((req, res) => {
+      latchDomain(req);
+      serveHandler(req, res);
+    });
     console.log("HTTP server will start on port " + opt.port);
   }
 
   zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
   console.log("Relay peer started on port " + opt.port + " with /zen");
+
+  // Start scan immediately if domain already known, else wait for first request
+  if (domain) startScan();
+  else console.log("Domain not configured — will scan after first request");
 }
 
 export default zen;
