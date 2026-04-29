@@ -304,19 +304,20 @@ if (isMain && cluster.isPrimary) {
   zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers });
   console.log("Relay peer started on port " + opt.port + " with /zen");
 
-  // Subscribe to peer exchange via graph — learn peers other nodes have found
-  zen.get("~peers").map().on((t, url) => {
-    if (t && typeof url === "string" && /^wss?:\/\//.test(url)) addPeer(url);
-  });
-
   // Announce self so others can discover us
+  let selfUrl = null;
   if (domain) {
     const selfProto = (opt.key) ? "wss" : "ws";
-    const selfUrl   = selfProto + "://" + domain + ":" + port + "/zen";
+    selfUrl = selfProto + "://" + domain + ":" + port + "/zen";
     setTimeout(() => {
       try { zen.get("~peers").get(selfUrl).put(Date.now()); } catch {}
     }, 2000);
   }
+
+  // Subscribe to peer exchange via graph — learn peers other nodes have found
+  zen.get("~peers").map().on((t, url) => {
+    if (t && typeof url === "string" && /^wss?:\/\//.test(url) && url !== selfUrl) addPeer(url);
+  });
 
   // Start scan immediately if domain already known, else wait for first request
   if (domain) { startScan(); scheduleScan(); }
