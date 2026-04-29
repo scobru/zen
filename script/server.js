@@ -9,15 +9,15 @@ import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import ZEN from "../index.js";
 import * as xdg from "../lib/xdg.js";
-import { discover, DOMAIN_FILE, PORT_FILE } from "../lib/discover.js";
-import { scanBackground, parseDomainPattern } from "../lib/scan.js";
+import { disc, DOMF, PORTF } from "../lib/discover.js";
+import { scanbg, mkpat } from "../lib/scan.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const isMain = !!process.argv[1] && __filename === process.argv[1];
+const main = !!process.argv[1] && __filename === process.argv[1];
 
-const nodeVersion = process.versions.node.split(".").map(Number);
-if (nodeVersion[0] < 14) {
+const nver = process.versions.node.split(".").map(Number);
+if (nver[0] < 14) {
   console.error(
     "ERROR: Node.js 14+ required. Current version:",
     process.version,
@@ -45,7 +45,7 @@ process.on("unhandledRejection", (reason, promise) => {
   process.exit(1);
 });
 
-function validatePort(port) {
+function vport(port) {
   const portNum = parseInt(port, 10);
   if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
     throw new Error("Invalid port: " + port + ". Must be between 1-65535");
@@ -53,7 +53,7 @@ function validatePort(port) {
   return portNum;
 }
 
-function validateFilePath(filePath) {
+function vpath(filePath) {
   if (filePath.includes("../") || filePath.includes("..\\")) {
     throw new Error("Path traversal detected: " + filePath);
   }
@@ -63,7 +63,7 @@ function validateFilePath(filePath) {
   return filePath;
 }
 
-function validatePeers(peers) {
+function vprs(peers) {
   if (!peers) return [];
   return peers.split(",").map((peer) => {
     const trimmed = peer.trim();
@@ -76,7 +76,7 @@ function validatePeers(peers) {
 
 let zen;
 
-if (isMain && cluster.isPrimary) {
+if (main && cluster.isPrimary) {
   console.log("Master process " + process.pid + " starting...");
   cluster.setupPrimary({ exec: __filename });
 
@@ -101,27 +101,27 @@ if (isMain && cluster.isPrimary) {
 
   const worker = cluster.fork();
   process.on("SIGTERM", () => {
-    console.log("Master received SIGTERM, shutting down workers...");
+    console.log("Master received SIGTERM, shutting down wkr...");
     worker.disconnect();
     setTimeout(() => {
       worker.kill();
     }, 5000);
   });
-} else if (isMain) {
+} else if (main) {
   const env = process.env;
   let port;
-  let httpsPort;
+  let hport;
   let peers;
   let domain;
 
   try {
-    port = validatePort(env.PORT || process.argv[2] || 8420);
-    httpsPort = env.HTTPS_PORT ? validatePort(env.HTTPS_PORT) : null;
-    peers = validatePeers(env.PEERS);
+    port = vport(env.PORT || process.argv[2] || 8420);
+    hport = env.HTTPS_PORT ? vport(env.HTTPS_PORT) : null;
+    peers = vprs(env.PEERS);
     // Domain: env var > XDG config file
     domain = env.DOMAIN || null;
     if (!domain) {
-      try { domain = fs.readFileSync(DOMAIN_FILE, "utf8").trim() || null; } catch {}
+      try { domain = fs.readFileSync(DOMF, "utf8").trim() || null; } catch {}
     }
   } catch (err) {
     console.error("Configuration Error:", err.message);
@@ -133,13 +133,13 @@ if (isMain && cluster.isPrimary) {
     peers,
   };
 
-  const zenCfgDir = xdg.config();
-  const defaultKeyFile = path.join(zenCfgDir, "key.pem");
-  const defaultCertFile = path.join(zenCfgDir, "cert.pem");
+  const cfgd = xdg.config();
+  const dkey = path.join(cfgd, "key.pem");
+  const dcrt = path.join(cfgd, "cert.pem");
 
   if (env.HTTPS_KEY) {
     try {
-      env.HTTPS_KEY = validateFilePath(env.HTTPS_KEY);
+      env.HTTPS_KEY = vpath(env.HTTPS_KEY);
     } catch (err) {
       console.error("HTTPS_KEY validation failed:", err.message);
       process.exit(1);
@@ -148,104 +148,104 @@ if (isMain && cluster.isPrimary) {
 
   if (env.HTTPS_CERT) {
     try {
-      env.HTTPS_CERT = validateFilePath(env.HTTPS_CERT);
+      env.HTTPS_CERT = vpath(env.HTTPS_CERT);
     } catch (err) {
       console.error("HTTPS_CERT validation failed:", err.message);
       process.exit(1);
     }
   }
 
-  if (fs.existsSync(defaultCertFile)) {
-    env.HTTPS_KEY = env.HTTPS_KEY || defaultKeyFile;
-    env.HTTPS_CERT = env.HTTPS_CERT || defaultCertFile;
+  if (fs.existsSync(dcrt)) {
+    env.HTTPS_KEY = env.HTTPS_KEY || dkey;
+    env.HTTPS_CERT = env.HTTPS_CERT || dcrt;
   }
 
   // Latch domain from first incoming request Host header if still unknown
-  let domainLatched = !!domain;
-  function latchDomain(req) {
-    if (domainLatched) return;
+  let dlat = !!domain;
+  function ldom(req) {
+    if (dlat) return;
     const host = (req.headers.host || "").split(":")[0];
     if (host && host !== "localhost" && !/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
       domain = host;
-      domainLatched = true;
-      try { xdg.ensure(zenCfgDir); fs.writeFileSync(DOMAIN_FILE, domain + "\n"); } catch {}
+      dlat = true;
+      try { xdg.ensure(cfgd); fs.writeFileSync(DOMF, domain + "\n"); } catch {}
       console.log("Domain latched from request:", domain);
-      startScan();
-      scheduleScan();
+      sscan();
+      schd();
     }
   }
 
   // ── peer discovery ────────────────────────────────────────────────────────
-  const knownPeers  = new Set(peers);  // all URLs ever seen
-  const scannedPats = new Set();       // patterns scanned this cycle
-  let scanTimer     = null;
-  let pexMesh       = null;            // set after AXE attaches
-  let foundInCycle  = false;           // tracks if addPeer fired this scan cycle
-  const SCAN_INTERVAL     = 10 * 60 * 1000;   // 10 min base interval
-  const MAX_SCAN_INTERVAL = 2 * 60 * 60 * 1000; // 2 hr cap
-  const MAX_UPSTREAMS     = 10;        // max outbound peer connections from scan
-  let   scanInterval      = SCAN_INTERVAL;
+  const kprs  = new Set(peers);  // all URLs ever seen
+  const spat = new Set();       // patterns scanned this cycle
+  let stmr     = null;
+  let pmsh       = null;            // set after AXE attaches
+  let fic  = false;           // tracks if adp fired this scan cycle
+  const SIV     = 10 * 60 * 1000;   // 10 min base interval
+  const MSIV = 2 * 60 * 60 * 1000; // 2 hr cap
+  const MUPS     = 10;        // max outbound peer connections from scan
+  let   siv      = SIV;
 
-  function patternKey(host) {
-    const p = parseDomainPattern((host || "").split(":")[0]);
+  function pkey(host) {
+    const p = mkpat((host || "").split(":")[0]);
     return p ? (p.prefix + "*" + p.tail + p.suffix) : host;
   }
 
-  function addPeer(url) {
-    if (knownPeers.has(url)) return;
-    knownPeers.add(url);
-    foundInCycle = true;
+  function adp(url) {
+    if (kprs.has(url)) return;
+    kprs.add(url);
+    fic = true;
     console.log("Discovered peer:", url);
     const r = zen && zen._graph && zen._graph._;
     // Connect only if under upstream limit (prevents full mesh / bandwidth waste)
-    const upstreamCount = r && r.axe ? Object.keys(r.axe.up || {}).length : 0;
-    if (pexMesh && upstreamCount < MAX_UPSTREAMS) {
-      try { pexMesh.hi({ id: url, url, retry: 9 }); } catch {}
-    } else if (!pexMesh && r && r.opt) {
+    const ups = r && r.axe ? Object.keys(r.axe.up || {}).length : 0;
+    if (pmsh && ups < MUPS) {
+      try { pmsh.hi({ id: url, url, retry: 9 }); } catch {}
+    } else if (!pmsh && r && r.opt) {
       // mesh not yet attached — queue in peer list for AXE to connect later
       if (!Array.isArray(r.opt.peers)) r.opt.peers = [];
       if (!r.opt.peers.includes(url)) r.opt.peers.push(url);
     }
     // Broadcast immediately to all currently connected peers
-    if (pexMesh) {
-      try { pexMesh.say({ dam: "pex", peers: [url] }, r && r.opt && r.opt.peers); } catch {}
+    if (pmsh) {
+      try { pmsh.say({ dam: "pex", peers: [url] }, r && r.opt && r.opt.peers); } catch {}
     }
-    // Expand scan to this peer's domain pattern
-    try { scanDomain(new URL(url).hostname); } catch {}
+    // Expand scan to this peer's domain pat
+    try { scnd(new URL(url).hostname); } catch {}
   }
 
-  function scanDomain(host) {
+  function scnd(host) {
     if (!host) return;
-    const key = patternKey(host);
-    if (scannedPats.has(key)) return;
-    scannedPats.add(key);
+    const key = pkey(host);
+    if (spat.has(key)) return;
+    spat.add(key);
     console.log("Scanning pattern:", key);
-    scanBackground(host, { port, onFound: addPeer });
+    scanbg(host, { port, onFound: adp });
   }
 
-  function startScan() {
-    if (domain) scanDomain(domain);
+  function sscan() {
+    if (domain) scnd(domain);
   }
 
-  function scheduleScan() {
-    clearTimeout(scanTimer);
-    scanTimer = setTimeout(() => {
-      foundInCycle = false;
-      scannedPats.clear(); // new cycle — re-probe all known patterns
-      startScan();
+  function schd() {
+    clearTimeout(stmr);
+    stmr = setTimeout(() => {
+      fic = false;
+      spat.clear(); // new cycle — re-probe all known patterns
+      sscan();
       // After 2 min (scan finishes well within that), check if we found anything
       const check = setTimeout(() => {
-        if (!foundInCycle) {
-          scanInterval = Math.min(scanInterval * 2, MAX_SCAN_INTERVAL);
-          console.log(`Scan: no new peers — next scan in ${Math.round(scanInterval / 60000)}m`);
+        if (!fic) {
+          siv = Math.min(siv * 2, MSIV);
+          console.log(`Scan: no new peers — next scan in ${Math.round(siv / 60000)}m`);
         } else {
-          scanInterval = SCAN_INTERVAL; // reset backoff on any discovery
+          siv = SIV; // reset backoff on any discovery
         }
-        scheduleScan();
+        schd();
       }, 2 * 60 * 1000);
       if (check.unref) check.unref();
-    }, scanInterval);
-    scanTimer.unref();
+    }, siv);
+    stmr.unref();
   }
 
   if (
@@ -253,73 +253,73 @@ if (isMain && cluster.isPrimary) {
     fs.existsSync(env.HTTPS_KEY) &&
     fs.existsSync(env.HTTPS_CERT)
   ) {
-    const actualHttpsPort = httpsPort || opt.port || 443;
-    const httpPort = env.HTTP_PORT ? validatePort(env.HTTP_PORT) : 80;
+    const ahp = hport || opt.port || 443;
+    const hprt = env.HTTP_PORT ? vport(env.HTTP_PORT) : 80;
 
     console.log("SSL certificates found, enabling HTTPS...");
 
-    let keyData;
-    let certData;
+    let kd;
+    let cd;
     try {
-      keyData = fs.readFileSync(env.HTTPS_KEY, "utf8");
-      certData = fs.readFileSync(env.HTTPS_CERT, "utf8");
+      kd = fs.readFileSync(env.HTTPS_KEY, "utf8");
+      cd = fs.readFileSync(env.HTTPS_CERT, "utf8");
 
-      if (!keyData.includes("BEGIN") || !keyData.includes("PRIVATE KEY")) {
+      if (!kd.includes("BEGIN") || !kd.includes("PRIVATE KEY")) {
         throw new Error("Invalid private key format");
       }
-      if (!certData.includes("BEGIN CERTIFICATE")) {
+      if (!cd.includes("BEGIN CERTIFICATE")) {
         throw new Error("Invalid certificate format");
       }
 
-      opt.key = keyData;
-      opt.cert = certData;
+      opt.key = kd;
+      opt.cert = cd;
     } catch (err) {
       console.error("SSL Certificate Error:", err.message);
       process.exit(1);
     }
 
-    const serveHandler = ZEN.serve(__dirname);
+    const srv = ZEN.serve(__dirname);
     opt.server = https.createServer(opt, (req, res) => {
-      latchDomain(req);
-      serveHandler(req, res);
+      ldom(req);
+      srv(req, res);
     });
 
-    if (httpsPort == 443 || env.HTTP_REDIRECT === "true") {
+    if (hport == 443 || env.HTTP_REDIRECT === "true") {
       try {
         http
           .createServer((req, res) => {
-            latchDomain(req);
+            ldom(req);
             const redirectUrl =
               "https://" +
-              req.headers.host.replace(":" + httpPort, ":" + httpsPort) +
+              req.headers.host.replace(":" + hprt, ":" + hport) +
               req.url;
             res.writeHead(301, { Location: redirectUrl });
             res.end();
           })
-          .listen(httpPort);
+          .listen(hprt);
         console.log(
           "HTTP redirect server started on port " +
-            httpPort +
+            hprt +
             " -> HTTPS " +
-            httpsPort,
+            hport,
         );
       } catch (e) {
         console.log(
           "Warning: Could not start HTTP redirect server on port " +
-            httpPort +
+            hprt +
             ": " +
             e.message,
         );
       }
     }
 
-    opt.port = actualHttpsPort;
-    console.log("HTTPS server will start on port " + actualHttpsPort);
+    opt.port = ahp;
+    console.log("HTTPS server will start on port " + ahp);
   } else {
-    const serveHandler = ZEN.serve(__dirname);
+    const srv = ZEN.serve(__dirname);
     opt.server = http.createServer((req, res) => {
-      latchDomain(req);
-      serveHandler(req, res);
+      ldom(req);
+      srv(req, res);
     });
     console.log("HTTP server will start on port " + opt.port);
   }
@@ -329,7 +329,7 @@ if (isMain && cluster.isPrimary) {
 
   // ── PEX: peer exchange via direct DAM message (not public graph) ──────────
   // mesh.hear["pex"] + root.on("hi") — only shared with already-connected peers
-  const selfUrl = domain
+  const surl = domain
     ? ((opt.key ? "wss" : "ws") + "://" + domain + ":" + port + "/zen")
     : null;
 
@@ -339,14 +339,14 @@ if (isMain && cluster.isPrimary) {
   setImmediate(() => {
     const mesh = root.opt && root.opt.mesh;
     if (!mesh) return;
-    pexMesh = mesh;
+    pmsh = mesh;
 
     // Handle incoming peer lists from other nodes
     mesh.hear["pex"] = function (msg, _peer) {
       if (!Array.isArray(msg.peers)) return;
       msg.peers.forEach((url) => {
-        if (typeof url === "string" && /^wss?:\/\//.test(url) && url !== selfUrl) {
-          addPeer(url);
+        if (typeof url === "string" && /^wss?:\/\//.test(url) && url !== surl) {
+          adp(url);
         }
       });
     };
@@ -354,38 +354,38 @@ if (isMain && cluster.isPrimary) {
     // On new peer connection: send our full known peer list to them
     root.on("hi", function (peer) {
       this.to.next(peer);
-      const list = Array.from(knownPeers).filter((u) => u !== selfUrl);
+      const list = Array.from(kprs).filter((u) => u !== surl);
       if (list.length) {
         setTimeout(() => {
           try { mesh.say({ dam: "pex", peers: list }, peer); } catch {}
         }, 500);
       }
       // Also send self URL
-      if (selfUrl) {
+      if (surl) {
         setTimeout(() => {
-          try { mesh.say({ dam: "pex", peers: [selfUrl] }, peer); } catch {}
+          try { mesh.say({ dam: "pex", peers: [surl] }, peer); } catch {}
         }, 600);
       }
     });
   });
 
   // Start scan immediately if domain already known, else wait for first request
-  if (domain) { startScan(); scheduleScan(); }
+  if (domain) { sscan(); schd(); }
   else console.log("Domain not configured — will scan after first request");
 
   // Reactive rescan: when a peer disconnects, rescan after a 30s debounce
-  let byeTimer = null;
+  let btmr = null;
   root.on("bye", function () {
     this.to.next.apply(this.to, arguments);
-    clearTimeout(byeTimer);
-    byeTimer = setTimeout(() => {
-      scanInterval = SCAN_INTERVAL; // reset backoff — need to find replacements
-      scannedPats.clear();
+    clearTimeout(btmr);
+    btmr = setTimeout(() => {
+      siv = SIV; // reset backoff — need to find replacements
+      spat.clear();
       console.log("Peer disconnected — rescanning...");
-      startScan();
-      scheduleScan();
+      sscan();
+      schd();
     }, 30000);
-    byeTimer.unref();
+    btmr.unref();
   });
 }
 
