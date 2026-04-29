@@ -10,8 +10,10 @@ set -e
 DOMAIN=""
 EMAIL=""
 WEBROOT=""
-KEY_FILE="$HOME/key.pem"
-CERT_FILE="$HOME/cert.pem"
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+ZEN_CONFIG_DIR="$XDG_CONFIG_HOME/zen"
+KEY_FILE="$ZEN_CONFIG_DIR/key.pem"
+CERT_FILE="$ZEN_CONFIG_DIR/cert.pem"
 ACME_DIR="$HOME/.acme.sh"
 FORCE_INSTALL=false
 DRY_RUN=false
@@ -46,8 +48,8 @@ REQUIRED OPTIONS:
 
 OPTIONAL:
     -w, --webroot PATH         Webroot path for domain validation (default: current dir)
-    -k, --key-file PATH        Output path for private key (default: ~/key.pem)
-    -c, --cert-file PATH       Output path for certificate (default: ~/cert.pem)
+    -k, --key-file PATH        Output path for private key (default: ~/.config/zen/key.pem)
+    -c, --cert-file PATH       Output path for certificate (default: ~/.config/zen/cert.pem)
     --acme-dir PATH            ACME installation directory (default: ~/.acme.sh)
     --reload-cmd COMMAND       Command to run after certificate installation
     --standalone               Use standalone mode (temporary web server on port 80)
@@ -257,8 +259,8 @@ get_acme_domain_dir() {
 DOMAIN="${DOMAIN:-}"
 EMAIL="${EMAIL:-}"
 WEBROOT="${WEBROOT:-}"
-KEY_FILE="${KEY_FILE:-$HOME/key.pem}"
-CERT_FILE="${CERT_FILE:-$HOME/cert.pem}"
+KEY_FILE="${KEY_FILE:-$ZEN_CONFIG_DIR/key.pem}"
+CERT_FILE="${CERT_FILE:-$ZEN_CONFIG_DIR/cert.pem}"
 RELOAD_CMD="${RELOAD_CMD:-}"
 
 # Validate required parameters

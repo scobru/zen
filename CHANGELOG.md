@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 1.0.8
+
+- **POSIX XDG Base Directory compliance**: ZEN now follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/) for all runtime paths, eliminating conflicts with other projects that use `~/`.
+  - SSL keys/certs: `$XDG_CONFIG_HOME/zen/` (default `~/.config/zen/`) — previously `~/`
+  - Graph data (radata): `$XDG_DATA_HOME/zen/radata/` (default `~/.local/share/zen/radata/`) — previously `./radata` in CWD
+  - Stats file: `$XDG_STATE_HOME/zen/stats.radata` (default `~/.local/state/zen/`) — previously at repo root
+  - Password file: `$XDG_CONFIG_HOME/zen/pass` — previously `~/pass`
+  - All directories are created automatically on first use.
+- **New `lib/xdg.js`**: shared XDG path resolution module; exports `config()`, `data()`, `state()`, `ensure()` helpers used by `lib/rfs.js`, `lib/stats.js`, `lib/service.js`, and `script/server.js`.
+- **Migration note**: existing `~/key.pem`/`~/cert.pem` should be moved to `~/.config/zen/`; existing `./radata/` should be moved to `~/.local/share/zen/radata/`.
+- **Test isolation**: all test npm scripts now set `GUN_TEST_TMP=1` to keep test data in `tmp/` and prevent cross-contamination with production XDG dirs.
+
 ## 1.0.7
 
 - **AXE consolidation**: merged browser peer discovery and Node.js relay into single `lib/axe.js`; deleted root `axe.js` which was dead code (browser block was unreachable due to `root.axe` guard in `lib/axe.js` running first).

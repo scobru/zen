@@ -3,12 +3,12 @@
 import cluster from "cluster";
 import fs from "fs";
 import path from "path";
-import os from "os";
 import http from "http";
 import https from "https";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import ZEN from "../index.js";
+import * as xdg from "../lib/xdg.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -125,9 +125,9 @@ if (isMain && cluster.isPrimary) {
     peers,
   };
 
-  const homeDir = os.homedir();
-  const defaultKeyFile = path.join(homeDir, "key.pem");
-  const defaultCertFile = path.join(homeDir, "cert.pem");
+  const zenCfgDir = xdg.config();
+  const defaultKeyFile = path.join(zenCfgDir, "key.pem");
+  const defaultCertFile = path.join(zenCfgDir, "cert.pem");
 
   if (env.HTTPS_KEY) {
     try {
