@@ -173,7 +173,7 @@ When `msg.nts` or `msg.NTS` is set on a message, `universe()` skips the `out` br
 
 ## 6.9 AXE — automatic peer clustering
 
-`axe.js` implements distributed hash table (DHT) clustering for automatic peer discovery and load balancing. It is an optional add-on loaded by the server entry point.
+`lib/axe.js` implements distributed hash table (DHT) clustering for automatic peer discovery and load balancing. It is an optional add-on loaded by the server entry point.
 
 ```js
 const zen = new ZEN({ axe: true });
@@ -184,7 +184,7 @@ AXE handles:
 - Automatic routing to the peers that hold specific data
 - Load balancing across peer clusters
 
-See `axe.js` for configuration options.
+See `lib/axe.js` for configuration options.
 
 ---
 

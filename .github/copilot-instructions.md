@@ -324,7 +324,7 @@ Zen.chain.myMethod = function (data) {
 - `*.zig` in `/src` = Zig source for WASM modules (pen.zig, crypto.zig, etc.)
 - `*.wasm` = Compiled WebAssembly (do not edit directly)
 - `*.d.ts` = TypeScript definitions (not primary source)
-- `axe.js` = Automatic peering/DHT clustering
+- `lib/axe.js` = Automatic peering/DHT clustering
 - `nts.js` = "No Time Sync" mode
 
 ---

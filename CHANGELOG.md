@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 1.0.7
+
+- **AXE consolidation**: merged browser peer discovery and Node.js relay into single `lib/axe.js`; deleted root `axe.js` which was dead code (browser block was unreachable due to `root.axe` guard in `lib/axe.js` running first).
+- **Import fix**: `lib/server.js` now imports `./axe.js` (local `lib/`) instead of `../axe.js` (root), fixing a broken `../axe.min.js` reference in the minified build.
+- **Stats fix**: removed stale `typeof require === "undefined"` guard in `lib/stats.js` that prevented `stats.radata` from ever being written in ES module context (Node.js ESM has no `require`).
+- **Multicast IPv6**: added `udp6` socket alongside `udp4` using `ff02::1` link-local multicast; refactored into shared `setupSocket()` helper to eliminate duplication; fixed interface detection using `fe80::addr%ifaceName` zone-ID format required by libuv for IPv6 `addMembership`; `setBroadcast`/`setMulticastTTL` guarded to IPv4 only; `ipv6Only: true` on `udp6` to avoid dual-stack port conflicts.
+- **Multicast IPv4**: fixed `addMembership` using explicit interface IP from `os.networkInterfaces()` instead of letting OS default to a DOWN interface (fixes ENODEV on Orange Pi / non-standard interface names).
+- **Build**: renamed `lib/uglify.js` → `lib/minify.js`; npm script `uglify` → `minify`; `buildRelease` updated accordingly.
+
 ## 0.2020.x
 
 `>0.2020.520` may break in-process `gun1` `gun2` message passing. Check `test/common.js` "Check multi instance message passing" for a hint and/or complain on community chat.

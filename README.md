@@ -438,7 +438,7 @@ lib/                 — storage adapters, extensions, build scripts
   memdisk.js         — in-memory storage
   
   # Extensions & utilities
-  axe.js             — automatic peering / DHT
+  lib/axe.js         — automatic peering / DHT
   webrtc.js          — WebRTC transport
   promise.js         — Promise API
   then.js            — Promise chaining

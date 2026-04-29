@@ -1,6 +1,6 @@
 import express from "express";
 import Zen from "..";
-import "../axe.js";
+import "../lib/axe.js";
 import { fileURLToPath } from "node:url";
 import { dirname as __dirnameOf } from "node:path";
 const __filename = fileURLToPath(import.meta.url);

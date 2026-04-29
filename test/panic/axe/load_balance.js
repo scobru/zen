@@ -19,7 +19,7 @@ var config = {
   route: {
     "/": __dirname + "/index.html",
     "/zen.js": __dirname + "/../../../zen.js",
-    "/zen/axe.js": __dirname + "/../../../axe.js",
+    "/zen/lib/axe.js": __dirname + "/../../../lib/axe.js",
     "/jquery.js": __dirname + "/../../../examples/jquery.js",
   },
 };
