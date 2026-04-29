@@ -344,7 +344,8 @@ remove_certificates() {
     
     log_info "Removing SSL certificates..."
     
-    CERT_FILES=("$HOME/key.pem" "$HOME/cert.pem" "/etc/ssl/private/zen.key" "/etc/ssl/certs/zen.crt")
+    XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+    CERT_FILES=("$XDG_CONFIG_HOME/zen/key.pem" "$XDG_CONFIG_HOME/zen/cert.pem" "/etc/ssl/private/zen.key" "/etc/ssl/certs/zen.crt")
     
     for cert_file in "${CERT_FILES[@]}"; do
         if [[ -f "$cert_file" ]]; then
@@ -394,7 +395,9 @@ remove_config() {
     log_info "Removing configuration and data files..."
     
     # Common ZEN data directories
-    DATA_DIRS=("${INSTALL_DIR%/*}/data" "${INSTALL_DIR%/*}/radata" "./data" "./radata")
+    XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+    XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+    DATA_DIRS=("$XDG_DATA_HOME/zen" "$XDG_STATE_HOME/zen" "${INSTALL_DIR%/*}/data" "${INSTALL_DIR%/*}/radata")
     
     for data_dir in "${DATA_DIRS[@]}"; do
         if [[ -d "$data_dir" ]]; then

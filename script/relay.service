@@ -1,0 +1,19 @@
+[Unit]
+Description=ZEN Graph Database Relay Peer
+Documentation=https://github.com/akaoio/zen
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=__ZEN_USER__
+WorkingDirectory=__ZEN_DIR__
+ExecStart=__ZEN_NODE__ __ZEN_DIR__/script/server.js
+Environment=PORT=8420
+# SSL certs are auto-detected from $XDG_CONFIG_HOME/zen/ (default: ~/.config/zen/)
+# To enable HTTPS, run: bash script/ssl.sh --domain yourdomain.com --email you@example.com
+
+[Install]
+WantedBy=multi-user.target

@@ -68,7 +68,7 @@ OPTIONS:
 
 EXAMPLES:
     $0
-    $0 --port 443 --https-key ~/key.pem --https-cert ~/cert.pem
+    $0 --port 443 --https-key ~/.config/zen/key.pem --https-cert ~/.config/zen/cert.pem
     $0 --peers "https://peer1.com/zen,https://peer2.com/zen"
     $0 --skip-service
 
