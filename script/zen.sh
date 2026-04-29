@@ -66,7 +66,7 @@ cmd_status() {
     echo ""
     echo -e "${BOLD}Service  (${service_name})${NC}"
     echo "$sep"
-    if command -v systemctl &>/dev/null && systemctl list-units --full --all 2>/dev/null | grep -q "^${service_name}.service"; then
+    if command -v systemctl &>/dev/null && systemctl is-active --quiet "${service_name}" 2>/dev/null; then
         local active
         active="$(systemctl is-active "$service_name" 2>/dev/null || echo "unknown")"
         local col="${GREEN}"
