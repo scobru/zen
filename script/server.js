@@ -179,6 +179,7 @@ if (isMain && cluster.isPrimary) {
   const knownPeers  = new Set(peers);  // all URLs ever seen
   const scannedPats = new Set();       // patterns scanned this cycle
   let scanTimer = null;
+  let pexMesh   = null;                // set after AXE attaches
   const SCAN_INTERVAL = 10 * 60 * 1000; // 10 min periodic rescan
 
   function patternKey(host) {
@@ -190,14 +191,16 @@ if (isMain && cluster.isPrimary) {
     if (knownPeers.has(url)) return;
     knownPeers.add(url);
     console.log("Discovered peer:", url);
-    // Inject into AXE peer list
-    const root = zen && zen._graph && zen._graph._;
-    if (root && root.opt) {
-      if (!Array.isArray(root.opt.peers)) root.opt.peers = [];
-      if (!root.opt.peers.includes(url)) root.opt.peers.push(url);
+    // Inject into AXE peer list so it connects
+    const r = zen && zen._graph && zen._graph._;
+    if (r && r.opt) {
+      if (!Array.isArray(r.opt.peers)) r.opt.peers = [];
+      if (!r.opt.peers.includes(url)) r.opt.peers.push(url);
     }
-    // Share with all connected peers via graph
-    try { zen.get("~peers").get(url).put(Date.now()); } catch {}
+    // Broadcast immediately to all currently connected peers
+    if (pexMesh) {
+      try { pexMesh.say({ dam: "pex", peers: [url] }, r.opt.peers); } catch {}
+    }
     // Expand scan to this peer's domain pattern
     try { scanDomain(new URL(url).hostname); } catch {}
   }
@@ -316,6 +319,7 @@ if (isMain && cluster.isPrimary) {
   setImmediate(() => {
     const mesh = root.opt && root.opt.mesh;
     if (!mesh) return;
+    pexMesh = mesh;
 
     // Handle incoming peer lists from other nodes
     mesh.hear["pex"] = function (msg, _peer) {
@@ -327,7 +331,7 @@ if (isMain && cluster.isPrimary) {
       });
     };
 
-    // On new peer connection: send our known peer list to them
+    // On new peer connection: send our full known peer list to them
     root.on("hi", function (peer) {
       this.to.next(peer);
       const list = Array.from(knownPeers).filter((u) => u !== selfUrl);
@@ -336,7 +340,7 @@ if (isMain && cluster.isPrimary) {
           try { mesh.say({ dam: "pex", peers: list }, peer); } catch {}
         }, 500);
       }
-      // Also send self URL so they can add us by domain
+      // Also send self URL
       if (selfUrl) {
         setTimeout(() => {
           try { mesh.say({ dam: "pex", peers: [selfUrl] }, peer); } catch {}
