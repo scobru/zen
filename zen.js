@@ -8241,9 +8241,15 @@ defmod('./src/index.js', function(module, exp){
     });
   }
 
+  const BOOT = ["wss://peer0.akao.io", "wss://peer1.akao.io"];
+
   class ZEN {
     constructor(opt = {}) {
       this._opt = opt;
+      // Auto-connect to bootstrap peers unless caller explicitly provides peers
+      if (opt.peers === undefined) {
+        opt.peers = BOOT.slice();
+      }
       this._graphInstance = opt.graph || graph.create(opt);
     }
 
