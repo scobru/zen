@@ -26,6 +26,7 @@ This repository is documented as a structured book. Read it in order or jump to 
 | [Ch 6 — Networking](docs/ch06-networking.md) | Mesh, peers, WebSocket, WebRTC, message protocol |
 | [Ch 7 — PEN Policy VM](docs/ch07-pen.md) | WASM bytecode engine, opcodes, `ZEN.pen()`, `ZEN.run()` |
 | [Ch 8 — Contributing](docs/ch08-contributing.md) | Build system, test suite, adding chain methods, adding adapters |
+| [Ch 9 — MCP (AI Integration)](docs/ch09-mcp.md) | IDE peer, stdio server, tools, Cursor/VSCode config |
 
 ---
 
@@ -324,7 +325,50 @@ import "@akaoio/zen/lib/rs3";      // AWS S3
 
 ---
 
-## PEN — policy VM
+## MCP — AI integration
+
+ZEN ships an MCP (Model Context Protocol) server that turns any IDE into a full ZEN peer. Your editor joins the P2P mesh, contributes to routing, and persists data at `~/.local/share/zen/mcp`.
+
+**Quick start (Cursor / VSCode + forks):**
+
+```json
+{
+  "mcpServers": {
+    "zen": {
+      "command": "npx",
+      "args": ["-y", "-p", "@akaoio/zen", "mcp"]
+    }
+  }
+}
+```
+
+- Cursor: `~/.cursor/mcp.json` (or project `.cursor/mcp.json`)
+- VSCode Copilot: `~/.copilot/mcp-config.json`
+
+No ZEN installation needed — `npx` fetches `@akaoio/zen` automatically.
+
+**Available tools (1:1 ZEN API mapping):**
+
+| Tool | Description |
+|------|-------------|
+| `get` | Read a value from the graph |
+| `put` | Write a value to the graph |
+| `on` | Read current state of a key |
+| `pair` | Generate a key pair (secp256k1 or P-256, optional seed) |
+| `sign` | Sign data with a private key |
+| `verify` | Verify a signed value |
+| `encrypt` | Encrypt data with an epub key |
+| `decrypt` | Decrypt data with an epriv key |
+| `secret` | ECDH shared secret |
+| `hash` | Hash data (SHA-256, KECCAK-256, PBKDF2, HKDF, or mining) |
+| `certify` | Issue a write-access certificate |
+| `recover` | Recover signer public key from a signature |
+
+See [Ch 9 — MCP](docs/ch09-mcp.md) for full details.
+
+---
+
+
 
 PEN is a bytecode policy engine integrated into ZEN. It compiles Zig source to WASM and runs verifiable access policies over graph writes.
 
@@ -504,6 +548,7 @@ lib/                 — storage adapters, extensions, build scripts
   
   # Extensions & utilities
   lib/axe.js         — automatic peering / DHT
+  mcp.js             — MCP stdio server (IDE-as-ZEN-peer, AI integration)
   webrtc.js          — WebRTC transport
   promise.js         — Promise API
   then.js            — Promise chaining
