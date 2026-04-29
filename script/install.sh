@@ -239,6 +239,49 @@ start_service() {
     fi
 }
 
+install_cli() {
+    # Record install location in XDG config so the `zen` CLI can find it
+    local cfg_dir="${XDG_CONFIG_HOME:-$HOME/.config}/zen"
+    mkdir -p "$cfg_dir"
+    echo "$INSTALL_DIR"  > "$cfg_dir/install_dir"
+    echo "$SERVICE_NAME" > "$cfg_dir/service_name"
+
+    # Determine where to place the `zen` binary
+    local bin_dir
+    if [[ $EUID -eq 0 ]]; then
+        bin_dir="/usr/local/bin"
+    elif [[ -w "/usr/local/bin" ]]; then
+        bin_dir="/usr/local/bin"
+    else
+        bin_dir="$HOME/.local/bin"
+        mkdir -p "$bin_dir"
+    fi
+
+    local target="$bin_dir/zen"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would install zen CLI → $target"
+        return
+    fi
+
+    if [[ -w "$bin_dir" ]]; then
+        cp "$INSTALL_DIR/script/zen.sh" "$target"
+        chmod +x "$target"
+    else
+        $SUDO cp "$INSTALL_DIR/script/zen.sh" "$target"
+        $SUDO chmod +x "$target"
+    fi
+
+    log_info "zen CLI installed → $target"
+
+    if [[ "$bin_dir" == "$HOME/.local/bin" ]]; then
+        if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
+            log_warn "Add ~/.local/bin to your PATH:"
+            log_warn "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc && source ~/.bashrc"
+        fi
+    fi
+}
+
 rollback() {
     log_warn "Installation failed, rolling back..."
     if [[ -f "/etc/systemd/system/${SERVICE_NAME}.service" ]]; then
@@ -278,12 +321,14 @@ main() {
     create_service
     configure_limits
     start_service
+    install_cli
 
     trap - ERR
 
     log_info "ZEN installation completed!"
     [[ "$SKIP_SERVICE" != "true" ]] && log_info "  Logs: journalctl -u $SERVICE_NAME -f"
     log_info "  Dir:  $INSTALL_DIR"
+    log_info "  Run:  zen status"
 }
 
 main "$@"

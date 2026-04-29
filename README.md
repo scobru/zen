@@ -43,11 +43,54 @@ This repository is documented as a structured book. Read it in order or jump to 
 
 ## Install
 
+**As a library** (Node.js / browser bundle):
+
 ```bash
 npm install @akaoio/zen
 ```
 
-Node.js ≥ 0.8.4 is required. The bundled `zen.js` runs in any modern browser with no build step.
+Node.js ≥ 18 is required. The bundled `zen.js` runs in any modern browser with no build step.
+
+---
+
+## Deploy a Relay Peer
+
+One command installs Node.js 24, clones ZEN, creates a systemd service, and adds the `zen` CLI:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/akaoio/zen/main/script/install.sh | bash
+```
+
+After install:
+
+```bash
+zen status      # service state, version, XDG paths, SSL expiry
+zen update      # pull latest & restart
+zen uninstall   # remove everything
+```
+
+Options (pass after `bash -s --`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/akaoio/zen/main/script/install.sh | bash -s -- --port 443 --peers "https://peer1.com/zen"
+```
+
+### POSIX / XDG Base Directory layout
+
+ZEN follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/) — no files land in `~/` or the project directory.
+
+| Purpose | Default path | Override |
+|---------|-------------|---------|
+| SSL key & cert, pass file | `~/.config/zen/` | `$XDG_CONFIG_HOME/zen/` |
+| Graph data (radata) | `~/.local/share/zen/radata/` | `$XDG_DATA_HOME/zen/` |
+| Stats / state | `~/.local/state/zen/` | `$XDG_STATE_HOME/zen/` |
+| `zen` CLI binary | `/usr/local/bin/zen` or `~/.local/bin/zen` | — |
+
+SSL setup (Let's Encrypt via acme.sh):
+
+```bash
+bash script/ssl.sh --domain relay.example.com --email you@example.com
+```
 
 ---
 

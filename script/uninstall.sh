@@ -427,6 +427,26 @@ reset_limits() {
     fi
 }
 
+# Remove zen CLI binary
+remove_cli() {
+    log_info "Removing zen CLI..."
+    for bin in "/usr/local/bin/zen" "$HOME/.local/bin/zen"; do
+        if [[ -f "$bin" ]]; then
+            if [[ -w "$(dirname "$bin")" ]]; then
+                execute rm -f "$bin"
+            else
+                execute $SUDO rm -f "$bin"
+            fi
+            log_info "Removed: $bin"
+        fi
+    done
+    # Remove XDG config metadata written by install_cli
+    XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+    for f in "$XDG_CONFIG_HOME/zen/install_dir" "$XDG_CONFIG_HOME/zen/service_name"; do
+        [[ -f "$f" ]] && execute rm -f "$f" && log_info "Removed: $f"
+    done
+}
+
 # Show what will be removed
 show_removal_plan() {
     log_info "Uninstallation plan:"
@@ -455,6 +475,7 @@ main() {
     
     check_sudo
     remove_service
+    remove_cli
     remove_zen
     remove_nodejs
     remove_certificates
