@@ -233,3 +233,92 @@ The server entry point sets `root.opt.faith = true` automatically. In faith mode
 root.opt.faith = true;
 root.opt.super = true;  // also set; marks this as a "super peer"
 ```
+
+---
+
+## 6.13 Self-discovery (`lib/discover.js`)
+
+A relay peer needs to know its own domain or IP to announce itself to the network and to build correct self-URLs (`wss://peer1.akao.io:8420/zen`). `lib/discover.js` finds this offline-first:
+
+| Priority | Method | Notes |
+|----------|--------|-------|
+| 1 | `~/.config/zen/domain` config file | Written by `install.sh` prompt or `ldom()` latch |
+| 2 | `ip route get 8.8.8.8` | LAN/WAN interface IP, most reliable offline method |
+| 3 | `hostname -I` | Fallback; first non-loopback IP |
+| 4 | STUN (`stun.l.google.com:19302`) | Public IP behind NAT — RFC 5389 Binding Request |
+| 5 | `api.ipify.org` / `ifconfig.me` | HTTP fallback only if all else fails |
+
+```js
+import { disc, DOMF } from "./lib/discover.js";
+
+const { domain, ip, port, source } = await disc({ port: 8420 });
+// source: "config" | "stun" | "http" | "ip" | "opt"
+```
+
+The domain is persisted to `DOMF` (`~/.config/zen/domain`) on first discovery so subsequent starts skip network calls. If the domain is still unknown at server start, `script/server.js` latches it from the first incoming HTTP request's `Host` header.
+
+---
+
+## 6.14 Smart domain scanning (`lib/scan.js`)
+
+Given a known peer domain like `peer1.akao.io`, ZEN automatically scans for sibling peers by detecting the numeric index in the leftmost label and probing all candidates:
+
+```
+peer1.akao.io  →  peer{0..100}.akao.io
+node-3.net     →  node-{0..100}.net
+relay01.host   →  relay{00..100}.host   (zero-padded)
+```
+
+The scanner (`lib/scan.js`) exports:
+
+| Function | Description |
+|----------|-------------|
+| `mkpat(domain)` | Parse domain → `{ prefix, index, tail, suffix, padLen }` |
+| `bdom(pat, n)` | Build domain for index `n` from a parsed pattern |
+| `scan(domain, opt)` | Probe all candidates; returns `Promise<string[]>` of `wss://` URLs |
+| `scanbg(domain, opt)` | Fire-and-forget variant; calls `opt.onFound(url)` per discovery |
+
+**Bandwidth controls:**
+
+- Stops probing once `opt.mfnd` peers found (default **10**) — avoids exhausting the full 0–100 range when the network is small
+- Concurrent HTTP/HTTPS probes (default **10**), 3 s timeout each; tries HTTPS first, falls back to HTTP
+- `script/server.js` tracks `spat` (scanned patterns) per cycle to skip re-probing the same pattern within one cycle
+
+**Backoff schedule:**
+
+```
+Cycle 1: no new peers → next scan in 20 min
+Cycle 2: no new peers → next scan in 40 min
+...
+Cap: 2 hours — minimum bandwidth regardless of network size
+Discovery resets backoff to 10 min immediately.
+```
+
+---
+
+## 6.15 Peer Exchange (PEX)
+
+When a new peer connects, the relay immediately sends it the full list of known peers via a DAM `"pex"` message — a direct peer-to-peer exchange that does not touch the public graph:
+
+```js
+// Sent on "hi" (new connection):
+mesh.say({ dam: "pex", peers: ["wss://peer0.akao.io:8420/zen", ...] }, newPeer)
+
+// Handler on receiving end:
+mesh.hear["pex"] = function(msg, _peer) {
+  msg.peers.forEach(url => adp(url));  // adp = addPeer
+};
+```
+
+When a peer is discovered mid-session (via scan or inbound pex), it is **immediately broadcast** to all currently connected peers — not deferred to the next `"hi"`.
+
+**Full-mesh prevention:**
+
+ZEN uses two complementary mechanisms to prevent every peer connecting to every other peer (O(n²) links):
+
+| Layer | Mechanism | Where |
+|-------|-----------|-------|
+| Inbound | **MOB** — redirects excess inbound connections to other peers | `lib/axe.js` line 491 |
+| Outbound | **`MUPS = 10`** — scan-initiated `mesh.hi()` capped at 10 upstream connections | `script/server.js` `adp()` |
+
+Checks `root.axe.up` (AXE upstream connection map) before each `mesh.hi()` call. Broadcast (`pex` send) is always allowed regardless of upstream limit — only the actual WebSocket connection is capped.
