@@ -67,8 +67,8 @@ function vprs(peers) {
   if (!peers) return [];
   return peers.split(",").map((peer) => {
     const trimmed = peer.trim();
-    // Accept standard URLs and bracket-IPv6 URLs: ws://[::1]:8420/zen
-    if (!/^https?:\/\//i.test(trimmed) && !/^wss?:\/\//i.test(trimmed)) {
+    // Accept http(s) and ws(s) schemes, including bracket-IPv6 format: ws://[::1]:8420/zen
+    if (!/^(https?|wss?):\/\//i.test(trimmed)) {
       throw new Error("Invalid peer URL: " + trimmed);
     }
     return trimmed;
@@ -347,6 +347,7 @@ if (main && cluster.isPrimary) {
   }
 
   zen = new ZEN({ web: opt.server.listen(opt.port, "::"), peers: opt.peers, ...(ppid && { pid: ppid }) });
+  // '::' binds dual-stack: accepts both IPv4 (via ::ffff:x.x.x.x) and native IPv6 connections
   console.log("Relay peer started on port " + opt.port + " with /zen (dual-stack ::");
 
   // ── PEX: peer exchange via direct DAM message (not public graph) ──────────
@@ -367,7 +368,9 @@ if (main && cluster.isPrimary) {
       kprs.add(surl6);
       console.log("IPv6 self-URL:", surl6);
     }
-  }).catch(() => {});
+  }).catch((err) => {
+    console.log("IPv6 discovery failed:", err && err.message || err);
+  });
 
   const root = zen._graph._;
 
