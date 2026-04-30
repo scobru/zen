@@ -10,7 +10,7 @@ import { dirname } from "node:path";
 import ZEN from "../index.js";
 import * as xdg from "../lib/xdg.js";
 import { disc, hwid, DOMF, PORTF } from "../lib/discover.js";
-import { scanbg, mkpat } from "../lib/scan.js";
+import { scanbg, mkpat, scanip6 } from "../lib/scan.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -67,7 +67,8 @@ function vprs(peers) {
   if (!peers) return [];
   return peers.split(",").map((peer) => {
     const trimmed = peer.trim();
-    if (!/^https?:\/\/[\w.-]+([:/].*)?$/i.test(trimmed)) {
+    // Accept standard URLs and bracket-IPv6 URLs: ws://[::1]:8420/zen
+    if (!/^https?:\/\//i.test(trimmed) && !/^wss?:\/\//i.test(trimmed)) {
       throw new Error("Invalid peer URL: " + trimmed);
     }
     return trimmed;
@@ -345,8 +346,8 @@ if (main && cluster.isPrimary) {
     }
   }
 
-  zen = new ZEN({ web: opt.server.listen(opt.port), peers: opt.peers, ...(ppid && { pid: ppid }) });
-  console.log("Relay peer started on port " + opt.port + " with /zen");
+  zen = new ZEN({ web: opt.server.listen(opt.port, "::"), peers: opt.peers, ...(ppid && { pid: ppid }) });
+  console.log("Relay peer started on port " + opt.port + " with /zen (dual-stack ::");
 
   // ── PEX: peer exchange via direct DAM message (not public graph) ──────────
   // mesh.hear["pex"] + root.on("hi") — only shared with already-connected peers
@@ -355,6 +356,18 @@ if (main && cluster.isPrimary) {
     : null;
 
   if (surl) kprs.add(surl); // include self in /peers responses
+
+  // ── IPv6 self-URL discovery ───────────────────────────────────────────────
+  // Discover our own IPv6 address and build a second self-URL for advertisement
+  let surl6 = null;
+  disc({ noSave: true }).then((di) => {
+    if (di.ip6) {
+      const scheme = opt.key ? "wss" : "ws";
+      surl6 = scheme + "://[" + di.ip6 + "]:" + port + "/zen";
+      kprs.add(surl6);
+      console.log("IPv6 self-URL:", surl6);
+    }
+  }).catch(() => {});
 
   const root = zen._graph._;
 
@@ -401,6 +414,11 @@ if (main && cluster.isPrimary) {
         setTimeout(() => {
           try { mesh.say({ dam: "pex", peers: [surl] }, peer); } catch {}
         }, 700);
+      }
+      if (surl6) {
+        setTimeout(() => {
+          try { mesh.say({ dam: "pex", peers: [surl6] }, peer); } catch {}
+        }, 750);
       }
     });
   });
