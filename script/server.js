@@ -68,7 +68,7 @@ function vprs(peers) {
   return peers.split(",").map((peer) => {
     const trimmed = peer.trim();
     // Accept http(s) and ws(s) schemes, including bracket-IPv6 format: ws://[::1]:8420/zen
-    if (!/^(https?|wss?):\/\//i.test(trimmed)) {
+    if (!/^(https?|wss?):\/\/.+/i.test(trimmed)) {
       throw new Error("Invalid peer URL: " + trimmed);
     }
     return trimmed;
