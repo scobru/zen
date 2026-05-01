@@ -7,15 +7,21 @@
   <body>
     <div id="ready">loading</div>
 
-    <script src="/zen.js"></script>
-    <script src="/lib/opfs.js"></script>
-    <script src="/lib/radix.js"></script>
-    <script src="/lib/radisk.js"></script>
-    <script src="/lib/store.js"></script>
-    <script src="/lib/rindexed.js"></script>
-    <script>
-      (function () {
-        var current = {};
+    <script type="module">
+      import ZEN from '/zen.js';
+      import RindexedDB from '/lib/rindexed.js';
+      import ROPFS from '/lib/opfs.js';
+      import Radix from '/lib/radix.js';
+      import Radisk from '/lib/radisk.js';
+
+      // expose as globals (zen.js sets window.Zen internally; set others explicitly)
+      window.RindexedDB = RindexedDB;
+      window.ROPFS = ROPFS;
+      window.Radix = Radix;
+      window.Radisk = Radisk;
+
+      var Zen = ZEN;
+      var current = {};
 
         function makeStore(kind, opt) {
           if ("opfs" === kind) {
@@ -202,7 +208,6 @@
         };
 
         document.getElementById("ready").textContent = "ready";
-      })();
     </script>
   </body>
 </html>
