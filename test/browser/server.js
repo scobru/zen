@@ -10,12 +10,14 @@ var root = path.resolve(__dirname, "../..");
 var files = {
   "/": path.join(__dirname, "fixtures", "index.html"),
   "/zen.js": path.join(root, "zen.js"),
-  "/zen.js": path.join(root, "zen.js"),
   "/lib/opfs.js": path.join(root, "lib", "opfs.js"),
   "/lib/radix.js": path.join(root, "lib", "radix.js"),
   "/lib/radisk.js": path.join(root, "lib", "radisk.js"),
   "/lib/store.js": path.join(root, "lib", "store.js"),
   "/lib/rindexed.js": path.join(root, "lib", "rindexed.js"),
+  "/lib/yson.js": path.join(root, "lib", "yson.js"),
+  "/lib/radmigtmp.js": path.join(root, "lib", "radmigtmp.js"),
+  "/lib/tpath.js": path.join(root, "lib", "tpath.js"),
 };
 
 function type(file) {

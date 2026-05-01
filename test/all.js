@@ -1,9 +1,11 @@
 import { spawn } from "node:child_process";
 
 const suites = [
-  { name: "PEN unit", args: ["run", "testPEN:unit"] },
-  { name: "ZEN unit", args: ["run", "testZEN:unit"] },
-  { name: "core",     args: ["run", "test:core"] },
+  { name: "PEN unit",      args: ["run", "testPEN:unit"] },
+  { name: "ZEN unit",      args: ["run", "testZEN:unit"] },
+  { name: "core",          args: ["run", "test:core"] },
+  { name: "discover",      args: ["run", "test:discover"] },
+  { name: "MCP",           args: ["run", "test:mcp"] },
 ];
 
 var totalPassing = 0;

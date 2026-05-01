@@ -13,6 +13,11 @@
     "github": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/"
+    },
+    "zen": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/lib/mcp.js"]
     }
   }
 }
