@@ -577,7 +577,7 @@ var obj_each = function (o, f) {
   C;
 
 Zen.log = function () {
-  var log = C && C.log;
+  var log = C && (typeof process !== "undefined" && !Zen.window ? C.error : C.log);
   return (
     !Zen.log.off && "function" == typeof log && log.apply(C, arguments),
     [].slice.call(arguments).join(" ")

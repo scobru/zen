@@ -1296,7 +1296,7 @@ defmod('./src/root.js', function(module, exp){
     C;
 
   Zen.log = function () {
-    var log = C && C.log;
+    var log = C && (typeof process !== "undefined" && !Zen.window ? C.error : C.log);
     return (
       !Zen.log.off && "function" == typeof log && log.apply(C, arguments),
       [].slice.call(arguments).join(" ")
@@ -7984,7 +7984,8 @@ defmod('./src/locstore.js', function(module, exp){
     store = (Zen.window || noop).localStorage;
   } catch (e) {}
   if (!store) {
-    if (!env.ZEN_SILENCE_TEST_WARNINGS) {
+    var isTTY = typeof process !== "undefined" && process.stdout && process.stdout.isTTY;
+    if (!env.ZEN_SILENCE_TEST_WARNINGS && (typeof process === "undefined" || isTTY)) {
       Zen.log("Warning: No localStorage exists to persist data to!");
     }
     store = {
