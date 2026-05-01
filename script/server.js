@@ -346,9 +346,11 @@ if (main && cluster.isPrimary) {
     }
   }
 
-  zen = new ZEN({ web: opt.server.listen(opt.port, "::"), peers: opt.peers, ...(ppid && { pid: ppid }) });
-  // '::' binds dual-stack: accepts both IPv4 (via ::ffff:x.x.x.x) and native IPv6 connections
-  console.log("Relay peer started on port " + opt.port + " with /zen (dual-stack ::");
+  // On Linux '::' is dual-stack (IPV6_V6ONLY=0 by default).
+  // On Windows IPV6_V6ONLY=1 by default, so '::' only serves IPv6 — fall back to '0.0.0.0'.
+  const bindHost = process.platform === "win32" ? "0.0.0.0" : "::"
+  zen = new ZEN({ web: opt.server.listen(opt.port, bindHost), peers: opt.peers, ...(ppid && { pid: ppid }) });
+  console.log("Relay peer started on port " + opt.port + " with /zen (" + bindHost + ")");
 
   // ── PEX: peer exchange via direct DAM message (not public graph) ──────────
   // mesh.hear["pex"] + root.on("hi") — only shared with already-connected peers
