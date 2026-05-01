@@ -5,6 +5,7 @@ const suites = [
   { name: "ZEN unit",      args: ["run", "testZEN:unit"] },
   { name: "core",          args: ["run", "test:core"] },
   { name: "discover",      args: ["run", "test:discover"] },
+  { name: "MCP",           args: ["run", "test:mcp"] },
 ];
 
 var totalPassing = 0;
