@@ -51,8 +51,9 @@ api.subtle =
   (globalScope.crypto || empty).subtle ||
   (globalScope.crypto || empty).webkitSubtle;
 api.random = function (len) {
+  var c = api.crypto || globalScope.crypto;
   return api.Buffer.from(
-    api.crypto.getRandomValues(new Uint8Array(api.Buffer.alloc(len))),
+    c.getRandomValues(new Uint8Array(api.Buffer.alloc(len))),
   );
 };
 

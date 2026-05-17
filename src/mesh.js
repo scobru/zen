@@ -130,10 +130,7 @@ function Mesh(root) {
     if ((tmp = dup_check(id))) {
       return;
     }
-    // DAM logic:
-    if (!(hash = msg["##"]) && false && u !== msg.put) {
-      /*hash = msg['##'] = Type.obj.hash(msg.put)*/
-    } // disable hashing for now // TODO: impose warning/penalty instead (?)
+    // DAM logic: dedup by content hash for pre-hashed messages (## set by sender).
     if (
       hash &&
       (tmp = msg["@"] || (msg.get && id)) &&
@@ -268,10 +265,9 @@ function Mesh(root) {
       } // TODO: Should broadcasts be hashed?
       if (!peer && ack) {
         peer =
-          ((tmp = dup.s.get(ack)) &&
-            (tmp.via || ((tmp = tmp.it) && (tmp = tmp._) && tmp.via))) ||
-          ((tmp = mesh.last) && ack === tmp["#"] && mesh.leap);
-      } // warning! mesh.leap could be buggy! mesh last check reduces this. // TODO: CLEAN UP THIS LINE NOW? `.it` should be reliable.
+          (tmp = dup.s.get(ack)) &&
+          (tmp.via || ((tmp = tmp.it) && (tmp = tmp._) && tmp.via));
+      } // mesh.leap fallback removed — race condition with async mesh.raw; dup.s.via is reliable.
       if (!peer && ack) {
         // still no peer, then ack daisy chain 'tunnel' got lost.
         if (dup.s.has(ack)) {
@@ -413,9 +409,9 @@ function Mesh(root) {
             break;
           }
         }
-        if (i > 1) {
+        if (i > 1 && !peer) {
           msg["><"] = to.join();
-        } // TODO: BUG! This gets set regardless of peers sent to! Detect?
+        } // Only set yo-list for broadcasts (peer=null); targeted sends must not include unrelated peers.
       }
       if (msg.put && (tmp = msg.ok)) {
         msg.ok = {
@@ -490,7 +486,9 @@ function Mesh(root) {
       mesh.say.d += raw.length || 0;
       ++mesh.say.c; // STATS!
     } catch (e) {
-      (peer.queue = peer.queue || []).push(raw);
+      var q = (peer.queue = peer.queue || []);
+      if (q.length >= 1000) { q.shift(); } // drop oldest to prevent unbounded memory growth
+      q.push(raw);
     }
   }
 
@@ -507,7 +505,7 @@ function Mesh(root) {
       var peerUrl = peer.url || peer.id;
       var storedPeer = peerUrl && opt.peers[peerUrl];
       if ((storedPeer && storedPeer._noReconnect) ||
-          (opt._tombUrls && (opt._tombUrls.has(peer.url) || opt._tombUrls.has(peer.id)))) {
+          (opt.tomb && (opt.tomb.has(peer.url) || opt.tomb.has(peer.id)))) {
         peer._noReconnect = true;
         if (wire) { try { wire.close(); } catch (e) {} peer.wire = null; }
         return;
@@ -521,7 +519,8 @@ function Mesh(root) {
       if (opt.udpPort) { hiMsg.udp = opt.udpPort; } // advertise our UDP listening port
       if (opt.udpToken) { hiMsg.udpToken = opt.udpToken; } // token peers must include in UDP packets to us
       mesh.say(hiMsg, (opt.peers[tmp] = peer));
-      dup.s.delete(peer.last); // IMPORTANT: see https://zen.eco/docs/DAM#self
+      var _hiLast = peer.last; // capture before any async reconnect can overwrite peer.last
+      dup.s.delete(_hiLast); // IMPORTANT: see https://zen.eco/docs/DAM#self
     }
     if (!peer.met) {
       mesh.near++;
@@ -547,12 +546,9 @@ function Mesh(root) {
     var effectiveNoRec = passedNoRec || peer._noReconnect;
     peer.met && --mesh.near;
     delete peer.met;
-    // Log which peer dropped (helps diagnose intermittent disconnect)
-    if (peer.url || peer.pub) {
-      console.log('[BYE] url=' + (peer.url||'inbound') + ' pub=' + (peer.pub||'?').slice(0,8) + ' noRec=' + !!effectiveNoRec);
-    }
-    // Clear the wire immediately so mesh.route() and direct-delivery checks skip
-    // this peer while it is disconnected — prevents routing messages to a closed socket.
+    // Save wire reference before nulling — root.on("bye") listener uses it to close the TCP connection.
+    // We null peer.wire first so mesh.route()/say() skip this peer while it's being torn down.
+    peer._preByeWire = peer.wire;
     peer.wire = null;
     peer.batch = peer.tail = peer.queue = null; // clear any in-flight message buffers to prevent leaking raw strings.
     root.on("bye", peer);
@@ -563,10 +559,11 @@ function Mesh(root) {
       // Keep peer as tombstone so PEX cannot re-add it; also record URL.
       peer._noReconnect = true;
       if (peer.url) {
-        opt._tombUrls = opt._tombUrls || new Set();
-        opt._tombUrls.add(peer.url);
-        opt._tombUrls.add(peer.url.replace(/^wss?/, 'http'));
-        opt._tombUrls.add(peer.url.replace(/^https?/, 'ws'));
+        var tu = (opt.tomb = opt.tomb || new Set());
+        if (tu.size >= 500) { tu.delete(tu.values().next().value); } // cap: drop oldest
+        tu.add(peer.url);
+        tu.add(peer.url.replace(/^wss?:/, function(p){ return p[2]==='s'?'https:':'http:'; }));
+        tu.add(peer.url.replace(/^https?:/, function(p){ return p[4]==='s'?'wss:':'ws:'; }));
       }
     }
   };
@@ -595,7 +592,8 @@ function Mesh(root) {
     if (opt.udpPort) { replyMsg.udp = opt.udpPort; } // advertise our UDP port in reply
     if (opt.udpToken) { replyMsg.udpToken = opt.udpToken; } // token peers must include in UDP packets to us
     mesh.say(replyMsg, peer);
-    dup.s.delete(peer.last); // IMPORTANT: see https://zen.eco/docs/DAM#self
+    var _replyLast = peer.last; // capture before any async reconnect can overwrite peer.last
+    dup.s.delete(_replyLast); // IMPORTANT: see https://zen.eco/docs/DAM#self
   };
   mesh.hear["ping"] = function (msg, peer) {
     mesh.say({ dam: "pong", t: msg.t, "@": msg["#"] }, peer);
@@ -693,7 +691,6 @@ function Mesh(root) {
     for (var k in peers) {
       var p = peers[k];
       if (p && p.pub === msg.to && p.wire) {
-        if (p.udpSay) { try { p.udpSay(fwd); return; } catch(e) {} }
         mesh.say(fwd, p); return;
       }
     }
@@ -702,10 +699,9 @@ function Mesh(root) {
     // (e.g. inbound-only peers absent from DHT k-buckets). Flooding with TTL
     // guarantees delivery and dedup (#) prevents true loops.
     for (var fk in peers) {
-      var fp = peers[fk];
-      if (fp && fp.pub && fp.wire && fp !== peer) {
-        if (fp.udpSay) { try { fp.udpSay(fwd); continue; } catch(e) {} }
-        mesh.say(fwd, fp);
+      var fpeer = peers[fk];
+      if (fpeer && fpeer.pub && fpeer.wire && fpeer !== peer) {
+        mesh.say(fwd, fpeer);
       }
     }
   };
@@ -733,7 +729,10 @@ function Mesh(root) {
   root.on("bye", function (peer, tmp) {
     peer = opt.peers[peer.id || peer] || peer;
     this.to.next(peer);
-    peer.bye ? peer.bye() : (tmp = peer.wire) && tmp.close && tmp.close();
+    // Use _preByeWire saved by mesh.bye (peer.wire is already null by the time this fires).
+    tmp = peer._preByeWire || peer.wire;
+    peer._preByeWire = null;
+    peer.bye ? peer.bye() : tmp && tmp.close && tmp.close(4001, 'bye');
     delete opt.peers[peer.id];
     peer.wire = null;
   });

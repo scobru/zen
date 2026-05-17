@@ -274,8 +274,9 @@ defmod('./src/shim.js', function(module, exp){
     (globalScope.crypto || empty).subtle ||
     (globalScope.crypto || empty).webkitSubtle;
   api.random = function (len) {
+    var c = api.crypto || globalScope.crypto;
     return api.Buffer.from(
-      api.crypto.getRandomValues(new Uint8Array(api.Buffer.alloc(len))),
+      c.getRandomValues(new Uint8Array(api.Buffer.alloc(len))),
     );
   };
 
@@ -839,8 +840,8 @@ defmod('./src/root.js', function(module, exp){
         S = +new Date();
       courtesyTime = courtesyTime || S;
       if (put["#"] && put["."]) {
-        /*root && root.on('put', msg);*/ return;
-      } // TODO: BUG! This needs to call HAM instead.
+        return; // leaf-format message emitted by ham() — already processed; map.js handles graph write.
+      }
       DBG && (DBG.p = S);
       ctx["#"] = msg["#"];
       ctx.msg = msg;
@@ -1023,6 +1024,7 @@ defmod('./src/root.js', function(module, exp){
       if (0 < --ctx.stun && !ctx.err) {
         return;
       } // decrement always runs; early-return only if stun still positive AND no error.
+      if (ctx.stun < 0) { ctx.stun = 0; } // defensive: ctx.stop below prevents double-fire, but guard underflow
       ctx.stop = 1;
       if (!(root = ctx.root)) {
         return;
@@ -2078,6 +2080,18 @@ defmod('./src/hash.js', function(module, exp){
 
       if (data instanceof ArrayBuffer) {
         data = new Uint8Array(data);
+      }
+      if (opt.input === "raw" && data instanceof Uint8Array) {
+        // Pass raw bytes directly to hash algorithm without string conversion.
+        // Required for EVM use cases: keccak256(rlpEncodedBytes).
+        if (!ishash(opt.name)) {
+          throw new Error("opt.input='raw' requires a hash algorithm via opt.name");
+        }
+        let hashed = shim.Buffer.from(await digest(data, opt.name), "binary");
+        hashed = encbuf(hashed, enc);
+        return cbOk(cb, hashed);
+      }
+      if (data instanceof Uint8Array) {
         data = new shim.TextDecoder("utf-8").decode(data);
       }
       data = typeof data === "string" ? data : await shim.stringify(data);
@@ -2813,12 +2827,349 @@ defmod('./src/verify.js', function(module, exp){
   exp.verify = verify;
 });
 
+defmod('./src/ripemd160.js', function(module, exp){
+  // Pure RIPEMD-160 implementation — no dependencies, no WebCrypto.
+  // Spec: https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
+  var bridge = reqmod('./src/crypto.js').default;
+  let _wasmReady = false;
+  bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});
+
+  const KL = [0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e];
+  const KR = [0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000];
+
+  // Message word indices
+  const ML = [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 7, 4, 13, 1, 10, 6, 15,
+    3, 12, 0, 9, 5, 2, 14, 11, 8, 3, 10, 14, 4, 9, 15, 8, 1, 2, 7, 0, 6, 13, 11,
+    5, 12, 1, 9, 11, 10, 0, 8, 12, 4, 13, 3, 7, 15, 14, 5, 6, 2, 4, 0, 5, 9, 7,
+    12, 2, 10, 14, 1, 3, 8, 11, 6, 15, 13,
+  ];
+  const MR = [
+    5, 14, 7, 0, 9, 2, 11, 4, 13, 6, 15, 8, 1, 10, 3, 12, 6, 11, 3, 7, 0, 13, 5,
+    10, 14, 15, 8, 12, 4, 9, 1, 2, 15, 5, 1, 3, 7, 14, 6, 9, 11, 8, 12, 2, 10, 0,
+    4, 13, 8, 6, 4, 1, 3, 11, 15, 0, 5, 12, 2, 13, 9, 7, 10, 14, 12, 15, 10, 4, 1,
+    5, 8, 7, 6, 2, 13, 14, 0, 3, 9, 11,
+  ];
+
+  // Shift amounts
+  const SL = [
+    11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8, 7, 6, 8, 13, 11, 9, 7,
+    15, 7, 12, 15, 9, 11, 7, 13, 12, 11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5,
+    12, 7, 5, 11, 12, 14, 15, 14, 15, 9, 8, 9, 14, 5, 6, 8, 6, 5, 12, 9, 15, 5,
+    11, 6, 8, 13, 12, 5, 12, 13, 14, 11, 8, 5, 6,
+  ];
+  const SR = [
+    8, 9, 9, 11, 13, 15, 15, 5, 7, 7, 8, 11, 14, 14, 12, 6, 9, 13, 15, 7, 12, 8,
+    9, 11, 7, 7, 12, 7, 6, 15, 13, 11, 9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14,
+    13, 13, 7, 5, 15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8, 8, 5,
+    12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11,
+  ];
+
+  function rotl(x, n) {
+    return ((x << n) | (x >>> (32 - n))) >>> 0;
+  }
+
+  // Round selection functions (left: f1..f5, right: f5..f1)
+  const FL = [
+    (x, y, z) => (x ^ y ^ z) >>> 0,
+    (x, y, z) => ((x & y) | (~x & z)) >>> 0,
+    (x, y, z) => ((x | ~y) ^ z) >>> 0,
+    (x, y, z) => ((x & z) | (y & ~z)) >>> 0,
+    (x, y, z) => (x ^ (y | ~z)) >>> 0,
+  ];
+  const FR = [FL[4], FL[3], FL[2], FL[1], FL[0]];
+
+  function ripemd160(data) {
+    const bytes =
+      data instanceof Uint8Array
+        ? data
+        : data instanceof ArrayBuffer
+          ? new Uint8Array(data)
+          : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+
+    if (_wasmReady) {
+      return bridge.ripemd160(bytes);
+    }
+
+    const len = bytes.length;
+    const bitLen = len * 8;
+    const padLen = (len + 9 + 63) & ~63;
+    const padded = new Uint8Array(padLen);
+    padded.set(bytes);
+    padded[len] = 0x80;
+    const dv = new DataView(padded.buffer);
+    dv.setUint32(padLen - 8, bitLen >>> 0, true);
+    dv.setUint32(padLen - 4, Math.floor(bitLen / 0x100000000), true);
+
+    let h0 = 0x67452301,
+      h1 = 0xefcdab89,
+      h2 = 0x98badcfe,
+      h3 = 0x10325476,
+      h4 = 0xc3d2e1f0;
+
+    for (let off = 0; off < padLen; off += 64) {
+      const M = [];
+      for (let i = 0; i < 16; i++) M[i] = dv.getUint32(off + i * 4, true);
+
+      let al = h0,
+        bl = h1,
+        cl = h2,
+        dl = h3,
+        el = h4;
+      let ar = h0,
+        br = h1,
+        cr = h2,
+        dr = h3,
+        er = h4;
+
+      for (let i = 0; i < 80; i++) {
+        const r = (i / 16) | 0;
+        const sumL = (al + FL[r](bl, cl, dl) + M[ML[i]] + KL[r]) >>> 0;
+        const tl = (rotl(sumL, SL[i]) + el) >>> 0;
+        al = el;
+        el = dl;
+        dl = rotl(cl, 10);
+        cl = bl;
+        bl = tl;
+
+        const sumR = (ar + FR[r](br, cr, dr) + M[MR[i]] + KR[r]) >>> 0;
+        const tr = (rotl(sumR, SR[i]) + er) >>> 0;
+        ar = er;
+        er = dr;
+        dr = rotl(cr, 10);
+        cr = br;
+        br = tr;
+      }
+
+      const T = (h1 + cl + dr) >>> 0;
+      h1 = (h2 + dl + er) >>> 0;
+      h2 = (h3 + el + ar) >>> 0;
+      h3 = (h4 + al + br) >>> 0;
+      h4 = (h0 + bl + cr) >>> 0;
+      h0 = T;
+    }
+
+    const out = new DataView(new ArrayBuffer(20));
+    out.setUint32(0, h0, true);
+    out.setUint32(4, h1, true);
+    out.setUint32(8, h2, true);
+    out.setUint32(12, h3, true);
+    out.setUint32(16, h4, true);
+    return new Uint8Array(out.buffer);
+  }
+
+  exp.default = ripemd160;
+});
+
+defmod('./src/format.js', function(module, exp){
+  // Format converters for zen.pair() output.
+  // Receives raw BigInt scalars and {x,y} curve points; returns {curve, pub, priv, address}.
+  var keccak256 = reqmod('./src/keccak256.js').default;
+  var ripemd160 = reqmod('./src/ripemd160.js').default;
+  var shim = reqmod('./src/shim.js').default;
+  var { bito } = reqmod('./src/base62.js');
+  // ── shared helpers ────────────────────────────────────────────────────────────
+
+  function toHex(bytes) {
+    return Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  // Binary SHA-256 — uses WebCrypto directly on raw bytes (NOT via sha256.js JSON path)
+  async function sha256Bytes(bytes) {
+    const hash = await shim.subtle.digest(
+      "SHA-256",
+      bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes),
+    );
+    return new Uint8Array(hash);
+  }
+
+  // Base58Check encode
+  const B58_ALPHA = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+  function base58Encode(bytes) {
+    const digits = [0];
+    for (let i = 0; i < bytes.length; i++) {
+      let carry = bytes[i];
+      for (let j = 0; j < digits.length; j++) {
+        carry += digits[j] * 256;
+        digits[j] = carry % 58;
+        carry = Math.floor(carry / 58);
+      }
+      while (carry) {
+        digits.push(carry % 58);
+        carry = Math.floor(carry / 58);
+      }
+    }
+    let result = "";
+    for (let i = 0; i < bytes.length && bytes[i] === 0; i++) result += "1";
+    for (let i = digits.length - 1; i >= 0; i--) result += B58_ALPHA[digits[i]];
+    return result;
+  }
+
+  async function base58Check(payload) {
+    const h1 = await sha256Bytes(payload);
+    const h2 = await sha256Bytes(h1);
+    const out = new Uint8Array(payload.length + 4);
+    out.set(payload);
+    out.set(h2.slice(0, 4), payload.length);
+    return base58Encode(out);
+  }
+
+  // ── EVM format ────────────────────────────────────────────────────────────────
+
+  async function evmAddress(pub) {
+    const xBytes = bito(pub.x);
+    const yBytes = bito(pub.y);
+    const raw = new Uint8Array(64);
+    raw.set(xBytes, 0);
+    raw.set(yBytes, 32);
+    // keccak256 of raw 64-byte uncompressed key (without 04 prefix)
+    const hash = await keccak256(raw);
+    const addrHex = toHex(hash.slice(-20));
+    // EIP-55 checksum
+    const ckHash = toHex(await keccak256(addrHex));
+    let addr = "0x";
+    for (let i = 0; i < 40; i++) {
+      addr +=
+        parseInt(ckHash[i], 16) >= 8 ? addrHex[i].toUpperCase() : addrHex[i];
+    }
+    return addr;
+  }
+
+  function evmPrivHex(priv) {
+    return "0x" + toHex(bito(priv));
+  }
+
+  function evmEncPub(pub) {
+    // Uncompressed pubkey: 0x04 + 32-byte x + 32-byte y
+    const out = new Uint8Array(65);
+    out[0] = 0x04;
+    out.set(bito(pub.x), 1);
+    out.set(bito(pub.y), 33);
+    return "0x" + toHex(out);
+  }
+
+  // ── BTC format ────────────────────────────────────────────────────────────────
+
+  function compressedPubBytes(pub) {
+    const out = new Uint8Array(33);
+    out[0] = pub.y & 1n ? 0x03 : 0x02;
+    out.set(bito(pub.x), 1);
+    return out;
+  }
+
+  async function btcAddress(pub) {
+    // P2PKH mainnet: Base58Check(0x00 + RIPEMD160(SHA256(compressed_pubkey)))
+    const compressed = compressedPubBytes(pub);
+    const sha = await sha256Bytes(compressed);
+    const ripd = ripemd160(sha);
+    const payload = new Uint8Array(21);
+    payload[0] = 0x00;
+    payload.set(ripd, 1);
+    return base58Check(payload);
+  }
+
+  async function btcWIF(priv) {
+    // WIF mainnet compressed: Base58Check(0x80 + 32-byte-priv + 0x01)
+    const privBytes = bito(priv);
+    const payload = new Uint8Array(34);
+    payload[0] = 0x80;
+    payload.set(privBytes, 1);
+    payload[33] = 0x01;
+    return base58Check(payload);
+  }
+
+  function btcCompressedHex(pub) {
+    return "0x" + toHex(compressedPubBytes(pub));
+  }
+
+  // ── main export ───────────────────────────────────────────────────────────────
+
+  async function applyFormat(format, curveName, core, raw) {
+    const { signPriv, signPub } = raw;
+    const out = { curve: curveName };
+
+    if (format === "zen") {
+      if (signPriv) out.priv = core.scalarToString(signPriv);
+      if (signPub)  out.pub  = core.pointToPub(signPub);
+      if (signPub)  out.address = await evmAddress(signPub);
+      return out;
+    }
+
+    if (format === "evm") {
+      if (signPub)  out.pub     = evmEncPub(signPub);       // 0x04 + 128 hex (uncompressed)
+      if (signPriv) out.priv    = evmPrivHex(signPriv);     // 0x + 64 hex
+      if (signPub)  out.address = await evmAddress(signPub); // 0x EIP-55 checksum
+      return out;
+    }
+
+    if (format === "btc") {
+      if (signPub)  out.pub     = btcCompressedHex(signPub); // 0x02/03 + 64 hex
+      if (signPriv) out.priv    = await btcWIF(signPriv);    // WIF compressed
+      if (signPub)  out.address = await btcAddress(signPub); // P2PKH base58
+      return out;
+    }
+
+    throw new Error("Unknown format: " + format + ". Supported: zen, evm, btc");
+  }
+
+  exp.default = applyFormat;
+});
+
 defmod('./src/recover.js', function(module, exp){
   var crv = reqmod('./src/curves.js').default;
+  var applyFormat = reqmod('./src/format.js').default;
   var { cryptoErr, cbOk } = reqmod('./src/err.js');
+  // Parse a raw ECDSA signature for prehash mode.
+  // Accepts: { r, s, v } object  OR  65-byte "0x..." hex string (r32 + s32 + v1).
+  function parseRawSig(data) {
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      let v = typeof data.v === "bigint" ? Number(data.v) : Number(data.v);
+      if (v >= 27) v -= 27;
+      const r = typeof data.r === "bigint" ? data.r : BigInt(data.r);
+      const s = typeof data.s === "bigint" ? data.s : BigInt(data.s);
+      return { r, s, v };
+    }
+    const hex = typeof data === "string" && data.startsWith("0x") ? data.slice(2) : String(data);
+    if (hex.length !== 130) throw new Error("ZEN.recover prehash: expected 65-byte hex sig (130 hex chars)");
+    const bytes = new Uint8Array(hex.match(/.{2}/g).map((b) => parseInt(b, 16)));
+    let v = bytes[64];
+    if (v >= 27) v -= 27;
+    const toBigInt = (arr) => arr.reduce((acc, b) => (acc << 8n) | BigInt(b), 0n);
+    return { r: toBigInt(bytes.slice(0, 32)), s: toBigInt(bytes.slice(32, 64)), v };
+  }
+
+  // Parse a pre-hashed digest — accepts 32-byte Uint8Array or "0x..." hex string.
+  function parseHashBytes(hash) {
+    if (hash instanceof Uint8Array) return hash;
+    const hex = typeof hash === "string" && hash.startsWith("0x") ? hash.slice(2) : String(hash);
+    return new Uint8Array(hex.match(/.{2}/g).map((b) => parseInt(b, 16)));
+  }
+
   async function recover(data, cb, opt) {
     try {
       opt = opt || {};
+
+      if (opt.prehash) {
+        // Prehash mode: data = raw sig {r,s,v} or 65-byte hex; opt.hash = pre-hashed digest bytes/hex.
+        // Mirrors ZEN.sign(digest, pair, null, { prehash: true, encode: "raw" }) on the verify side.
+        if (!opt.hash) throw new Error("ZEN.recover prehash: opt.hash (pre-hashed digest) is required");
+        const curveName = opt.curve || "secp256k1";
+        const c = crv(curveName);
+        const hashBytes = parseHashBytes(opt.hash);
+        const { r, s, v } = parseRawSig(data);
+        const point = c.recoverPub(v, r, s, hashBytes);
+        if (opt.format === "evm" || opt.format === "btc") {
+          const out = await applyFormat(opt.format, c.curve, c, { signPriv: null, signPub: point });
+          return cbOk(cb, out.address);
+        }
+        const pub = c.pointToPub(point);
+        return cbOk(cb, pub);
+      }
+
+      // Original ZEN-format path: data is a ZEN signed string (base62 + embedded message).
       const c0 = crv();
       const msg = await c0.settings.parse(data);
       if (!msg || msg.v === undefined || msg.v === null) {
@@ -2855,8 +3206,20 @@ defmod('./src/sign.js', function(module, exp){
         throw new Error("No signing key.");
       }
       const c = crv(pair.curve);
-      const msg = await c.normalizeMessage(data);
-      const h = await c.shaBytes(msg);
+      let msg, h;
+      if (opt.prehash) {
+        // Accept pre-hashed bytes (Uint8Array or 0x-prefixed hex string).
+        // Used for EVM transaction signing where the hash is keccak256(rlpEncoded).
+        if (data instanceof Uint8Array) {
+          h = data;
+        } else {
+          const hex = typeof data === "string" && data.startsWith("0x") ? data.slice(2) : data;
+          h = new Uint8Array(hex.match(/.{2}/g).map((b) => parseInt(b, 16)));
+        }
+      } else {
+        msg = await c.normalizeMessage(data);
+        h = await c.shaBytes(msg);
+      }
       const priv = c.parseScalar(pair.priv, "Signing key");
       for (let i = 0; i < 16; i++) {
         const k = await c.deterministicK(priv, h, i);
@@ -2879,6 +3242,18 @@ defmod('./src/sign.js', function(module, exp){
         if (s > c.HALF_N) {
           s = c.N - s;
           v ^= 1;
+        }
+        if (opt.encode === "raw") {
+          // Return raw {r, s, v} for EVM RLP transaction construction.
+          return c.finalize(
+            {
+              r: "0x" + r.toString(16).padStart(64, "0"),
+              s: "0x" + s.toString(16).padStart(64, "0"),
+              v,
+            },
+            { raw: true },
+            cb,
+          );
         }
         const sig = c.concatBytes(c.bigIntToBytes(r, 32), c.bigIntToBytes(s, 32));
         const sigB62 = c.base62.bufToB62Fixed(sig, 86);
@@ -3849,9 +4224,11 @@ defmod('./src/pen.js', function(module, exp){
       if (typeof val === "string") {
         view[offset++] = 4;
         var encoded = _enc.encode(val);
-        var slen = Math.min(encoded.length, 0xffff);
+        var slen = encoded.length;
         view[offset++] = slen & 0xff;
         view[offset++] = (slen >> 8) & 0xff;
+        view[offset++] = (slen >> 16) & 0xff;
+        view[offset++] = (slen >> 24) & 0xff;
         for (var i = 0; i < slen; i++) view[offset++] = encoded[i];
         return offset;
       }
@@ -3978,8 +4355,8 @@ defmod('./src/pen.js', function(module, exp){
       return [0x02];
     };
     bc.str = function (s) {
-      var bytes = Array.from(_enc.encode(s.slice(0, 255)));
-      return [0x03, bytes.length].concat(bytes);
+      var bytes = Array.from(_enc.encode(s));
+      return [0x03].concat(bc.uleb(bytes.length)).concat(bytes);
     };
     bc.uint = function (n) {
       return [0x04].concat(bc.uleb(n));
@@ -4152,7 +4529,13 @@ defmod('./src/pen.js', function(module, exp){
       if (op === 0x00 || op === 0x01 || op === 0x02 || op === 0x23 || op === 0x24)
         return pos;
       if (op === 0x03) {
-        var len = bytecode[pos++];
+        // ULEB128-encoded length
+        var len = 0, shift = 0, b;
+        do {
+          b = bytecode[pos++];
+          len |= (b & 0x7f) << shift;
+          shift += 7;
+        } while (b & 0x80);
         return pos + len;
       } // string
       if (op === 0x04 || op === 0x07) {
@@ -4727,297 +5110,6 @@ defmod('./src/pen.js', function(module, exp){
     };
   }
   exp.default = pen;
-});
-
-defmod('./src/ripemd160.js', function(module, exp){
-  // Pure RIPEMD-160 implementation — no dependencies, no WebCrypto.
-  // Spec: https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
-  var bridge = reqmod('./src/crypto.js').default;
-  let _wasmReady = false;
-  bridge.ready.then(() => { _wasmReady = true; }).catch(() => {});
-
-  const KL = [0x00000000, 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xa953fd4e];
-  const KR = [0x50a28be6, 0x5c4dd124, 0x6d703ef3, 0x7a6d76e9, 0x00000000];
-
-  // Message word indices
-  const ML = [
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 7, 4, 13, 1, 10, 6, 15,
-    3, 12, 0, 9, 5, 2, 14, 11, 8, 3, 10, 14, 4, 9, 15, 8, 1, 2, 7, 0, 6, 13, 11,
-    5, 12, 1, 9, 11, 10, 0, 8, 12, 4, 13, 3, 7, 15, 14, 5, 6, 2, 4, 0, 5, 9, 7,
-    12, 2, 10, 14, 1, 3, 8, 11, 6, 15, 13,
-  ];
-  const MR = [
-    5, 14, 7, 0, 9, 2, 11, 4, 13, 6, 15, 8, 1, 10, 3, 12, 6, 11, 3, 7, 0, 13, 5,
-    10, 14, 15, 8, 12, 4, 9, 1, 2, 15, 5, 1, 3, 7, 14, 6, 9, 11, 8, 12, 2, 10, 0,
-    4, 13, 8, 6, 4, 1, 3, 11, 15, 0, 5, 12, 2, 13, 9, 7, 10, 14, 12, 15, 10, 4, 1,
-    5, 8, 7, 6, 2, 13, 14, 0, 3, 9, 11,
-  ];
-
-  // Shift amounts
-  const SL = [
-    11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8, 7, 6, 8, 13, 11, 9, 7,
-    15, 7, 12, 15, 9, 11, 7, 13, 12, 11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5,
-    12, 7, 5, 11, 12, 14, 15, 14, 15, 9, 8, 9, 14, 5, 6, 8, 6, 5, 12, 9, 15, 5,
-    11, 6, 8, 13, 12, 5, 12, 13, 14, 11, 8, 5, 6,
-  ];
-  const SR = [
-    8, 9, 9, 11, 13, 15, 15, 5, 7, 7, 8, 11, 14, 14, 12, 6, 9, 13, 15, 7, 12, 8,
-    9, 11, 7, 7, 12, 7, 6, 15, 13, 11, 9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14,
-    13, 13, 7, 5, 15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8, 8, 5,
-    12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11,
-  ];
-
-  function rotl(x, n) {
-    return ((x << n) | (x >>> (32 - n))) >>> 0;
-  }
-
-  // Round selection functions (left: f1..f5, right: f5..f1)
-  const FL = [
-    (x, y, z) => (x ^ y ^ z) >>> 0,
-    (x, y, z) => ((x & y) | (~x & z)) >>> 0,
-    (x, y, z) => ((x | ~y) ^ z) >>> 0,
-    (x, y, z) => ((x & z) | (y & ~z)) >>> 0,
-    (x, y, z) => (x ^ (y | ~z)) >>> 0,
-  ];
-  const FR = [FL[4], FL[3], FL[2], FL[1], FL[0]];
-
-  function ripemd160(data) {
-    const bytes =
-      data instanceof Uint8Array
-        ? data
-        : data instanceof ArrayBuffer
-          ? new Uint8Array(data)
-          : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-
-    if (_wasmReady) {
-      return bridge.ripemd160(bytes);
-    }
-
-    const len = bytes.length;
-    const bitLen = len * 8;
-    const padLen = (len + 9 + 63) & ~63;
-    const padded = new Uint8Array(padLen);
-    padded.set(bytes);
-    padded[len] = 0x80;
-    const dv = new DataView(padded.buffer);
-    dv.setUint32(padLen - 8, bitLen >>> 0, true);
-    dv.setUint32(padLen - 4, Math.floor(bitLen / 0x100000000), true);
-
-    let h0 = 0x67452301,
-      h1 = 0xefcdab89,
-      h2 = 0x98badcfe,
-      h3 = 0x10325476,
-      h4 = 0xc3d2e1f0;
-
-    for (let off = 0; off < padLen; off += 64) {
-      const M = [];
-      for (let i = 0; i < 16; i++) M[i] = dv.getUint32(off + i * 4, true);
-
-      let al = h0,
-        bl = h1,
-        cl = h2,
-        dl = h3,
-        el = h4;
-      let ar = h0,
-        br = h1,
-        cr = h2,
-        dr = h3,
-        er = h4;
-
-      for (let i = 0; i < 80; i++) {
-        const r = (i / 16) | 0;
-        const sumL = (al + FL[r](bl, cl, dl) + M[ML[i]] + KL[r]) >>> 0;
-        const tl = (rotl(sumL, SL[i]) + el) >>> 0;
-        al = el;
-        el = dl;
-        dl = rotl(cl, 10);
-        cl = bl;
-        bl = tl;
-
-        const sumR = (ar + FR[r](br, cr, dr) + M[MR[i]] + KR[r]) >>> 0;
-        const tr = (rotl(sumR, SR[i]) + er) >>> 0;
-        ar = er;
-        er = dr;
-        dr = rotl(cr, 10);
-        cr = br;
-        br = tr;
-      }
-
-      const T = (h1 + cl + dr) >>> 0;
-      h1 = (h2 + dl + er) >>> 0;
-      h2 = (h3 + el + ar) >>> 0;
-      h3 = (h4 + al + br) >>> 0;
-      h4 = (h0 + bl + cr) >>> 0;
-      h0 = T;
-    }
-
-    const out = new DataView(new ArrayBuffer(20));
-    out.setUint32(0, h0, true);
-    out.setUint32(4, h1, true);
-    out.setUint32(8, h2, true);
-    out.setUint32(12, h3, true);
-    out.setUint32(16, h4, true);
-    return new Uint8Array(out.buffer);
-  }
-
-  exp.default = ripemd160;
-});
-
-defmod('./src/format.js', function(module, exp){
-  // Format converters for zen.pair() output.
-  // Receives raw BigInt scalars and {x,y} curve points; returns {curve, pub, priv, address}.
-  var keccak256 = reqmod('./src/keccak256.js').default;
-  var ripemd160 = reqmod('./src/ripemd160.js').default;
-  var shim = reqmod('./src/shim.js').default;
-  var { bito } = reqmod('./src/base62.js');
-  // ── shared helpers ────────────────────────────────────────────────────────────
-
-  function toHex(bytes) {
-    return Array.from(bytes)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-  }
-
-  // Binary SHA-256 — uses WebCrypto directly on raw bytes (NOT via sha256.js JSON path)
-  async function sha256Bytes(bytes) {
-    const hash = await shim.subtle.digest(
-      "SHA-256",
-      bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes),
-    );
-    return new Uint8Array(hash);
-  }
-
-  // Base58Check encode
-  const B58_ALPHA = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-
-  function base58Encode(bytes) {
-    const digits = [0];
-    for (let i = 0; i < bytes.length; i++) {
-      let carry = bytes[i];
-      for (let j = 0; j < digits.length; j++) {
-        carry += digits[j] * 256;
-        digits[j] = carry % 58;
-        carry = Math.floor(carry / 58);
-      }
-      while (carry) {
-        digits.push(carry % 58);
-        carry = Math.floor(carry / 58);
-      }
-    }
-    let result = "";
-    for (let i = 0; i < bytes.length && bytes[i] === 0; i++) result += "1";
-    for (let i = digits.length - 1; i >= 0; i--) result += B58_ALPHA[digits[i]];
-    return result;
-  }
-
-  async function base58Check(payload) {
-    const h1 = await sha256Bytes(payload);
-    const h2 = await sha256Bytes(h1);
-    const out = new Uint8Array(payload.length + 4);
-    out.set(payload);
-    out.set(h2.slice(0, 4), payload.length);
-    return base58Encode(out);
-  }
-
-  // ── EVM format ────────────────────────────────────────────────────────────────
-
-  async function evmAddress(pub) {
-    const xBytes = bito(pub.x);
-    const yBytes = bito(pub.y);
-    const raw = new Uint8Array(64);
-    raw.set(xBytes, 0);
-    raw.set(yBytes, 32);
-    // keccak256 of raw 64-byte uncompressed key (without 04 prefix)
-    const hash = await keccak256(raw);
-    const addrHex = toHex(hash.slice(-20));
-    // EIP-55 checksum
-    const ckHash = toHex(await keccak256(addrHex));
-    let addr = "0x";
-    for (let i = 0; i < 40; i++) {
-      addr +=
-        parseInt(ckHash[i], 16) >= 8 ? addrHex[i].toUpperCase() : addrHex[i];
-    }
-    return addr;
-  }
-
-  function evmPrivHex(priv) {
-    return "0x" + toHex(bito(priv));
-  }
-
-  function evmEncPub(pub) {
-    // Uncompressed pubkey: 0x04 + 32-byte x + 32-byte y
-    const out = new Uint8Array(65);
-    out[0] = 0x04;
-    out.set(bito(pub.x), 1);
-    out.set(bito(pub.y), 33);
-    return "0x" + toHex(out);
-  }
-
-  // ── BTC format ────────────────────────────────────────────────────────────────
-
-  function compressedPubBytes(pub) {
-    const out = new Uint8Array(33);
-    out[0] = pub.y & 1n ? 0x03 : 0x02;
-    out.set(bito(pub.x), 1);
-    return out;
-  }
-
-  async function btcAddress(pub) {
-    // P2PKH mainnet: Base58Check(0x00 + RIPEMD160(SHA256(compressed_pubkey)))
-    const compressed = compressedPubBytes(pub);
-    const sha = await sha256Bytes(compressed);
-    const ripd = ripemd160(sha);
-    const payload = new Uint8Array(21);
-    payload[0] = 0x00;
-    payload.set(ripd, 1);
-    return base58Check(payload);
-  }
-
-  async function btcWIF(priv) {
-    // WIF mainnet compressed: Base58Check(0x80 + 32-byte-priv + 0x01)
-    const privBytes = bito(priv);
-    const payload = new Uint8Array(34);
-    payload[0] = 0x80;
-    payload.set(privBytes, 1);
-    payload[33] = 0x01;
-    return base58Check(payload);
-  }
-
-  function btcCompressedHex(pub) {
-    return "0x" + toHex(compressedPubBytes(pub));
-  }
-
-  // ── main export ───────────────────────────────────────────────────────────────
-
-  async function applyFormat(format, curveName, core, raw) {
-    const { signPriv, signPub } = raw;
-    const out = { curve: curveName };
-
-    if (format === "zen") {
-      if (signPriv) out.priv = core.scalarToString(signPriv);
-      if (signPub)  out.pub  = core.pointToPub(signPub);
-      if (signPub)  out.address = await evmAddress(signPub);
-      return out;
-    }
-
-    if (format === "evm") {
-      if (signPub)  out.pub     = evmEncPub(signPub);       // 0x04 + 128 hex (uncompressed)
-      if (signPriv) out.priv    = evmPrivHex(signPriv);     // 0x + 64 hex
-      if (signPub)  out.address = await evmAddress(signPub); // 0x EIP-55 checksum
-      return out;
-    }
-
-    if (format === "btc") {
-      if (signPub)  out.pub     = btcCompressedHex(signPub); // 0x02/03 + 64 hex
-      if (signPriv) out.priv    = await btcWIF(signPriv);    // WIF compressed
-      if (signPub)  out.address = await btcAddress(signPub); // P2PKH base58
-      return out;
-    }
-
-    throw new Error("Unknown format: " + format + ". Supported: zen, evm, btc");
-  }
-
-  exp.default = applyFormat;
 });
 
 defmod('./src/pair.js', function(module, exp){
@@ -7028,7 +7120,7 @@ defmod('./src/on.js', function(module, exp){
       }
       act = cat.on(tag, arg, eas || cat, as);
       if (eas && eas.$) {
-        (eas.subs || (eas.subs = [])).push(act);
+        trackSub(eas, act);
       }
       return zen;
     }
@@ -7179,6 +7271,23 @@ defmod('./src/on.js', function(module, exp){
       return;
     }
     at.ack = 0; // so can resubscribe.
+    clearTimers(at.one);
+    if ((tmp = at.any)) {
+      Object.keys(tmp).forEach(function (id) {
+        tmp[id] && tmp[id].off && tmp[id].off();
+      });
+      delete at.any;
+    }
+    if ((tmp = at.subs)) {
+      at.subs = [];
+      tmp.slice().forEach(function (sub) {
+        sub && sub.off && sub.off();
+      });
+    }
+    if ((tmp = at.jam)) {
+      delete at.jam;
+      tmp.length = 0;
+    }
     if ((tmp = cat.next)) {
       if (tmp[at.get]) {
         delete tmp[at.get];
@@ -7216,6 +7325,24 @@ defmod('./src/on.js', function(module, exp){
     at.on("off", {});
     return zen;
   };
+  function trackSub(eas, act, subs, off) {
+    subs = eas.subs || (eas.subs = []);
+    subs.push(act);
+    off = act.off;
+    act.off = function () {
+      var i = subs.indexOf(act);
+      if (i >= 0) {
+        subs.splice(i, 1);
+      }
+      return off && off.call(this);
+    };
+  }
+  function clearTimers(map) {
+    Object.keys(map || {}).forEach(function (id) {
+      clearTimeout(map[id]);
+      delete map[id];
+    });
+  }
   var empty = {},
     noop = function () {},
     u;
@@ -7577,10 +7704,7 @@ defmod('./src/mesh.js', function(module, exp){
       if ((tmp = dup_check(id))) {
         return;
       }
-      // DAM logic:
-      if (!(hash = msg["##"]) && false && u !== msg.put) {
-        /*hash = msg['##'] = Type.obj.hash(msg.put)*/
-      } // disable hashing for now // TODO: impose warning/penalty instead (?)
+      // DAM logic: dedup by content hash for pre-hashed messages (## set by sender).
       if (
         hash &&
         (tmp = msg["@"] || (msg.get && id)) &&
@@ -7715,10 +7839,9 @@ defmod('./src/mesh.js', function(module, exp){
         } // TODO: Should broadcasts be hashed?
         if (!peer && ack) {
           peer =
-            ((tmp = dup.s.get(ack)) &&
-              (tmp.via || ((tmp = tmp.it) && (tmp = tmp._) && tmp.via))) ||
-            ((tmp = mesh.last) && ack === tmp["#"] && mesh.leap);
-        } // warning! mesh.leap could be buggy! mesh last check reduces this. // TODO: CLEAN UP THIS LINE NOW? `.it` should be reliable.
+            (tmp = dup.s.get(ack)) &&
+            (tmp.via || ((tmp = tmp.it) && (tmp = tmp._) && tmp.via));
+        } // mesh.leap fallback removed — race condition with async mesh.raw; dup.s.via is reliable.
         if (!peer && ack) {
           // still no peer, then ack daisy chain 'tunnel' got lost.
           if (dup.s.has(ack)) {
@@ -7860,9 +7983,9 @@ defmod('./src/mesh.js', function(module, exp){
               break;
             }
           }
-          if (i > 1) {
+          if (i > 1 && !peer) {
             msg["><"] = to.join();
-          } // TODO: BUG! This gets set regardless of peers sent to! Detect?
+          } // Only set yo-list for broadcasts (peer=null); targeted sends must not include unrelated peers.
         }
         if (msg.put && (tmp = msg.ok)) {
           msg.ok = {
@@ -7937,7 +8060,9 @@ defmod('./src/mesh.js', function(module, exp){
         mesh.say.d += raw.length || 0;
         ++mesh.say.c; // STATS!
       } catch (e) {
-        (peer.queue = peer.queue || []).push(raw);
+        var q = (peer.queue = peer.queue || []);
+        if (q.length >= 1000) { q.shift(); } // drop oldest to prevent unbounded memory growth
+        q.push(raw);
       }
     }
 
@@ -7954,7 +8079,7 @@ defmod('./src/mesh.js', function(module, exp){
         var peerUrl = peer.url || peer.id;
         var storedPeer = peerUrl && opt.peers[peerUrl];
         if ((storedPeer && storedPeer._noReconnect) ||
-            (opt._tombUrls && (opt._tombUrls.has(peer.url) || opt._tombUrls.has(peer.id)))) {
+            (opt.tomb && (opt.tomb.has(peer.url) || opt.tomb.has(peer.id)))) {
           peer._noReconnect = true;
           if (wire) { try { wire.close(); } catch (e) {} peer.wire = null; }
           return;
@@ -7968,7 +8093,8 @@ defmod('./src/mesh.js', function(module, exp){
         if (opt.udpPort) { hiMsg.udp = opt.udpPort; } // advertise our UDP listening port
         if (opt.udpToken) { hiMsg.udpToken = opt.udpToken; } // token peers must include in UDP packets to us
         mesh.say(hiMsg, (opt.peers[tmp] = peer));
-        dup.s.delete(peer.last); // IMPORTANT: see https://zen.eco/docs/DAM#self
+        var _hiLast = peer.last; // capture before any async reconnect can overwrite peer.last
+        dup.s.delete(_hiLast); // IMPORTANT: see https://zen.eco/docs/DAM#self
       }
       if (!peer.met) {
         mesh.near++;
@@ -7994,12 +8120,9 @@ defmod('./src/mesh.js', function(module, exp){
       var effectiveNoRec = passedNoRec || peer._noReconnect;
       peer.met && --mesh.near;
       delete peer.met;
-      // Log which peer dropped (helps diagnose intermittent disconnect)
-      if (peer.url || peer.pub) {
-        console.log('[BYE] url=' + (peer.url||'inbound') + ' pub=' + (peer.pub||'?').slice(0,8) + ' noRec=' + !!effectiveNoRec);
-      }
-      // Clear the wire immediately so mesh.route() and direct-delivery checks skip
-      // this peer while it is disconnected — prevents routing messages to a closed socket.
+      // Save wire reference before nulling — root.on("bye") listener uses it to close the TCP connection.
+      // We null peer.wire first so mesh.route()/say() skip this peer while it's being torn down.
+      peer._preByeWire = peer.wire;
       peer.wire = null;
       peer.batch = peer.tail = peer.queue = null; // clear any in-flight message buffers to prevent leaking raw strings.
       root.on("bye", peer);
@@ -8010,10 +8133,11 @@ defmod('./src/mesh.js', function(module, exp){
         // Keep peer as tombstone so PEX cannot re-add it; also record URL.
         peer._noReconnect = true;
         if (peer.url) {
-          opt._tombUrls = opt._tombUrls || new Set();
-          opt._tombUrls.add(peer.url);
-          opt._tombUrls.add(peer.url.replace(/^wss?/, 'http'));
-          opt._tombUrls.add(peer.url.replace(/^https?/, 'ws'));
+          var tu = (opt.tomb = opt.tomb || new Set());
+          if (tu.size >= 500) { tu.delete(tu.values().next().value); } // cap: drop oldest
+          tu.add(peer.url);
+          tu.add(peer.url.replace(/^wss?:/, function(p){ return p[2]==='s'?'https:':'http:'; }));
+          tu.add(peer.url.replace(/^https?:/, function(p){ return p[4]==='s'?'wss:':'ws:'; }));
         }
       }
     };
@@ -8042,7 +8166,8 @@ defmod('./src/mesh.js', function(module, exp){
       if (opt.udpPort) { replyMsg.udp = opt.udpPort; } // advertise our UDP port in reply
       if (opt.udpToken) { replyMsg.udpToken = opt.udpToken; } // token peers must include in UDP packets to us
       mesh.say(replyMsg, peer);
-      dup.s.delete(peer.last); // IMPORTANT: see https://zen.eco/docs/DAM#self
+      var _replyLast = peer.last; // capture before any async reconnect can overwrite peer.last
+      dup.s.delete(_replyLast); // IMPORTANT: see https://zen.eco/docs/DAM#self
     };
     mesh.hear["ping"] = function (msg, peer) {
       mesh.say({ dam: "pong", t: msg.t, "@": msg["#"] }, peer);
@@ -8140,7 +8265,6 @@ defmod('./src/mesh.js', function(module, exp){
       for (var k in peers) {
         var p = peers[k];
         if (p && p.pub === msg.to && p.wire) {
-          if (p.udpSay) { try { p.udpSay(fwd); return; } catch(e) {} }
           mesh.say(fwd, p); return;
         }
       }
@@ -8149,10 +8273,9 @@ defmod('./src/mesh.js', function(module, exp){
       // (e.g. inbound-only peers absent from DHT k-buckets). Flooding with TTL
       // guarantees delivery and dedup (#) prevents true loops.
       for (var fk in peers) {
-        var fp = peers[fk];
-        if (fp && fp.pub && fp.wire && fp !== peer) {
-          if (fp.udpSay) { try { fp.udpSay(fwd); continue; } catch(e) {} }
-          mesh.say(fwd, fp);
+        var fpeer = peers[fk];
+        if (fpeer && fpeer.pub && fpeer.wire && fpeer !== peer) {
+          mesh.say(fwd, fpeer);
         }
       }
     };
@@ -8180,7 +8303,10 @@ defmod('./src/mesh.js', function(module, exp){
     root.on("bye", function (peer, tmp) {
       peer = opt.peers[peer.id || peer] || peer;
       this.to.next(peer);
-      peer.bye ? peer.bye() : (tmp = peer.wire) && tmp.close && tmp.close();
+      // Use _preByeWire saved by mesh.bye (peer.wire is already null by the time this fires).
+      tmp = peer._preByeWire || peer.wire;
+      peer._preByeWire = null;
+      peer.bye ? peer.bye() : tmp && tmp.close && tmp.close(4001, 'bye');
       delete opt.peers[peer.id];
       peer.wire = null;
     });
@@ -8252,6 +8378,16 @@ defmod('./src/websocket.js', function(module, exp){
   var Zen = __root;
   Zen.Mesh = __mesh;
 
+  // Cap tombUrls at 500 entries (≈167 dead peers × 3 URL variants each).
+  // Set is insertion-ordered so oldest entries are dropped first.
+  function tombAdd(opt, url) {
+    var t = (opt.tomb = opt.tomb || new Set());
+    if (t.size >= 500) { t.delete(t.values().next().value); }
+    t.add(url);
+    t.add(url.replace(/^wss?:/, function(p){ return p[2]==='s'?'https:':'http:'; }));
+    t.add(url.replace(/^https?:/, function(p){ return p[4]==='s'?'wss:':'ws:'; }));
+  }
+
   // TODO: resync upon reconnect online/offline
   //window.ononline = window.onoffline = function(){ console.log('online?', navigator.onLine) }
 
@@ -8282,9 +8418,14 @@ defmod('./src/websocket.js', function(module, exp){
           return wired && wired(peer);
         }
         // Do not open connections to tombstoned peers.
+        // Normalise to https:// for lookup since tombstones are stored under https/http keys.
         if (peer._noReconnect) { return; }
-        if (opt._tombUrls && (opt._tombUrls.has(peer.url) ||
-            opt._tombUrls.has(peer.url.replace(/^https?/, 'ws')))) { return; }
+        if (opt.tomb) {
+          var _tu = peer.url;
+          var _tn = _tu.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+          if (opt.tomb.has(_tu) || opt.tomb.has(_tn) ||
+              opt.tomb.has(_tu.replace(/^https?/, 'ws'))) { return; }
+        }
         var url = peer.url.replace(/^http/, "ws");
         peer._isOutbound = true;
         var wire = (peer.wire = new opt.WebSocket(url));
@@ -8297,12 +8438,7 @@ defmod('./src/websocket.js', function(module, exp){
             peer._axeGuess = (peer._axeGuess || 0) + 1;
             if (peer._axeGuess >= 5) {
               peer._noReconnect = true;
-              if (peer.url) {
-                opt._tombUrls = opt._tombUrls || new Set();
-                opt._tombUrls.add(peer.url);
-                opt._tombUrls.add(peer.url.replace(/^wss?/, 'http'));
-                opt._tombUrls.add(peer.url.replace(/^https?/, 'ws'));
-              }
+              if (peer.url) { tombAdd(opt, peer.url); }
             }
           }
           // Backoff for peers that accept then quickly close (AXE PID-sort drop).
@@ -8311,12 +8447,7 @@ defmod('./src/websocket.js', function(module, exp){
             peer._hiGuess = (peer._hiGuess || 0) + 1;
             if (peer._hiGuess >= 3) {
               peer._noReconnect = true;
-              if (peer.url) {
-                opt._tombUrls = opt._tombUrls || new Set();
-                opt._tombUrls.add(peer.url);
-                opt._tombUrls.add(peer.url.replace(/^wss?/, 'http'));
-                opt._tombUrls.add(peer.url.replace(/^https?/, 'ws'));
-              }
+              if (peer.url) { tombAdd(opt, peer.url); }
             }
           }
           reconnect(peer);
@@ -8326,7 +8457,11 @@ defmod('./src/websocket.js', function(module, exp){
           reconnect(peer);
         };
         wire.onopen = function () {
+          clearTimeout(peer.defer);
+          peer.defer = null;
           peer._openAt = +new Date();
+          peer._axeGuess = 0; // reset on successful open — prevent spurious tombstoning
+          peer._hiGuess = 0;
           // Keepalive: ping every 30s so idle relay connections don't time out at
           // network/proxy boundaries (typical idle timeout is ~60s).
           peer._keepalive = setInterval(function () {
@@ -8356,25 +8491,42 @@ defmod('./src/websocket.js', function(module, exp){
     }, 1); // it can take a while to open a socket, so maybe no longer lazy load for perf reasons?
 
     var wait = 2 * 999;
-    function reconnect(peer) {
-      clearTimeout(peer.defer);
-      if (!opt.peers[peer.url] || peer._noReconnect) {
-        return;
+    function canReconnect(peer) {
+      if (!peer || !peer.url || !opt.peers[peer.url] || peer._noReconnect) {
+        return false;
       }
-      if (opt._tombUrls && (opt._tombUrls.has(peer.url) ||
-          opt._tombUrls.has((peer.url || '').replace(/^https?/, 'ws')))) {
-        return;
+      if (opt.tomb) {
+        var _ru = peer.url || "";
+        var _rn = _ru.replace(/^wss:\/\//, "https://").replace(/^ws:\/\//, "http://");
+        if (opt.tomb.has(_ru) || opt.tomb.has(_rn) ||
+            opt.tomb.has(_ru.replace(/^https?/, "ws"))) {
+          return false;
+        }
       }
       if (doc && peer.retry <= 0) {
+        return false;
+      }
+      return true;
+    }
+    function reconnect(peer) {
+      clearTimeout(peer.defer);
+      peer.defer = null;
+      if (!canReconnect(peer)) {
         return;
       }
       peer.retry =
         (peer.retry || opt.retry + 1 || 60) -
         (-peer.tried + (peer.tried = +new Date()) < wait * 4 ? 1 : 0);
       peer.defer = setTimeout(function to() {
-        if (doc && doc.hidden) {
-          return setTimeout(to, wait);
+        if (!canReconnect(peer)) {
+          peer.defer = null;
+          return;
         }
+        if (doc && doc.hidden) {
+          peer.defer = setTimeout(to, wait);
+          return;
+        }
+        peer.defer = null;
         open(peer);
       }, wait);
     }
@@ -8670,6 +8822,776 @@ defmod('./src/bootstrap.js', function(module, exp){
   exp.resolveEnvPeers = resolveEnvPeers;
 });
 
+defmod('./src/axe.js', function(module, exp){
+  var _axeInit = false; // guard against double-registration
+
+  function initAXE(ZEN) {
+    if (_axeInit) return;
+    _axeInit = true;
+  var Zen = ZEN;
+  var u;
+  var __servicePromise;
+
+  function loadService(root) {
+    if (Zen.window || typeof process === "undefined") {
+      return;
+    }
+    __servicePromise = __servicePromise || import("./service.js");
+    __servicePromise.then(
+      function (mod) {
+        var service = mod && (mod.default || mod);
+        if (typeof service === "function") {
+          service(root);
+        }
+      },
+      function () {},
+    );
+  }
+
+  Zen.on("opt", function (at) {
+    start(at);
+    this.to.next(at);
+  }); // make sure to call the "next" middleware adapter.
+  // TODO: BUG: panic test/panic/1 & test/panic/3 fail when AXE is on.
+  function start(root) {
+    if (root.axe) {
+      return;
+    }
+    var opt = root.opt,
+      peers = opt.peers;
+    if (false === opt.axe) {
+      return;
+    }
+    if (false === opt.WebSocket) {
+      return; // in-process / test mode — no real network, skip AXE entirely
+    }
+    var axe = (root.axe = {}),
+      tmp,
+      id;
+    var mesh = (opt.mesh = opt.mesh || Zen.Mesh(root)); // DAM!
+
+    if (Zen.window) {
+      // BROWSER peer discovery — localStorage · WebSocket scan · PEX · BroadcastChannel
+      var w   = Zen.window,
+          lS  = w.localStorage || opt.localStorage || {},
+          loc = w.location || opt.location || {},
+          nav = w.navigator || opt.navigator || {};
+
+      // ── localStorage JSON peer list ───────────────────────────────────────
+      function lsld() {
+        try { return JSON.parse(lS.zenPeers || "[]"); } catch { return []; }
+      }
+      function lssv(urls) {
+        var set = {}, all = lsld();
+        all.concat(urls).forEach(function(u) { if (u && /^wss?:\/\//.test(u)) set[u] = 1; });
+        try { lS.zenPeers = JSON.stringify(Object.keys(set).slice(0, 50)); } catch {}
+      }
+
+      // ── BroadcastChannel — share peers across tabs on same origin ─────────
+      var bc = null;
+      try { bc = new (w.BroadcastChannel || BroadcastChannel)("zen-peers"); } catch {}
+      function bcast(d) { try { if (bc) bc.postMessage(d); } catch {} }
+
+      // ── add peer: connect + save + broadcast + expand scan ────────────────
+      axe.fall = {};
+      function adopt(url) {
+        if (!url || !/^wss?:\/\//.test(url)) return;
+        if (axe.fall[url]) return;
+        axe.fall[url] = { url: url, id: url, retry: 0 };
+        mesh.hi({ id: url, url: url, retry: 9 });
+        lssv([url]);
+        bcast({ type: "peer", url: url });
+      }
+
+      // ── PEX handler: receive peer list from relay ─────────────────────────
+      mesh.hear["pex"] = function(msg) {
+        if (!Array.isArray(msg.peers)) return;
+        msg.peers.forEach(adopt);
+      };
+
+      // ── on connect: fetch /status signed string from relay ─────────────────
+      root.on("hi", function(peer) {
+        this.to.next(peer);
+        if (!peer.url) return;
+        try {
+          var base = peer.url
+            .replace(/^wss:\/\//, "https://")
+            .replace(/^ws:\/\//, "http://")
+            .replace(/\/zen$/, "");
+          var ac = w.AbortController ? new w.AbortController() : null;
+          var tofetch = ac ? setTimeout(function() { ac.abort(); }, 3000) : null;
+          fetch(base + "/status", ac ? { signal: ac.signal } : {})
+            .then(function(r) { clearTimeout(tofetch); return r.ok ? r.text() : null; })
+            .then(function(str) {
+              if (!str) return;
+              return Zen.recover(str).then(function(pub) {
+                return Zen.verify(str, pub);
+              }).then(function(data) {
+                if (!data) return;
+                // ZEN.verify auto-parses JSON — data may already be an object
+                var status = (typeof data === "string") ? JSON.parse(data) : data;
+                if (status && Array.isArray(status.peers)) status.peers.forEach(adopt);
+              });
+            })
+            .catch(function() { clearTimeout(tofetch); });
+        } catch {}
+      });
+
+      // ── BroadcastChannel inbound: peers from other tabs ───────────────────
+      if (bc) bc.onmessage = function(e) {
+        if (e && e.data && e.data.type === "peer") adopt(e.data.url);
+      };
+
+      // ── on disconnect: fall back to next known peer ───────────────────────
+      root.on("bye", function(peer) {
+        this.to.next(peer);
+        if (!peer.url) return;
+        if (!nav.onLine) { peer.retry = 1; return; }
+        if (peer.retry) return;
+        delete axe.fall[peer.url || peer.id];
+        var fall = Object.keys(axe.fall);
+        if (!fall.length) return;
+        var one = fall[(Math.random() * fall.length) >> 0];
+        if (!peers[one]) mesh.hi(one);
+      });
+
+      // ── stable browser pid — persisted in localStorage, generated once ────
+      if (!opt.pid) {
+        opt.pid = lS.zenPid || String.random(9);
+        try { lS.zenPid = opt.pid; } catch {}
+      }
+
+      // ── bootstrap ─────────────────────────────────────────────────────────
+
+      // 1. saved peers from previous sessions
+      lsld().forEach(adopt);
+
+      // 2. same-origin relay
+      tmp = peers[(id = loc.origin + "/zen")] = peers[id] || {};
+      tmp.id = tmp.url = id; tmp.retry = tmp.retry || 9;
+
+      // 3. localhost dev
+      tmp = peers[(id = "http://localhost:8420/zen")] = peers[id] || {};
+      tmp.id = tmp.url = id; tmp.retry = tmp.retry || 9;
+
+      // 4. ?peers= URL param
+      var parg = ((loc.search || "").split("peers=")[1] || "").split("&")[0];
+      if (parg) parg.split(",").forEach(function(u) { u = u.trim(); if (u) adopt(u); });
+
+      // 5. Fetch peers from same-origin /status — silent, no console errors
+      // (replaces blind WebSocket scan that caused net::ERR_CONNECTION_REFUSED noise)
+      try {
+        var _o = loc.origin || (loc.protocol + "//" + loc.host);
+        var _ac5 = w.AbortController ? new w.AbortController() : null;
+        var _sto5 = _ac5 ? setTimeout(function() { _ac5.abort(); }, 3000) : null;
+        fetch(_o + "/status", _ac5 ? { signal: _ac5.signal } : {})
+          .then(function(r) { if (_sto5) clearTimeout(_sto5); return r.ok ? r.text() : null; })
+          .then(function(str) {
+            if (!str) return;
+            return Zen.recover(str).then(function(pub) {
+              return Zen.verify(str, pub);
+            }).then(function(data) {
+              if (!data) return;
+              var st = typeof data === "string" ? JSON.parse(data) : data;
+              if (st && Array.isArray(st.peers)) st.peers.forEach(adopt);
+            });
+          })
+          .catch(function() { if (_sto5) clearTimeout(_sto5); });
+      } catch {}
+
+      // 6. volunteer DHT — last resort, only if still not connected after 5s
+      setTimeout(function() {
+        if (Object.keys(axe.up || {}).length) return;
+        var axeUrl = ((loc.search || "").split("axe=")[1] || "").split("&")[0]
+                     || (loc.axe || "");
+        if (!axeUrl) return;
+        try {
+          fetch(axeUrl)
+            .then(function(r) { return r.text(); })
+            .then(function(t) { (t.match(/wss?:\/\/[^\s"'<>]+/g) || []).forEach(adopt); })
+            .catch(function() {});
+        } catch {}
+      }, 5000);
+
+      return;
+    }
+
+    // NODE.JS: relay
+    if (false === opt.WebSocket) {
+      return;
+    }
+    if (
+      typeof process !== "undefined" &&
+      "false" === "" + (opt.env = process.env || "").AXE
+    ) {
+      return;
+    }
+    Zen.log.once("AXE", "AXE relay enabled!");
+    var dup = root.dup;
+
+    mesh.way = function (msg) {
+      if (!msg) { return; }
+      if (msg.get) { return GET(msg); }
+      if (msg.put) { return fall(msg); }
+      if (msg.dam === "rtc") { return rtcway(msg); }
+      fall(msg);
+    };
+
+    // Route dam:"rtc" to the target pid directly; broadcast only if not found locally
+    function rtcway(msg) {
+      var toPid = msg.ok && msg.ok.rtc && msg.ok.rtc.to;
+      if (!toPid) { fall(msg); return; }
+      var peers = opt.peers, p, id;
+      for (id in peers) {
+        p = peers[id];
+        if (p && p.pid === toPid && p.wire) { mesh.say(msg, p); return; }
+      }
+      fall(msg); // target not on this relay — broadcast to relay peers
+    }
+    // mesh.hear dispatches dam messages directly; mesh.way is only called when dam is absent.
+    // Register rtcway so relay properly routes WebRTC signaling (offer/answer/candidate).
+    mesh.hear["rtc"] = rtcway;
+
+    function GET(msg) {
+      if (!msg) {
+        return;
+      }
+      var via = (msg._ || "").via,
+        soul,
+        has,
+        tmp,
+        ref;
+      if (!via || !via.id) {
+        return fall(msg);
+      }
+      // SUBSCRIPTION LOGIC MOVED TO GET'S ACK REPLY.
+      if (!(ref = REF(msg)._)) {
+        return fall(msg);
+      }
+      ref.asked = +new Date();
+      GET.turn(msg, ref.route, 0);
+    }
+    GET.turn = function (msg, route, turn) {
+      var tmp = msg["#"],
+        tag = dup.s[tmp],
+        next;
+      if (!tmp || !tag) {
+        return;
+      } // message timed out
+      clearTimeout(tag.lack);
+      if (tag.ack && (tmp = tag["##"]) && msg["##"] === tmp) {
+        return;
+      } // hashes match, stop asking other peers!
+      // Sort peers by RTT (ascending) so the lowest-latency peer is queried first.
+      // Peers with no RTT data (rtt == 0 or undefined) sort to the end.
+      var keys = Object.maps(route || opt.peers).slice((turn = turn || 0));
+      keys.sort(function(a, b) {
+        var pa = route ? (route.get ? route.get(a) : route[a]) : opt.peers[a];
+        var pb = route ? (route.get ? route.get(b) : route[b]) : opt.peers[b];
+        var ra = (pa && pa.rtt > 0) ? pa.rtt : Infinity;
+        var rb = (pb && pb.rtt > 0) ? pb.rtt : Infinity;
+        if (ra !== rb) return ra - rb;
+        // When broadcasting to all peers, relay peers (in axe.up) go first.
+        if (!route) {
+          var ua = (pa && pa.url) ? 0 : 1;
+          var ub = (pb && pb.url) ? 0 : 1;
+          return ua - ub;
+        }
+        return 0;
+      });
+      next = keys;
+      if (!next.length) {
+        if (!route) {
+          return;
+        } // asked all peers, stop asking!
+        GET.turn(msg, u, 0); // asked all subs, now now ask any peers. (not always the best idea, but stays )
+        return;
+      }
+      setTimeout.each(
+        next,
+        function (id) {
+          var peer = opt.peers[id];
+          turn++;
+          if (!peer || !peer.wire) {
+            route && route.delete(id);
+            return;
+          } // bye! // TODO: CHECK IF 0 OTHER PEERS & UNSUBSCRIBE
+          if (mesh.say(msg, peer) === false) {
+            return;
+          } // was self
+          if (0 == turn % 3) {
+            return 1;
+          }
+        },
+        function () {
+          tag["##"] = msg["##"]; // should probably set this in a more clever manner, do live `in` checks ++ --, etc. but being lazy for now. // TODO: Yes, see `in` TODO, currently this might match against only in-mem cause no other peers reply, which is "fine", but could cause a false positive.
+          tag.lack = setTimeout(function () {
+            GET.turn(msg, route, turn);
+          }, 25);
+        },
+        3,
+      );
+    };
+    function fall(msg) {
+      mesh.say(msg, opt.peers);
+    }
+    function REF(msg) {
+      var ref = "",
+        soul,
+        has,
+        tmp;
+      if (!msg || !msg.get) {
+        return ref;
+      }
+      if ("string" == typeof (soul = msg.get["#"])) {
+        ref = root.$.get(soul);
+      }
+      if ("string" == typeof (tmp = msg.get["."])) {
+        has = tmp;
+      } else {
+        has = "";
+      }
+
+      var via = (msg._ || "").via,
+        sub = via.sub || (via.sub = new Object.Map());
+      (sub.get(soul) || (sub.set(soul, (tmp = new Object.Map())) && tmp)).set(
+        has,
+        1,
+      ); // {soul: {'':1, has: 1}} // TEMPORARILY REVERT AXE TOWER TYING TO SUBSCRIBING TO EVERYTHING. UNDO THIS!
+      via.id &&
+        ref._ &&
+        (ref._.route || (ref._.route = new Object.Map())).set(via.id, via); // SAME AS ^
+
+      return ref;
+    }
+    function LEX(lex) {
+      return (lex = lex || "")["="] || lex["*"] || lex[">"] || lex;
+    }
+
+    root.on("in", function (msg) {
+      var to = this.to,
+        tmp;
+      if ((tmp = msg["@"]) && (tmp = dup.s[tmp])) {
+        tmp.ack = (tmp.ack || 0) + 1; // count remote ACKs to GET. // TODO: If mismatch, should trigger next asks.
+        if (tmp.it && tmp.it.get && msg.put) {
+          // WHEN SEEING A PUT REPLY TO A GET...
+          var get = tmp.it.get || "",
+            ref = REF(tmp.it)._,
+            via = (tmp.it._ || "").via || "",
+            sub;
+          if (via && ref) {
+            // SUBSCRIBE THE PEER WHO ASKED VIA FOR IT:
+            //console.log("SUBSCRIBING", Object.maps(ref.route||''), "to", LEX(get['#']));
+            via.id &&
+              (ref.route || (ref.route = new Object.Map())).set(via.id, via);
+            sub = via.sub || (via.sub = new Object.Map());
+            ref &&
+              (
+                sub.get(LEX(get["#"])) ||
+                (sub.set(LEX(get["#"]), (sub = new Object.Map())) && sub)
+              ).set(LEX(get["."]), 1); // {soul: {'':1, has: 1}}
+
+            via = (msg._ || "").via || "";
+            if (via) {
+              // BIDIRECTIONAL SUBSCRIBE: REPLIER IS NOW SUBSCRIBED. DO WE WANT THIS?
+              via.id &&
+                (ref.route || (ref.route = new Object.Map())).set(via.id, via);
+              sub = via.sub || (via.sub = new Object.Map());
+              if (ref) {
+                var soul = LEX(get["#"]),
+                  sift = sub.get(soul),
+                  has = LEX(get["."]);
+                if (has) {
+                  (
+                    sift ||
+                    (sub.set(soul, (sift = new Object.Map())) && sift)
+                  ).set(has, 1);
+                } else if (!sift) {
+                  sub.set(soul, (sift = new Object.Map()));
+                  sift.set("", 1);
+                }
+              }
+            }
+          }
+        }
+        if ((tmp = tmp.back)) {
+          // backtrack OKs since AXE splits PUTs up.
+          setTimeout.each(Object.keys(tmp), function (id) {
+            to.next({ "#": msg["#"], "@": id, ok: msg.ok });
+          });
+          return;
+        }
+      }
+      to.next(msg);
+    });
+
+    root.on("create", function (root) {
+      this.to.next(root);
+      var Q = {};
+      root.on("put", function (msg) {
+        var eve = this,
+          at = eve.as,
+          put = msg.put,
+          soul = put["#"],
+          has = put["."],
+          val = put[":"],
+          state = put[">"],
+          q,
+          tmp;
+        eve.to.next(msg);
+        if (msg["@"]) {
+          return;
+        } // acks send existing data, not updates, so no need to resend to others.
+        if (!soul || !has) {
+          return;
+        }
+        var ref = root.$.get(soul)._,
+          route = (ref || "").route;
+        if (!route) {
+          return;
+        }
+        if (ref.skip && ref.skip.has == has) {
+          ref.skip.now = msg["#"];
+          return;
+        }
+        clearTimeout(ref.skip && ref.skip.to); // clear stale timeout before overwriting
+        (ref.skip = { now: msg["#"], has: has }).to = setTimeout(function () {
+          setTimeout.each(Object.maps(route), function (pid) {
+            var peer, tmp;
+            var skip = ref.skip || "";
+            ref.skip = null;
+            if (!(peer = route.get(pid))) {
+              return;
+            }
+            if (!peer.wire) {
+              route.delete(pid);
+              return;
+            } // bye!
+            var sub = (peer.sub || (peer.sub = new Object.Map())).get(soul);
+            if (!sub) {
+              return;
+            }
+            if (!sub.get(has) && !sub.get("")) {
+              return;
+            }
+            var put = peer.put || (peer.put = {});
+            var node = root.graph[soul],
+              tmp;
+            if (node && u !== (tmp = node[has])) {
+              state = state_is(node, has);
+              val = tmp;
+            }
+            put[soul] = state_ify(put[soul], has, state, val, soul);
+            tmp = dup.track((peer.next = peer.next || String.random(9)));
+            (tmp.back || (tmp.back = {}))["" + (skip.now || msg["#"])] = 1;
+            if (peer.to) {
+              return;
+            }
+            peer.to = setTimeout(function () {
+              flush(peer);
+            }, opt.gap);
+          });
+        }, 9);
+      });
+    });
+
+    function flush(peer) {
+      var msg = { "#": peer.next, put: peer.put, ok: { "@": 3, "/": mesh.near } }; // BUG: TODO: sub count!
+      // TODO: what about DAM's >< dedup? Current thinking is, don't use it, however, you could store first msg# & latest msg#, and if here... latest === first then likely it is the same >< thing, so if(firstMsg['><'][peer.id]){ return } don't send.
+      peer.next = peer.put = peer.to = null;
+      mesh.say(msg, peer);
+    }
+    var state_ify = Zen.state.ify,
+      state_is = Zen.state.is;
+
+    {
+      // THIS IS THE UP MODULE;
+      axe.up = {};
+      var hi = mesh.hear["?"]; // lower-level integration with DAM! This is abnormal but helps performance.
+      mesh.hear["?"] = function (msg, peer) {
+        var p; // deduplicate unnecessary connections:
+        hi(msg, peer);
+        if (!peer.pid) {
+          return;
+        }
+        if (peer.pid === opt.pid) {
+          peer._noReconnect = true; // don't retry self-connection
+          mesh.bye(peer);
+          return;
+        } // if I connected to myself, drop.
+        if ((p = axe.up[peer.pid])) {
+          // if we both connected to each other...
+          if (p === peer) {
+            return;
+          } // do nothing if no conflict,
+          var drop, keep;
+          if (!p.url && !peer.url) {
+            // Both inbounds: keep the live entry, do NOT close either wire.
+            if (!p.wire) { axe.up[peer.pid] = peer; }
+            return;
+          }
+          // Use PID sort for ALL directional cases (outbound+inbound or both outbound).
+          // CRITICAL: both relay sides must reach the SAME decision about which physical
+          // connection to close — otherwise each side closes its own outbound and ALL
+          // connections drop. PID sort guarantees cross-relay consistency:
+          //   higher opt.pid side → drops its outbound (keeps inbound from remote)
+          //   lower  opt.pid side → drops its inbound  (keeps outbound to remote)
+          if (opt.pid > peer.pid) {
+            // This relay has the higher PID: drop whichever peer has url (outbound).
+            if (p.url) { drop = p; keep = peer; } else { drop = peer; keep = p; }
+          } else {
+            // This relay has the lower PID: keep whichever peer has url (outbound).
+            if (p.url) { keep = p; drop = peer; } else { keep = peer; drop = p; }
+          }
+          // NOTE: do NOT copy drop.url to keep — inbounds must stay url-less.
+          // Copying url caused axe.stay to save inbound URLs (incl. self-URL),
+          // which then created outbound self-connections on next startup.
+          drop._noReconnect = true; // prevent reconnect cycle on dropped peer's wire.onclose
+          mesh.bye(drop);
+          axe.up[keep.pid] = keep;
+          // If the kept peer is an outbound and has no ping interval yet
+          // (happens when the inbound arrives before the outbound's "?" completes),
+          // start one now to prevent the TCP from going idle and timing out.
+          if (keep.url && mesh.ping && !keep._pingIv) {
+            mesh.ping(keep);
+            var keepIv = setInterval(function () {
+              if (!keep.wire) { clearInterval(keepIv); return; }
+              mesh.ping(keep);
+            }, 30000);
+            keep._pingIv = keepIv;
+          }
+          return;
+        }
+        axe.up[peer.pid] = peer;
+        if (!peer.url) {
+          // Inbound client (browser or inbound relay) — skip axe.stay and ping.
+          // Send PEX so the new client discovers relay URLs and existing browser pids for WebRTC.
+          if (peer.wire) {
+            var pexPeers = [], pexBpids = [];
+            Object.maps(axe.up).forEach(function (pid) {
+              var p = axe.up[pid];
+              if (!p || p === peer || !p.wire) return;
+              if (p.url) pexPeers.push(p.url);
+              else if (p.pid) pexBpids.push(p.pid);
+            });
+            if (pexPeers.length || pexBpids.length) {
+              var pexMsg = { dam: "pex" };
+              if (pexPeers.length) pexMsg.peers = pexPeers;
+              if (pexBpids.length) pexMsg.bpids = pexBpids;
+              mesh.say(pexMsg, peer);
+            }
+            // Notify existing inbound clients about the new peer's pid so they can initiate WebRTC.
+            if (peer.pid) {
+              Object.maps(axe.up).forEach(function (pid) {
+                var p = axe.up[pid];
+                if (!p || p === peer || !p.wire || p.url) return;
+                mesh.say({ dam: "pex", bpids: [peer.pid] }, p);
+              });
+            }
+          }
+          return;
+        }
+        if (axe.stay) {
+          axe.stay();
+        }
+        // Auto-ping on connect so RTT is populated immediately.
+        // Repeat every 30s to keep the rolling average fresh.
+        if (mesh.ping) {
+          mesh.ping(peer);
+          var pinger = setInterval(function () {
+            if (!peer.wire) { clearInterval(pinger); return; }
+            mesh.ping(peer);
+          }, 30000);
+          peer._pingIv = pinger;
+        }
+      };
+
+      // URL normalisation helper: wss→https, ws→http (relay section)
+      var normUrl = function(u) {
+        return u.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+      };
+
+      mesh.hear["opt"] = function (msg, peer) {
+        if (msg.ok) {
+          return;
+        }
+        var tmp = msg.opt;
+        if (!tmp) {
+          return;
+        }
+        tmp = tmp.peers;
+        if (!tmp || "string" != typeof tmp) {
+          return;
+        }
+        if (99 <= Object.keys(axe.up).length) {
+          return;
+        } // 99 TEMPORARILY UNTIL BENCHMARKED!
+        // Normalize protocol: wss→https, ws→http — avoids dual outbound from axe.stay.
+        var normTmp = normUrl(tmp);
+        // Skip self-URL to prevent self-connection loop.
+        if (opt.domain) {
+          try {
+            var urlHost = new (typeof URL !== 'undefined' ? URL : require('url').URL)(normTmp).hostname;
+            if (urlHost === opt.domain) { return; }
+          } catch(e) {}
+        }
+        // Skip if already configured as an outbound peer — prevents duplicate connections
+        // when a remote peer suggests a URL we already have open (e.g. PEX forwarding boot peers).
+        if (opt.peers && opt.peers[normTmp]) { return; }
+        mesh.hi({ id: normTmp, url: normTmp, retry: 9 });
+        if (peer) {
+          mesh.say({ dam: "opt", ok: 1, "@": msg["#"] }, peer);
+        }
+      };
+
+      axe.stay = function () {
+        clearTimeout(axe.stay.to);
+        axe.stay.to = setTimeout(function (tmp, urls) {
+          if (!(tmp = root.stats && root.stats.stay)) {
+            return;
+          }
+          urls = {};
+          Object.keys(axe.up || "").forEach(function (p) {
+            p = (axe.up || "")[p];
+            if (p.url) {
+              // Normalize protocol: wss→https, ws→http — prevents dual outbound on restore.
+              var normP = normUrl(p.url);
+              urls[normP] = {};
+            }
+          });
+          (tmp.axe = tmp.axe || {}).up = urls;
+        }, 1000 * 9); //1000 * 60);
+      };
+      setTimeout(function (tmp) {
+        // In relay mode (opt.super=true), BOOT handles all reconnects — skip axe.stay restore
+        // to prevent redundant connection cycles.
+        if (opt.super) { return; }
+        if (!(tmp = root.stats && root.stats.stay && root.stats.stay.axe)) {
+          return;
+        }
+        if (!(tmp = tmp.up)) {
+          return;
+        }
+        if (!(tmp instanceof Array)) {
+          tmp = Object.keys(tmp);
+        }
+        setTimeout.each(tmp || [], function (url) {
+          mesh.hear.opt({ opt: { peers: url } });
+        });
+      }, 1000);
+    }
+
+    setTimeout(function () {
+      loadService(root);
+    }, 9);
+
+    {
+      // THIS IS THE MOB MODULE;
+      //return; // WORK IN PROGRESS, TEST FINALIZED, NEED TO MAKE STABLE.
+      /*
+  			AXE should have a couple of threshold items...
+  			let's pretend there is a variable max peers connected
+  			mob = 10000
+  			if we get more peers than that...
+  			we should start sending those peers a remote command
+  			that they should connect to this or that other peer
+  			and then once they (or before they do?) drop them from us.
+  			sake of the test... gonna set that peer number to 1.
+  			The mob threshold might be determined by other factors,
+  			like how much RAM or CPU stress we have.
+  		*/
+      opt.mob = opt.mob || parseFloat((opt.env || "").MOB) || 999999; // should be based on ulimit, some clouds as low as 10K.
+
+      // handle rebalancing a mob of peers:
+      root.on("hi", function (peer) {
+        this.to.next(peer);
+        if (peer.url) {
+          return;
+        } // I am assuming that if we are wanting to make an outbound connection to them, that we don't ever want to drop them unless our actual config settings change.
+        var count = /*Object.keys(opt.peers).length ||*/ mesh.near; // TODO: BUG! This is slow, use .near, but near is buggy right now, fix in DAM.
+        //console.log("are we mobbed?", opt.mob, Object.keys(opt.peers).length, mesh.near);
+        if (opt.mob >= count) {
+          return;
+        } // TODO: Make dynamic based on RAM/CPU also. Or possibly even weird stuff like opt.mob / axe.up length?
+        var peers = {};
+        // Prefer dropping peers with the highest RTT first (worst latency).
+        // Collect inbound peers (no url) that could be redirected, sorted worst-first.
+        var candidates = Object.keys(axe.up).map(function (p) { return axe.up[p]; })
+          .filter(function (p) { return !p.url; })
+          .sort(function (a, b) {
+            var ra = (a.rtt !== undefined && a.rtt > 0) ? a.rtt : Infinity;
+            var rb = (b.rtt !== undefined && b.rtt > 0) ? b.rtt : Infinity;
+            return rb - ra; // highest RTT first
+          });
+        Object.keys(axe.up).forEach(function (p) {
+          p = axe.up[p];
+          p.url && (peers[p.url] = {});
+        });
+        // TODO: BUG!!! Infinite reconnection loop happens if not enough relays, or if some are missing. For instance, :8766 says to connect to :8767 which then says to connect to :8766. To not DDoS when system overload, figure clever way to tell peers to retry later, that network does not have enough capacity?
+        var toDrop = candidates[0] || peer; // drop highest-RTT inbound or the new peer
+        mesh.say({ dam: "mob", mob: count, peers: peers }, toDrop);
+        setTimeout(function () {
+          mesh.bye(toDrop);
+        }, 9); // something with better perf?
+      });
+      root.on("bye", function (peer) {
+        this.to.next(peer);
+        // Clear timers/batches retained by this peer after disconnect.
+        if (peer._pingIv) { clearInterval(peer._pingIv); delete peer._pingIv; }
+        if (peer.to) { clearTimeout(peer.to); peer.to = null; }
+        if (peer.defer) { clearTimeout(peer.defer); peer.defer = null; }
+        peer.next = peer.put = null;
+        // Prune dead peer references from per-soul routing tables.
+        if (peer.sub) {
+          Object.maps(peer.sub).forEach(function (soul) {
+            var node = (root.next || "")[soul];
+            var ref = (node && ((node.$ || "")._ || node._)) || "";
+            var route = ref && ref.route;
+            route && route.delete && route.delete(peer.id);
+            peer.sub.delete && peer.sub.delete(soul);
+          });
+          peer.sub = null;
+        }
+        // Clean up axe.up so the next reconnect from this peer is treated fresh.
+        if (peer.pid && axe.up[peer.pid] === peer) { delete axe.up[peer.pid]; }
+      });
+    }
+
+    {
+      var from = Array.from;
+      Object.maps = function (o) {
+        if (from && o instanceof Map) {
+          return from(o.keys());
+        }
+        if (o instanceof Object.Map) {
+          o = o.s;
+        }
+        return Object.keys(o);
+      };
+      if (from) {
+        return (Object.Map = Map);
+      }
+      (Object.Map = function () {
+        this.s = {};
+      }).prototype = {
+        set: function (k, v) {
+          this.s[k] = v;
+          return this;
+        },
+        get: function (k) {
+          return this.s[k];
+        },
+        delete: function (k) {
+          delete this.s[k];
+        },
+      };
+    }
+  }
+  }
+
+  exp.default = initAXE;
+});
+
 defmod('./src/index.js', function(module, exp){
   var PEN = reqmod('./src/pen.js').default;
   var settings = reqmod('./src/settings.js').default;
@@ -8938,11 +9860,15 @@ defmod('./src/index.js', function(module, exp){
 
   ZEN.Buffer = shim.Buffer;
   ZEN.random = shim.random;
+  ZEN.TextEncoder = shim.TextEncoder;
+  ZEN.TextDecoder = shim.TextDecoder;
   ZEN.keyid = keyid;
   ZEN.graph = graph;
   ZEN.security = security;
   ZEN.check = security.check;
   ZEN.opt = security.opt;
+  var initAXE = reqmod('./src/axe.js').default;
+  initAXE(ZEN);
 
 
   exp.default = ZEN;

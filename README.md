@@ -22,11 +22,12 @@ This repository is documented as a structured book. Read it in order or jump to 
 | [Ch 2 — Graph Model](docs/ch02-graph-model.md) | Nodes, souls, HAM/CRDT, state timestamps, `get`, `put`, `on`, `map` |
 | [Ch 3 — Cryptography](docs/ch03-crypto.md) | `pair`, `sign`, `verify`, `encrypt`, `decrypt`, `secret`, `hash`, `certify` |
 | [Ch 4 — Authenticated Data](docs/ch04-authenticated-data.md) | Owned namespaces, signing writes, certificates, security pipeline |
-| [Ch 5 — Storage Adapters](docs/ch05-storage.md) | Radisk, filesystem, IndexedDB, OPFS, S3, writing your own |
+| [Ch 5 — Storage Adapters](docs/ch05-storage.md) | Radisk, filesystem, IndexedDB, OPFS, S3, writing your own; ENOSPC/OOM resilience |
 | [Ch 6 — Networking](docs/ch06-networking.md) | Mesh, peers, WebSocket, `zen.push()` ephemeral relay, DAM ping/RTT, AXE clustering |
 | [Ch 7 — PEN Policy VM](docs/ch07-pen.md) | WASM bytecode engine, opcodes, `ZEN.pen()`, bridge/runtime policy enforcement |
 | [Ch 8 — Contributing](docs/ch08-contributing.md) | Build system, test suite, adding chain methods, adding adapters |
 | [Ch 9 — MCP (AI Integration)](docs/ch09-mcp.md) | IDE peer, stdio server, tools, Cursor/VSCode config |
+| [Ch 10 — EVM Chain Adapter](docs/ch10-chains-evm.md) | `lib/chains/evm.js` — full ethers.js replacement using ZEN primitives, DeFi utilities, EIP-712 |
 
 ---
 
@@ -68,6 +69,10 @@ After install:
 
 ```bash
 zen status      # service state, version, XDG paths, SSL expiry
+zen start       # start the relay service
+zen stop        # stop the relay service
+zen restart     # restart the relay service
+zen logs        # follow journalctl live logs
 zen update      # pull latest & restart
 zen uninstall   # remove everything
 ```
@@ -86,6 +91,10 @@ curl -fsSL https://raw.githubusercontent.com/akaoio/zen/main/script/install.sh |
 | `--port` | `8420` | Listening port |
 | `--domain` | auto-detected | Your relay domain (saved to `~/.config/zen/domain`) |
 | `--peers` | none | Comma-separated seed peer URLs |
+| `--https-key` | auto from `~/.config/zen/key.pem` | Path to TLS private key |
+| `--https-cert` | auto from `~/.config/zen/cert.pem` | Path to TLS certificate |
+| `--skip-deps` | false | Skip Node.js installation (use when Node is installed via nvm) |
+| `-y` / `--yes` | false | Non-interactive mode — skip all prompts |
 
 The domain is used for self-identification and peer scanning. If omitted, ZEN detects it at runtime via STUN or the incoming request `Host` header.
 
@@ -110,10 +119,23 @@ ZEN follows the [XDG Base Directory Specification](https://specifications.freede
 | Stats / state | `~/.local/state/zen/` | `$XDG_STATE_HOME/zen/` |
 | `zen` CLI binary | `/usr/local/bin/zen` or `~/.local/bin/zen` | — |
 
-SSL setup (Let's Encrypt via acme.sh):
+### SSL setup (Let's Encrypt via acme.sh)
+
+Run `ssl.sh` once before `install.sh`. The cert is saved to `~/.config/zen/` and picked up automatically on install:
 
 ```bash
-bash script/ssl.sh --domain relay.example.com --email you@example.com
+# Step 1 — get a certificate (once per machine)
+sh script/ssl.sh --domain relay.example.com --email you@example.com
+
+# Step 2 — install (cert is auto-detected from ~/.config/zen/)
+sh script/install.sh --domain relay.example.com --yes
+```
+
+For automated / non-interactive deploys (e.g. SSH without a TTY):
+
+```bash
+echo "sudo-password" | sudo -SE sh script/install.sh \
+  --domain relay.example.com --yes --skip-deps
 ```
 
 ---
@@ -429,8 +451,8 @@ const soul = ZEN.pen({ val: { type: "string" }, sign: true });
 ```
 
 ```bash
-npm run buildPEN     # rebuild pen.wasm from src/pen.zig
-npm run testPEN      # run PEN unit tests
+npm run build:pen     # rebuild pen.wasm from src/pen.zig
+npm run test:pen      # run PEN unit tests
 ```
 
 ---
@@ -453,7 +475,7 @@ The principle: **use whatever is fastest**. Measure at the micro level, then dec
 | **base62** encode/decode | **WASM** (`crypto.wasm`) | Faster than BigInt for encoding |
 
 ```bash
-npm run buildCrypto  # rebuild crypto.wasm from src/crypto.zig
+npm run build:crypto  # rebuild crypto.wasm from src/crypto.zig
 ```
 
 ---
@@ -489,10 +511,10 @@ Selected baselines (Node.js, 5000 iters):
 
 ```bash
 npm test             # build zen.js + run full suite (PEN + ZEN unit + core)
-npm run testZEN      # build + ZEN unit tests only
-npm run testPEN      # build + PEN unit tests only
-npm run buildZEN     # buildPEN + buildCrypto + bundle + minify
-npm run buildRelease # buildZEN + uglify all lib adapters
+npm run test:zen      # build + ZEN unit tests only
+npm run test:pen      # build + PEN unit tests only
+npm run build:zen     # build:pen + build:crypto + bundle + minify
+npm run build:release # build:zen + uglify all lib adapters
 npm start            # start example relay (examples/zen-http.js)
 ```
 

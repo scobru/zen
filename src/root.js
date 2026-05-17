@@ -116,8 +116,8 @@ Zen.ask = __ask;
       S = +new Date();
     courtesyTime = courtesyTime || S;
     if (put["#"] && put["."]) {
-      /*root && root.on('put', msg);*/ return;
-    } // TODO: BUG! This needs to call HAM instead.
+      return; // leaf-format message emitted by ham() — already processed; map.js handles graph write.
+    }
     DBG && (DBG.p = S);
     ctx["#"] = msg["#"];
     ctx.msg = msg;
@@ -300,6 +300,7 @@ Zen.ask = __ask;
     if (0 < --ctx.stun && !ctx.err) {
       return;
     } // decrement always runs; early-return only if stun still positive AND no error.
+    if (ctx.stun < 0) { ctx.stun = 0; } // defensive: ctx.stop below prevents double-fire, but guard underflow
     ctx.stop = 1;
     if (!(root = ctx.root)) {
       return;

@@ -1,6 +1,90 @@
 # CHANGELOG
 
-## 1.0.9
+## 1.0.25 — 2026-05-15
+
+### CLI & Browser Bootstrap
+
+- **Fixed `zen` CLI crash on empty args** (`script/zen.sh`): `shift || true` fails in POSIX `dash` under `set -eu` when `$# = 0`. Changed to `if [ "$#" -ge 1 ]; then shift; fi`. Commit `33f70fe`.
+- **Eliminated browser console peer-scan spam** (`src/axe.js`): `bscan()` was probing `peer0..peer100` via blind WebSocket connections, flooding the browser console with `ERR_CONNECTION_REFUSED`. WebSocket errors cannot be suppressed via try/catch — the browser logs them at the network layer. Replaced the entire `bscan()` approach with a single `fetch({origin}/status)` call (already CORS-enabled), which fails silently and returns known relay peers. Commit `33f70fe`.
+- **Removed `browser.js`** (`bde5b40`): outdated demo shim that imported `zen.min.js` + lib addons. `index.html` now imports all modules directly. `BROWSER_RUNTIME` object defined inline; `optAxe.disabled` set to `false` (AXE is now always built-in). FAQ and code snippets updated to reflect that AXE is part of the core bundle, not a separate add-on.
+
+### Memory Leaks Fixed
+
+- **`src/on.js`** (`bc17eef`): `trackSub()` now self-splices from `eas.subs[]` on teardown. `chain.off()` clears `once` timers, `any` listeners, orphaned `subs`, and the `jam` queue — preventing subscription accumulation on long-running relay processes.
+- **`src/websocket.js`** (`bc17eef`): Extracted `canReconnect()` null-safe guard. `reconnect()` always nulls `peer.defer` after `clearTimeout`. Inner `setTimeout` re-checks `canReconnect()` and stores handle back into `peer.defer`. `onopen` clears `peer.defer` immediately — previously timers could accumulate and fire after the connection was already alive.
+- **`src/axe.js` bye handler** (`bc17eef`): Added `clearTimeout(peer.to)` + `clearTimeout(peer.defer)` on peer disconnect. Nulls `peer.next`/`peer.put`. Iterates `peer.sub`, removes the dead peer from each soul's `ref.route` Map, then nulls `peer.sub` — previously dead peers remained in route maps forever.
+
+### Dead Code & Drift Cleanup
+
+- **Deleted `src/scan.js`** (`a5b5b30`): file had no importers after `axe.js` cleanup.
+- **Deleted `lib/radisk2.js`, `lib/radix2.js`** (and `.min.js`) (`a5b5b30`): orphaned alternate implementations with no importers.
+- **Removed from `src/axe.js`** (`a5b5b30`): dead `bscan()` function, `scpat` variable, `import { mkpat, candidateHosts } from "./scan.js"`, and orphaned `relayUp()` function.
+- **Minor cleanup in `lib/radisk.js`** (`a5b5b30`): removed dead empty branch and orphaned debug log.
+- **Fixed misleading comment `src/root.js:120`** (`5061fd1`): prior comment said `TODO BUG` on the early `return` for `put["#"] && put["."]`. This is the leaf format emitted by `ham()` and IS correct — `map.js` handles the graph write from the same event; the `return` prevents double-processing. Comment replaced with correct explanation.
+- **Removed dead `&& false` block in `src/mesh.js`** (`5061fd1`): permanently-disabled hash-compute block using the old `Type.obj.hash` API (replaced long ago by `String.hash` in `shim.js`). Block deleted entirely.
+
+### WebRTC Browser-to-Browser P2P — Full Implementation
+
+This release completes the WebRTC DataChannel layer, enabling browsers to communicate directly without routing through the relay once connected. The relay is still used as signaling server and as fallback.
+
+**Bug 1 — Relay never sent `bpids` in PEX** (`530bc0a`)
+- `lib/webrtc.js` had a `mesh.hear["pex"]` hook consuming `msg.bpids` (array of browser peer IDs) to auto-initiate WebRTC connections — but the relay never populated this field.
+- Fix in `src/axe.js`: in the relay-side `mesh.hear["?"]` override, after registering a new inbound browser client in `axe.up`, relay now:
+  1. Sends `{ dam:"pex", peers:[relay URLs], bpids:[existing browser pids] }` to the newly connected browser.
+  2. Broadcasts `{ dam:"pex", bpids:[new browser pid] }` to all other currently-connected browsers.
+- Both directions now learn each other's pid. The "lower pid initiates" rule in `webrtc.js` (`if (opt.pid >= pid) return`) prevents simultaneous double-offer races.
+
+**Bug 2 — `drop()` returned early for open DataChannels** (`4bdb38a`)
+- `dc.onopen` deletes `pcs[pid]` (pending) and calls `mesh.hi(pc)` to add the DataChannel peer to `opt.peers`. But the old `drop()` only checked `pcs[pid]` — when it found nothing there, it returned without cleaning up the wired `opt.peers` entry. Dead DataChannels accumulated indefinitely.
+- Fix: `drop()` now checks both `pcs[pid]` (pending) and `opt.peers[pid]` (wired), calling `mesh.bye()` on wired peers.
+- `pc.say` now checks `dc.readyState === "open"` before sending; calls `drop(pid)` on failure so traffic falls back to the relay WebSocket automatically.
+- `dc.onerror` now calls `drop(pid)` (was empty).
+
+**Bug 3 — `mesh.hear["rtc"]` never registered** (`b5ec256`)
+- `src/mesh.js` `hear.one()` dispatches all `dam:X` messages via `mesh.hear[X]` and **always returns early** — `mesh.way` is never called for `dam` messages.
+- `axe.js` had wired `rtcway` into `mesh.way` instead of `mesh.hear["rtc"]`, so WebRTC signaling (offer/answer/ICE) was never routed by the relay.
+- Fix: added `mesh.hear["rtc"] = rtcway` in `src/axe.js` immediately after the `rtcway` function definition. After this fix, offer and answer SDPs are exchanged correctly.
+
+**Bug 4 — ICE candidates serialized as `[object Object]`** (`2d3c5f2`)
+- After fixing routing, DataChannels still never opened. Playwright WebSocket spy revealed the wire payload literally contained `"candidate":[object Object]` — invalid JSON at the source.
+- Root cause: `RTCIceCandidate` (Chrome Web API) stores `candidate`, `sdpMid`, `sdpMLineIndex`, `usernameFragment` as **prototype getters**, not own enumerable properties. `JSON.stringify(iceCandidate)` works when called directly (invokes `toJSON()`), but when the object is nested inside a larger GUN message and serialized via ZEN's JSON pipeline, the prototype getters are not accessed and the object coerces to the string `[object Object]`.
+- Fix: `sig({ candidate: e.candidate.toJSON(), ... })` — call `.toJSON()` at the source to produce a plain serialisable object before embedding in the message.
+- Result: ICE candidates arrive correctly; `addIceCandidate()` succeeds; DataChannels open.
+
+**Verified end-to-end with Playwright:**
+- 2-tab localhost test: both peers reach `RTC ↔ ... (direct)` in ~7 s ✅
+- 3-tab localhost test: full mesh (6/6 DataChannels) in ~8 s ✅
+- 3-machine cross-relay test (zen.akao.io, peer0.akao.io, peer1.akao.io): full mesh (6/6 DataChannels) in ~9 s ✅
+
+### MAX_RTC_PEERS Cap (`a28e1dd`)
+
+Without a connection limit, every browser connects to every other browser — O(n²) DataChannels. At 100 browsers this is 4,950 simultaneous RTCPeerConnections; Chrome crashes well before that. `opt.rtc.max = 55` was already declared (WebTorrent convention, well under Chrome's ~256 hard limit) but was never enforced.
+
+- Added `dcPeers = {}` to track confirmed-open DataChannels separately from `pcs` (pending connections).
+- Added `rtcCount()` helper: `Object.keys(pcs).length + Object.keys(dcPeers).length` — counts all active WebRTC slots (pending + wired).
+- `dc.onopen` now sets `dcPeers[pid] = true`; `drop()` clears it.
+- **Initiator guard**: `opt.rtc.connect()` bails if `rtcCount() >= opt.rtc.max`.
+- **Responder guard**: incoming offer handler bails if `!pcs[pid] && rtcCount() >= opt.rtc.max` — respects already-in-progress connections, rejects new ones when at capacity.
+- **Random peer selection**: `msg.bpids` is Fisher-Yates shuffled in the PEX handler before iterating — when at capacity, the relay picks a random subset of available peers rather than always the same (alphabetically first) peers.
+
+## 1.0.22
+
+- **All shell scripts POSIX-compliant** (`script/install.sh`, `update.sh`, `uninstall.sh`, `zen.sh`, `ssl.sh`, `mcp.sh`): changed shebang to `#!/bin/sh`; replaced all bash-specific syntax (`[[ ]]` → `[ ]`, `echo -e` → `printf`, `$EUID` → `$(id -u)`, bash arrays → inline loops, `grep -oP` → `sed`, `${var//k/v}` → `sed`). Scripts now run on any POSIX-compatible shell including `dash`. `nvm.sh` is loaded via `bash -c ". ~/.nvm/nvm.sh && cmd"` since nvm itself requires bash.
+- **`install.sh` auto-detects SSL certs**: if `--https-key`/`--https-cert` are not specified, `install.sh` automatically uses `$XDG_CONFIG_HOME/zen/key.pem` and `$XDG_CONFIG_HOME/zen/cert.pem` (the paths where `ssl.sh` saves certificates). Run `ssl.sh` once, then `install.sh` — no extra flags needed.
+- **`install.sh` new flags**: `--yes`/`-y` skips all interactive prompts (safe for SSH/piped installs); `--skip-deps` skips the `apt-get install nodejs` step (useful when Node.js is installed via nvm); `--https-key`/`--https-cert` for explicit cert paths.
+- **`install.sh` correctness fixes under `sudo`**: added `REAL_USER="${SUDO_USER:-$(id -un)}"` so the systemd `User=` field is set to the actual login user (not `root`) when running via `sudo`; all `command -v` lookups made safe under `set -e` with `|| true`; nvm node resolution uses `bash -c '. ~/.nvm/nvm.sh && command -v node'` to get the nvm default version (not newest installed).
+- **Service renamed**: systemd unit is now `zen.service` (was `relay.service`); auto-update timer is `zen-update.timer`. The `zen` CLI default service name updated accordingly.
+- **`zen` CLI extended**: added `zen start`, `zen stop`, `zen restart` (via sudoers NOPASSWD) and `zen logs` (tails `journalctl -u zen -f`).
+- **MCP `relay` tool renamed to `status`**: the MCP tool that returns relay health is now called `status`, matching the HTTP `GET /status` endpoint.
+- **Sudoers NOPASSWD rules**: `install.sh` creates `/etc/sudoers.d/zen` granting passwordless `systemctl start/stop/restart zen` and CLI install operations, so `zen start/stop/restart` and `zen update` work without a password prompt.
+
+## 1.0.10
+
+- **`root.graph` GC eviction** (`script/server.js`): relay now evicts in-memory graph nodes when heap exceeds `GRAPH_GC_MB` (default 400 MB). Eviction skips souls with active `on()` listeners (`root.next[soul]`) and souls written in the last `GRAPH_GC_KEEP` seconds (default 120 s). All data remains on disk (RAD); eviction only causes cache misses. Configurable via `GRAPH_GC_MB`, `GRAPH_GC_SEC`, `GRAPH_GC_KEEP` env vars.
+- **Fix: cluster worker crash loop** (`lib/mcp/server.js`): the MCP stdio transport registered a `process.stdin.once("end", process.exit)` handler to clean up on stdin close. In cluster workers, `process.stdin` is `/dev/null` — not a TTY and not a real pipe — so the `end` event fired immediately, killing the worker with `code 0`. Fixed by adding `!cluster.isWorker` to the stdio activation guard. The IPC (Unix socket) transport continues to work in workers.
+- **UDP throughput benchmark** (`script/bench.js`): new benchmark script for the relay mesh. Connects a sender and receiver to a relay, sends N messages via `mesh.relay()` (which uses the UDP fast path when available), and reports throughput and RTT percentiles. Usage: `node script/bench.js [relay_url] [n_messages] [batch_size]`. Baseline: 2109 msg/s, p50=18 ms, p99=101 ms, 0% loss over localhost.
+
+
 
 **Breaking changes** — compact wire format replaces JSON-wrapper format for all signed/encrypted values.
 
@@ -32,7 +116,7 @@
 - **Stats fix**: removed stale `typeof require === "undefined"` guard in `lib/stats.js` that prevented `stats.radata` from ever being written in ES module context (Node.js ESM has no `require`).
 - **Multicast IPv6**: added `udp6` socket alongside `udp4` using `ff02::1` link-local multicast; refactored into shared `setupSocket()` helper to eliminate duplication; fixed interface detection using `fe80::addr%ifaceName` zone-ID format required by libuv for IPv6 `addMembership`; `setBroadcast`/`setMulticastTTL` guarded to IPv4 only; `ipv6Only: true` on `udp6` to avoid dual-stack port conflicts.
 - **Multicast IPv4**: fixed `addMembership` using explicit interface IP from `os.networkInterfaces()` instead of letting OS default to a DOWN interface (fixes ENODEV on Orange Pi / non-standard interface names).
-- **Build**: renamed `lib/uglify.js` → `lib/minify.js`; npm script `uglify` → `minify`; `buildRelease` updated accordingly.
+- **Build**: renamed `lib/uglify.js` → `lib/minify.js`; npm script `uglify` → `minify`; `build:release` updated accordingly.
 
 ## 0.2020.x
 
