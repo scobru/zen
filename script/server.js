@@ -15,6 +15,7 @@ import {
   bootstrapDisabled,
   resolveBootstrapPeers,
 } from "../src/bootstrap.js";
+import { discoverPeers } from "../lib/bootstrap.js";
 import * as xdg from "../lib/xdg.js";
 import { disc, hwid, DOMF, PORTF } from "../lib/discover.js";
 import { scanbg, mkpat, scanip6 } from "../lib/scan.js";
@@ -139,14 +140,23 @@ if (main && cluster.isPrimary) {
     if (!domain) {
       try { domain = fs.readFileSync(DOMF, "utf8").trim() || null; } catch {}
     }
-    // Filter own URLs from bootstrap peers to prevent self-connection loops.
+    // Build self-URL set once (used both for filtering and DNS dedup).
+    const selfUrls = new Set();
     if (domain) {
-      const selfUrls = new Set();
       for (const scheme of ["https", "http", "wss", "ws"]) {
         selfUrls.add(`${scheme}://${domain}:${port}/zen`);
         selfUrls.add(`${scheme}://${domain}/zen`);
       }
-      peers = peers.filter(p => !selfUrls.has(p));
+    }
+    peers = peers.filter(p => !selfUrls.has(p));
+
+    // If no explicit peers configured: discover via DNS TXT "peers.akao.io".
+    // This lets any new relay join the network without hardcoded addresses.
+    // Skipped when NO_BOOTSTRAP=1 (tests, isolated deployments).
+    if (!bootstrapDisabled(env) && peers.length === 0) {
+      const discovered = await discoverPeers();
+      peers = discovered.filter(p => !selfUrls.has(p));
+      if (peers.length) console.log(`Bootstrap: discovered ${peers.length} peer(s) via DNS`);
     }
   } catch (err) {
     console.error("Configuration Error:", err.message);
@@ -228,6 +238,32 @@ if (main && cluster.isPrimary) {
     }
   }
 
+  // ── ZEN internals helpers ─────────────────────────────────────────────────
+  // Single access point for axe.up (inbound relay connections keyed by PID).
+  // Avoids scattered zen._graph._.axe.up accesses throughout server.js.
+  function getAxeUp() {
+    const at = zen && zen._graph && zen._graph._;
+    return (at && at.axe && at.axe.up) || {};
+  }
+
+  // Returns true when a registry entry has at least one live wire.
+  // Checks both opt.peers (outbound, keyed by URL) and axe.up (inbound, keyed
+  // by PID) so that inbound-only connections (after AXE conflict resolution)
+  // are correctly detected as alive — replacing 3 duplicate inline checks.
+  function isPeerAlive(entry, opt) {
+    const { pub: knownPub, pid: knownPid, url } = entry;
+    if (knownPub || knownPid) {
+      const axeUp = getAxeUp();
+      return (knownPub && (
+        Object.values(opt && opt.peers || {}).some(p => p && p.wire && p.pub === knownPub) ||
+        Object.values(axeUp).some(p => p && p.wire && p.pub === knownPub)
+      )) ||
+      !!(knownPid && axeUp[knownPid] && axeUp[knownPid].wire);
+    }
+    const p = opt && opt.peers && opt.peers[url];
+    return !!(p && p.wire);
+  }
+
   // ── /status signed endpoint (CORS-enabled, consumed by AXE and agents) ────
   // Returns a pre-computed compact ZEN signed string (cached, refreshed on a
   // schedule). Signing (ECDSA) runs in the background — requests are served
@@ -235,11 +271,8 @@ if (main && cluster.isPrimary) {
   // Client: ZEN.recover(str) → pub, ZEN.verify(str, pub) → JSON payload.
   // Peers: only fully-qualified relay URLs ending in '/zen' (RTT-sorted).
   function rttOf(url) {
-    const at = zen && zen._graph && zen._graph._;
-    if (!at || !at.axe) return Infinity;
-    const n = PeerRegistry.norm(url); // axe.up entries use https:// canonical form
-    for (const pid in at.axe.up) {
-      const p = at.axe.up[pid];
+    const n = PeerRegistry.norm(url);
+    for (const [, p] of Object.entries(getAxeUp())) {
       if (p && PeerRegistry.norm(p.url) === n && p.rtt > 0) return p.rtt;
     }
     return Infinity;
@@ -307,6 +340,26 @@ if (main && cluster.isPrimary) {
       res.end(cachedStatus || "");
       return;
     }
+    if (req.method === "GET" && req.url === "/.well-known/peers.json") {
+      // Return known peers (BOOT + confirmed) as host:port for bootstrap discovery.
+      // Any ZEN relay exposes this so new relays/browsers can seed their peer list.
+      const entries = [
+        ...registry.bootEntries(),
+        ...registry.confirmedNonBoot(),
+      ];
+      const peers = entries
+        .map(e => {
+          try { const u = new URL(e.url); return u.hostname + ":" + u.port; } catch { return null; }
+        })
+        .filter((v, i, a) => v && a.indexOf(v) === i); // unique, non-null
+      res.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "max-age=60",
+      });
+      res.end(JSON.stringify({ peers }));
+      return;
+    }
     srv(req, res);
   }
 
@@ -344,7 +397,7 @@ if (main && cluster.isPrimary) {
     scheduleRefreshStatus(); // debounced — safe even if 1000 nodes join rapidly
     console.log("Discovered peer:", n);
     // Connect only if under upstream limit (prevents full mesh / bandwidth waste)
-    const ups = r && r.axe ? Object.keys(r.axe.up || {}).length : 0;
+    const ups = Object.keys(getAxeUp()).length;
     if (route && ups < MUPS) {
       try { route.hi({ id: n, url: n, retry: 9 }); } catch {}
     } else if (!route && r && r.opt) {
@@ -867,23 +920,11 @@ if (main && cluster.isPrimary) {
     const opt = root.opt;
     if (!route || !opt) return;
     const at = zen && zen._graph && zen._graph._;
-    const axeUp = (at && at.axe && at.axe.up) || {};
+    if (!at) return;
 
     for (const entry of registry.bootEntries()) {
       const norm = entry.url;
-      const { pub: knownPub, pid: knownPid } = entry;
-      if (knownPub || knownPid) {
-        const alive =
-          (knownPub && (
-            Object.values(opt.peers || {}).some(p => p && p.wire && p.pub === knownPub) ||
-            Object.values(axeUp).some(p => p && p.wire && p.pub === knownPub)
-          )) ||
-          (knownPid && axeUp[knownPid] && axeUp[knownPid].wire);
-        if (alive) continue;
-      } else {
-        const p = opt.peers[norm];
-        if (p && p.wire) continue;
-      }
+      if (isPeerAlive(entry, opt)) continue;
       // No live connection — clear tombstone + backoff counters and reconnect.
       if (opt._tombUrls) {
         opt._tombUrls.delete(norm);
@@ -897,7 +938,7 @@ if (main && cluster.isPrimary) {
 
     // Also reconnect confirmed PEX-discovered peers that dropped, if under capacity.
     // Less aggressive than BOOT: respect tombstones, retry: 3 (not 9).
-    const ups = Object.keys(axeUp).length;
+    const ups = Object.keys(getAxeUp()).length;
     if (ups < MUPS) {
       for (const entry of registry.confirmedNonBoot()) {
         if (ups >= MUPS) break;
@@ -922,10 +963,8 @@ if (main && cluster.isPrimary) {
       // Re-activate UDP fast path for any surviving peer at the same remote IP.
       // This handles the AXE conflict case: when outbound is AXE-dropped, the
       // surviving inbound (in axe.up, keyed by PID) should inherit the fast path.
-      const axeUp = root.axe && root.axe.up;
-      if (axeUp) {
-        for (const pid in axeUp) { setupUdpForPeer(axeUp[pid]); }
-      }
+      const axeUp = getAxeUp();
+      for (const pid in axeUp) { setupUdpForPeer(axeUp[pid]); }
     }
     clearTimeout(tbye);
     tbye = setTimeout(() => {
