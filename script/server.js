@@ -17,12 +17,13 @@ import {
 } from "../src/bootstrap.js";
 import { discoverPeers } from "../lib/bootstrap.js";
 import * as xdg from "../lib/xdg.js";
-import { disc, hwid, DOMF, PORTF } from "../lib/discover.js";
+import { hwid, DOMF, PORTF } from "../lib/discover.js";
 import { scanbg, mkpat, scanip6 } from "../lib/scan.js";
 import { getOrCreateIdentity } from "../lib/identity.js";
 import { buildStatus, signStatus } from "../lib/status.js";
 import { attach as attachMcp } from "../lib/mcp/server.js";
 import PeerRegistry from "../lib/peer-registry.js";
+import { setupRelayPex } from "../lib/pex.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -126,12 +127,14 @@ if (main && cluster.isPrimary) {
     const env = process.env;
     let port;
     let hport;
+    let publicPort;
     let peers;
     let domain;
 
   try {
     port = vport(env.PORT || process.argv[2] || 8420);
     hport = env.HTTPS_PORT ? vport(env.HTTPS_PORT) : null;
+    publicPort = env.PUBLIC_PORT ? vport(env.PUBLIC_PORT) : null;
     peers = resolveBootstrapPeers(screen(env.PEERS), {
       includeBootstrap: !bootstrapDisabled(env),
     });
@@ -349,7 +352,11 @@ if (main && cluster.isPrimary) {
       ];
       const peers = entries
         .map(e => {
-          try { const u = new URL(e.url); return u.hostname + ":" + u.port; } catch { return null; }
+          try {
+            const u = new URL(e.url);
+            const port = u.port || (u.protocol === "https:" ? "443" : "8420");
+            return u.hostname + ":" + port;
+          } catch { return null; }
         })
         .filter((v, i, a) => v && a.indexOf(v) === i); // unique, non-null
       res.writeHead(200, {
@@ -368,7 +375,7 @@ if (main && cluster.isPrimary) {
   // identity (pub/pid), eviction, and persistence — replacing the former
   // ad-hoc combination of kprs/bootPubMap/bootPidMap/kprsProtect.
   const registry = new PeerRegistry().bindSave(PEERSF);
-  // BOOT peers are registered after domain/origin are resolved (see below).
+  // BOOT peers are protected below via registry.protect(); origin is resolved inside setupRelayPex.
 
   const probed = new Set();       // patterns scanned this cycle
   let tscan   = null;
@@ -382,35 +389,6 @@ if (main && cluster.isPrimary) {
   function pkey(host) {
     const p = mkpat((host || "").split(":")[0]);
     return p ? (p.prefix + "*" + p.tail + p.suffix) : host;
-  }
-
-  function adopt(url) {
-    const n = PeerRegistry.norm(url); // canonical https:// form
-    if (registry.has(n)) return;      // already known (either scheme)
-    if (registry.isSelf(n)) return;
-    // Skip tombstoned peers (AXE-dropped; BOOT-WATCHDOG handles BOOT peers separately)
-    const r = zen && zen._graph && zen._graph._;
-    const tombs = r && r.opt && r.opt._tombUrls;
-    if (tombs && (tombs.has(n) || tombs.has(PeerRegistry.alt(n)))) return;
-    registry.add(n);
-    found = true;
-    scheduleRefreshStatus(); // debounced — safe even if 1000 nodes join rapidly
-    console.log("Discovered peer:", n);
-    // Connect only if under upstream limit (prevents full mesh / bandwidth waste)
-    const ups = Object.keys(getAxeUp()).length;
-    if (route && ups < MUPS) {
-      try { route.hi({ id: n, url: n, retry: 9 }); } catch {}
-    } else if (!route && r && r.opt) {
-      // mesh not yet attached — queue in peer list for AXE to connect later
-      if (!Array.isArray(r.opt.peers)) r.opt.peers = [];
-      if (!r.opt.peers.includes(n)) r.opt.peers.push(n);
-    }
-    // Broadcast immediately to all currently connected peers
-    if (route) {
-      try { route.say({ dam: "pex", peers: [n] }, r && r.opt && r.opt.peers); } catch {}
-    }
-    // Expand scan to this peer's domain pattern
-    try { probe(new URL(n).hostname); } catch {}
   }
 
   function kprsEvict() { registry.evict(); } // kept for call-site compat; delegate to registry
@@ -593,46 +571,48 @@ if (main && cluster.isPrimary) {
   // Embed MCP server on this ZEN instance — exposes IPC socket for local IDE/agent connections.
   // This eliminates the need for a second ZEN peer process when MCP is used on the same machine.
   attachMcp(zen, { hwIdentity: identity, ipc: true });
-  // ── PEX: peer exchange via direct DAM message (not public graph) ──────────
-  // mesh.hear["pex"] + root.on("hi") — only shared with already-connected peers
-  const origin = domain
-    ? ((opt.key ? "wss" : "ws") + "://" + domain + ":" + port + "/zen")
-    : null;
 
-  // Register self and BOOT peers in the registry now that origin is resolved.
-  if (origin) registry.setSelf(origin);
+  // ── PEX: peer exchange via direct DAM message (not public graph) ──────────
+  // setupRelayPex wires mesh.hear["pex"] + root.on("hi") self-announce inside
+  // setImmediate (after AXE attaches). server.js adds the saySmart/bpids send
+  // via sendPeers, and drives scan-cycle bookkeeping via onAdopt/onDisc.
   registry.protect(peers); // BOOT peers: never evict, watchdog reconnects them
 
-  // ── IP discovery (IPv4 + IPv6) ────────────────────────────────────────────
-  // Single source of truth for IP info: cached in discResult, refreshed every
-  // 10 min (relays often have dynamic IPs). Used by /status and registry.
-  let originv = null;
   let discResult = null;
 
-  function refreshDisc() {
-    disc({ noSave: true }).then((di) => {
+  const { adopt } = setupRelayPex(zen, {
+    domain,
+    port,
+    publicPort,
+    key:      opt.key,
+    registry,
+    pexMax:   50,
+    rttOf,
+    sendPeers: (list, peer) => {
+      const r = zen._graph._;
+      const bpids = Object.values((r && r.opt && r.opt.peers) || {})
+        .filter(p => p && p.pid && !p.url && p.pid !== peer.pid)
+        .map(p => p.pid);
+      const msg = { dam: "pex", peers: list };
+      if (bpids.length) msg.bpids = bpids;
+      saySmart(msg, peer);
+    },
+    onDisc: (di) => {
       discResult = di;
-      if (di.ip6) {
-        const scheme = opt.key ? "wss" : "ws";
-        const newSurl6 = scheme + "://[" + di.ip6 + "]:" + port + "/zen";
-        if (newSurl6 !== originv) {
-          if (originv) registry.setSelf(originv); // absorb stale IPv6 into self set
-          originv = newSurl6;
-          // Only advertise IPv6 URL if no domain URL — avoids duplicate entries
-          if (!origin) registry.setSelf(originv);
-          console.log("IPv6 self-URL:", originv);
-        }
-      }
-      refreshStatus(); // rebuild status after IPs are updated
-    }).catch((err) => {
-      console.log("IP discovery failed:", err && err.message || err);
-    });
-  }
+      refreshStatus();
+    },
+    onAdopt: (url) => {
+      found = true;
+      scheduleRefreshStatus();
+      try { probe(new URL(PeerRegistry.norm(url)).hostname); } catch {}
+    },
+  });
 
-  refreshStatus();                                    // initial cache (no IP yet)
-  refreshDisc();                                       // async: updates IPs then re-caches
-  setInterval(refreshDisc, 10 * 60 * 1000);            // refresh IPs every 10 min
-  setInterval(refreshStatus, 30 * 1000);               // keep timestamp + peers fresh
+  // setupRelayPex registers origin/self URLs and wires disc() refresh.
+  // registry.protect() was already called above for BOOT peers.
+
+  refreshStatus();                        // initial cache (no IP yet)
+  setInterval(refreshStatus, 30 * 1000); // keep timestamp + peers fresh
 
   const root = zen._graph._;
 
@@ -836,9 +816,29 @@ if (main && cluster.isPrimary) {
       const existing = _initOpt && _initOpt.peers && _initOpt.peers[normUrl];
       if (existing && existing.wire) return; // already wired
       const peerObj = existing || { id: normUrl, url: normUrl, retry: 9 };
+      peerObj._isBoot = true; // prevent AXE hiGuess/axeGuess tombstoning for BOOT peers
       if (existing) existing.retry = 9;
       try { route.hi(peerObj); } catch {}
+      // Ensure the stored peer object is also marked (open() may reuse opt.peers entry)
+      const stored = _initOpt && _initOpt.peers && _initOpt.peers[normUrl];
+      if (stored) stored._isBoot = true;
     });
+
+    // Confirm inbound BOOT peer connections when they announce their URL via dam:"opt".
+    // Without this, isPeerAlive() can't find the inbound connection in axe.up when
+    // AXE dedup drops our outbound (lower-PID peer keeps its outbound = our inbound).
+    const _origHearOpt = mesh.hear["opt"];
+    mesh.hear["opt"] = function(msg, peer) {
+      _origHearOpt.call(this, msg, peer);
+      if (!msg.ok && msg.opt && typeof msg.opt.peers === "string" && peer && !peer.url && peer.pid) {
+        const ann = PeerRegistry.norm(msg.opt.peers);
+        if (ann && !registry.isSelf(ann)) {
+          // Confirm ALL inbound connections (not just BOOT) so every peer
+          // that announces its URL becomes visible in confirmedNonBoot().
+          registry.confirm(ann, { pub: peer.pub || "", pid: peer.pid });
+        }
+      }
+    };
 
     // Load previously discovered peers from disk and reconnect them.
     // This runs after BOOT peers are wired so adopt() MUPS check is accurate.
@@ -847,21 +847,29 @@ if (main && cluster.isPrimary) {
       console.log(`Loaded ${count} persisted peers from disk`);
     } catch {}
 
-    // Handle incoming peer lists from other nodes
-    mesh.hear["pex"] = function (msg, _peer) {
-      if (!Array.isArray(msg.peers)) return;
-      msg.peers.forEach((url) => {
-        if (typeof url === "string" && /^wss?:\/\//.test(url) &&
-            url !== origin && url !== originv) {
-          adopt(url);
+    // Confirm inbound peers that self-announce their URL via dam:"pex".
+    // adopt() returns early (no confirm) when the peer is already known, leaving lastOk=0.
+    // Inbound connections have peer.url=undefined — gossip PEX from relay outbounds has peer.url set.
+    // So we confirm only when peer.url is absent (inbound/unknown transport) + peer.pid is set.
+    const _origHearPex = mesh.hear["pex"];
+    mesh.hear["pex"] = function(msg, peer) {
+      _origHearPex.call(this, msg, peer);
+      if (peer && peer.pid && !peer.url && Array.isArray(msg.peers)) {
+        for (const u of msg.peers) {
+          if (typeof u !== "string") continue;
+          const ann = PeerRegistry.norm(u);
+          if (ann && !registry.isSelf(ann)) {
+            registry.confirm(ann, { pub: peer.pub || "", pid: peer.pid });
+          }
         }
-      });
+      }
     };
 
-    // On new peer connection: mark URL as confirmed + send capped peer list
-    // PEX_MAX: cap prevents flooding when 1000+ MCP nodes are in registry.
-    // Sort: wss:// first (browser-usable), then by RTT ascending.
-    const PEX_MAX = 50;
+    // Handle incoming peer lists from other nodes
+    // (mesh.hear["pex"] is wired by setupRelayPex — see lib/pex.js)
+
+    // On new peer connection: mark URL as confirmed + announce new browser PIDs for WebRTC.
+    // Peer list + self-URL are sent by setupRelayPex via the sendPeers/root.on("hi") hooks.
     root.on("hi", function (peer) {
       this.to.next(peer);
       if (peer.url) {
@@ -869,36 +877,17 @@ if (main && cluster.isPrimary) {
         // confirm() records lastOk and stores pub/pid for WATCHDOG to use
         registry.confirm(nu, { pub: peer.pub || "", pid: peer.pid || "" });
       }
-      const list = registry.pexList(PEX_MAX, rttOf).filter(u => u !== origin);
-      setTimeout(() => {
-        try {
-          // browser pids: connected peers that have a pid but no URL (pure browser WS clients)
-          const bpids = Object.values(root.opt.peers || {})
-            .filter(p => p && p.pid && !p.url && p.pid !== peer.pid)
-            .map(p => p.pid);
-          const pexMsg = { dam: "pex", peers: list };
-          if (bpids.length) pexMsg.bpids = bpids;
-          saySmart(pexMsg, peer); // prefer UDP for relay peers
-          // announce this peer's pid to all existing peers so they can WebRTC to it
-          if (peer.pid && !peer.url) {
+      // Announce new browser peer's PID to all existing peers so they can WebRTC to it
+      if (peer.pid && !peer.url) {
+        setTimeout(() => {
+          try {
             Object.values(root.opt.peers || {}).forEach(p => {
               if (p && p.wire && p !== peer) {
                 saySmart({ dam: "pex", peers: [], bpids: [peer.pid] }, p);
               }
             });
-          }
-        } catch {}
-      }, 600);
-      if (origin) {
-        setTimeout(() => {
-          try { mesh.say({ dam: "pex", peers: [origin] }, peer); } catch {}
-        }, 700);
-      }
-      // Only advertise IPv6 URL when no domain URL — avoids duplicate peer entries
-      if (originv && !origin) {
-        setTimeout(() => {
-          try { mesh.say({ dam: "pex", peers: [originv] }, peer); } catch {}
-        }, 750);
+          } catch {}
+        }, 600);
       }
     });
   });
@@ -931,24 +920,36 @@ if (main && cluster.isPrimary) {
         opt._tombUrls.delete(PeerRegistry.alt(norm));
       }
       const p = opt.peers[norm];
-      if (p) { delete p._noReconnect; delete p._hiGuess; delete p._axeGuess; }
+      if (p) { delete p._noReconnect; delete p._hiGuess; delete p._axeGuess; p._isBoot = true; }
       console.log('[BOOT-WATCHDOG] Reconnecting lost BOOT peer:', norm);
       try { route.hi({ id: norm, url: norm, retry: 9 }); } catch {}
+      // Re-mark the peer after hi() reuses/creates the opt.peers entry
+      const rp = opt.peers && opt.peers[norm];
+      if (rp) rp._isBoot = true;
     }
 
     // Also reconnect confirmed PEX-discovered peers that dropped, if under capacity.
-    // Less aggressive than BOOT: respect tombstones, retry: 3 (not 9).
+    // Like BOOT peers: clear tombstones so AXE dedup doesn't block reconnect.
+    // Less aggressive than BOOT: retry: 3 (not 9).
+    // Always iterate (not just when under capacity) so alive peers get touch()
+    // to refresh their seen timestamp — otherwise evict() removes them after TTL.
     const ups = Object.keys(getAxeUp()).length;
-    if (ups < MUPS) {
-      for (const entry of registry.confirmedNonBoot()) {
-        if (ups >= MUPS) break;
-        const url = entry.url;
-        const tombs = opt._tombUrls;
-        if (tombs && (tombs.has(url) || tombs.has(PeerRegistry.alt(url)))) continue;
-        const p = opt.peers && opt.peers[url];
-        if (p && p.wire) continue;               // already connected
-        try { route.hi({ id: url, url: url, retry: 3 }); } catch {}
+    for (const entry of registry.confirmedNonBoot()) {
+      const url = entry.url;
+      if (isPeerAlive(entry, opt)) {
+        registry.touch(url); // keep seen fresh → prevent TTL eviction while connected
+        continue;
       }
+      if (ups >= MUPS) continue;               // at capacity — skip reconnect
+      const tombs = opt._tombUrls;
+      const p = opt.peers && opt.peers[url];
+      // Clear tombstone so AXE allows reconnect (same as BOOT watchdog does)
+      if (tombs) {
+        tombs.delete(url);
+        tombs.delete(PeerRegistry.alt(url));
+      }
+      if (p) { delete p._noReconnect; delete p._hiGuess; delete p._axeGuess; }
+      try { route.hi({ id: url, url: url, retry: 3 }); } catch {}
     }
   }, 30 * 1000).unref();
 
