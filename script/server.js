@@ -22,7 +22,7 @@ import { scanbg, mkpat, scanip6 } from "../lib/scan.js";
 import { getOrCreateIdentity } from "../lib/identity.js";
 import { buildStatus, signStatus } from "../lib/status.js";
 import { attach as attachMcp } from "../lib/mcp/server.js";
-import PeerRegistry from "../lib/peer-registry.js";
+import PeerRegistry from "../lib/preg.js";
 import { setupRelayPex } from "../lib/pex.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -257,14 +257,28 @@ if (main && cluster.isPrimary) {
     const { pub: knownPub, pid: knownPid, url } = entry;
     if (knownPub || knownPid) {
       const axeUp = getAxeUp();
-      return (knownPub && (
-        Object.values(opt && opt.peers || {}).some(p => p && p.wire && p.pub === knownPub) ||
-        Object.values(axeUp).some(p => p && p.wire && p.pub === knownPub)
-      )) ||
-      !!(knownPid && axeUp[knownPid] && axeUp[knownPid].wire);
+      const byPubInPeers = knownPub && Object.values(opt && opt.peers || {}).some(p => p && p.wire && p.pub === knownPub);
+      const byPubInAxe = knownPub && Object.values(axeUp).some(p => p && p.wire && p.pub === knownPub);
+      const byPidInAxe = !!(knownPid && axeUp[knownPid] && axeUp[knownPid].wire);
+      const alive = byPubInPeers || byPubInAxe || byPidInAxe;
+      if (!alive) {
+        const shortUrl = url && url.replace('https://','').replace(':8420/zen','');
+        console.log(`[BOOT-WATCHDOG] DEAD: ${shortUrl} pub=${knownPub&&knownPub.slice(0,8)} axeKeys=${Object.keys(axeUp).map(k=>k.slice(0,8)).join(',')}`);
+      }
+      return alive;
     }
     const p = opt && opt.peers && opt.peers[url];
-    return !!(p && p.wire);
+    const alive2 = !!(p && p.wire);
+    if (!alive2) {
+      // Fallback: inbound peer may have announced this URL as their self-URL (_bootUrl)
+      // before registry.confirm() stored the pub (e.g. during outbound retry exhaustion)
+      const axeUp = getAxeUp();
+      const byInboundUrl = Object.values(axeUp).some(ap => ap && ap.wire && ap._bootUrl === url);
+      if (byInboundUrl) return true;
+      const shortUrl = url && url.replace('https://','').replace(':8420/zen','');
+      console.log(`[BOOT-WATCHDOG] DEAD(nopub): ${shortUrl}`);
+    }
+    return alive2;
   }
 
   // ── /status signed endpoint (CORS-enabled, consumed by AXE and agents) ────
@@ -588,12 +602,13 @@ if (main && cluster.isPrimary) {
     registry,
     pexMax:   50,
     rttOf,
-    sendPeers: (list, peer) => {
+    sendPeers: (list, peer, pubmap) => {
       const r = zen._graph._;
       const bpids = Object.values((r && r.opt && r.opt.peers) || {})
         .filter(p => p && p.pid && !p.url && p.pid !== peer.pid)
         .map(p => p.pid);
       const msg = { dam: "pex", peers: list };
+      if (pubmap && Object.keys(pubmap).length) msg.pubmap = pubmap;
       if (bpids.length) msg.bpids = bpids;
       saySmart(msg, peer);
     },
@@ -759,13 +774,45 @@ if (main && cluster.isPrimary) {
     // At that point peer.udpPort is already stored by the original handler.
     // Also update pub/pid here: peer.pub/pid are set (by _origHearQ) for
     // outbound connections receiving the "@" reply — not yet set when on("hi") fired.
+    //
+    // For INBOUND connections (!peer.url): match source IP to a BOOT entry URL
+    // using pre-resolved DNS addresses (bootIpToUrl). When matched, set peer._bootUrl
+    // and call registry.confirm so isPeerAlive() can find alive inbound-only BOOT peers.
+    const bootIpToUrl = new Map(); // ip → normalized BOOT entry URL
+    (async () => {
+      const { promises: dns } = await import("dns");
+      for (const entry of registry.bootEntries()) {
+        try {
+          const hostname = new URL(entry.url).hostname.replace(/^\[|\]$/g, "");
+          // If already an IP literal, register directly
+          if (/^[\d.]+$/.test(hostname) || /^[0-9a-f:]+$/i.test(hostname)) {
+            bootIpToUrl.set(hostname, entry.url);
+            continue;
+          }
+          const addrs = await dns.lookup(hostname, { all: true, family: 0 });
+          for (const { address } of addrs) {
+            bootIpToUrl.set(address, entry.url);
+          }
+        } catch {}
+      }
+    })();
+
     const _origHearQ = mesh.hear["?"];
     mesh.hear["?"] = function(msg, peer) {
       _origHearQ.call(this, msg, peer);
       if (peer.url) {
-        // confirm() stores pub/pid for WATCHDOG even if on("hi") already ran
+        // Outbound: confirm() stores pub/pid for WATCHDOG even if on("hi") already ran
         const nu = PeerRegistry.norm(peer.url);
         registry.confirm(nu, { pub: peer.pub || "", pid: peer.pid || "" });
+      } else if (peer.pub && peer.pid) {
+        // Inbound: match source IP to a BOOT URL so isPeerAlive() can see the inbound
+        const sock = peer.wire && peer.wire._socket;
+        const srcIp = sock && (sock.remoteAddress || "").replace(/^::ffff:/, "");
+        const bootUrl = srcIp && (bootIpToUrl.get(srcIp) || bootIpToUrl.get(srcIp.replace(/^\[|\]$/g, "")));
+        if (bootUrl) {
+          peer._bootUrl = bootUrl;
+          registry.confirm(bootUrl, { pub: peer.pub, pid: peer.pid });
+        }
       }
       setupUdpForPeer(peer);
     };
@@ -850,7 +897,12 @@ if (main && cluster.isPrimary) {
     // Confirm inbound peers that self-announce their URL via dam:"pex".
     // adopt() returns early (no confirm) when the peer is already known, leaving lastOk=0.
     // Inbound connections have peer.url=undefined — gossip PEX from relay outbounds has peer.url set.
-    // So we confirm only when peer.url is absent (inbound/unknown transport) + peer.pid is set.
+    //
+    // IMPORTANT: Do NOT use peer.pub here for any URL in msg.peers.
+    // The pex gossip message can contain OTHER peers' URLs (re-gossip), not just the sender's
+    // own URL. Using peer.pub for a different URL corrupts registry._pidx and triggers
+    // spurious pub-dedup eviction of the BOOT entry. IP-based matching in dam:"?" is the
+    // reliable way to map inbound pub → BOOT URL. Here we only update lastOk timestamps.
     const _origHearPex = mesh.hear["pex"];
     mesh.hear["pex"] = function(msg, peer) {
       _origHearPex.call(this, msg, peer);
@@ -858,9 +910,11 @@ if (main && cluster.isPrimary) {
         for (const u of msg.peers) {
           if (typeof u !== "string") continue;
           const ann = PeerRegistry.norm(u);
-          if (ann && !registry.isSelf(ann)) {
-            registry.confirm(ann, { pub: peer.pub || "", pid: peer.pid });
-          }
+          if (!ann || registry.isSelf(ann)) continue;
+          // Touch only (update seen without setting lastOk) — no pub available from
+          // re-gossip messages so confirm() would create a nopub confirmed entry that
+          // triggers spurious DEAD(nopub) logs in the WATCHDOG every 30s.
+          registry.touch(ann);
         }
       }
     };
@@ -915,15 +969,32 @@ if (main && cluster.isPrimary) {
       const norm = entry.url;
       if (isPeerAlive(entry, opt)) continue;
       // No live connection — clear tombstone + backoff counters and reconnect.
+      // Clear BOTH tombstone systems: opt._tombUrls (PEX) and opt.tomb (WebSocket).
+      // After cascade restarts, _axeGuess/_hiGuess can reach threshold and add the
+      // BOOT peer URL to opt.tomb — BOOT-WATCHDOG must clear it or reconnects are
+      // permanently blocked even though _noReconnect is false.
       if (opt._tombUrls) {
         opt._tombUrls.delete(norm);
         opt._tombUrls.delete(PeerRegistry.alt(norm));
       }
-      const p = opt.peers[norm];
-      if (p) { delete p._noReconnect; delete p._hiGuess; delete p._axeGuess; p._isBoot = true; }
+      if (opt.tomb) {
+        opt.tomb.delete(norm);
+        opt.tomb.delete(PeerRegistry.alt(norm));
+      }
+      // Reuse the existing peer object so _isBoot=true is set on the SAME object
+      // that open() will store back into opt.peers[norm] via wire.onopen → mesh.hi.
+      // Creating a new object causes a race: _isBoot is set on the old entry while
+      // the new entry (stored async on wire.onopen) has _isBoot=false, so onclose
+      // fires with !peer._isBoot=true and increments _axeGuess/_hiGuess → tombstone.
+      const watchPeer = (opt.peers && opt.peers[norm]) || { id: norm, url: norm };
+      if (!watchPeer.retry || watchPeer.retry < 9) watchPeer.retry = 9;
+      watchPeer._isBoot = true;
+      delete watchPeer._noReconnect;
+      delete watchPeer._hiGuess;
+      delete watchPeer._axeGuess;
       console.log('[BOOT-WATCHDOG] Reconnecting lost BOOT peer:', norm);
-      try { route.hi({ id: norm, url: norm, retry: 9 }); } catch {}
-      // Re-mark the peer after hi() reuses/creates the opt.peers entry
+      try { route.hi(watchPeer); } catch {}
+      // Also mark whatever is currently in opt.peers (in case open() replaced it)
       const rp = opt.peers && opt.peers[norm];
       if (rp) rp._isBoot = true;
     }
@@ -936,6 +1007,9 @@ if (main && cluster.isPrimary) {
     const ups = Object.keys(getAxeUp()).length;
     for (const entry of registry.confirmedNonBoot()) {
       const url = entry.url;
+      // Skip entries with no pub/pid — liveness can't be verified and reconnect
+      // attempts would produce DEAD(nopub) log spam with no useful recovery path.
+      if (!entry.pub && !entry.pid) continue;
       if (isPeerAlive(entry, opt)) {
         registry.touch(url); // keep seen fresh → prevent TTL eviction while connected
         continue;
@@ -947,6 +1021,10 @@ if (main && cluster.isPrimary) {
       if (tombs) {
         tombs.delete(url);
         tombs.delete(PeerRegistry.alt(url));
+      }
+      if (opt.tomb) {
+        opt.tomb.delete(url);
+        opt.tomb.delete(PeerRegistry.alt(url));
       }
       if (p) { delete p._noReconnect; delete p._hiGuess; delete p._axeGuess; }
       try { route.hi({ id: url, url: url, retry: 3 }); } catch {}
