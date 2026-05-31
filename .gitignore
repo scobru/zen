@@ -22,3 +22,5 @@ tmp/
 .well-known/
 playwright-report/
 test-results/
+lib/reboot.cron
+stats.testzen-*
