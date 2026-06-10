@@ -4,25 +4,33 @@ function Dup(opt) {
   var dup = { s: new Map() },
     s = dup.s;
   opt = opt || { max: 999, age: 1000 * 9 }; //*/ 1000 * 9 * 3};
+  function toKey(id) {
+    if (id && typeof id === 'object' && typeof id.toString === 'function') {
+      return id.toString();
+    }
+    return id;
+  }
   dup.check = function (id) {
-    if (!s.has(id)) {
+    var key = toKey(id);
+    if (!s.has(key)) {
       return false;
     }
-    return dt(id);
+    return dt(key);
   };
   var dt = (dup.track = function (id) {
-    var it = s.get(id);
+    var key = toKey(id);
+    var it = s.get(key);
     if (!it) {
       // Evict oldest entry when at capacity (Map is insertion-ordered → first key = oldest).
       if (s.size >= opt.max) { s.delete(s.keys().next().value); }
-      it = {}; s.set(id, it);
+      it = {}; s.set(key, it);
     }
     it.was = dup.now = +new Date();
     if (!dup.to) {
       dup.to = setTimeout(dup.drop, opt.age + 9);
     }
     if (dt.ed) {
-      dt.ed(id);
+      dt.ed(key);
     }
     return it;
   });
