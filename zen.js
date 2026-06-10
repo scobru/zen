@@ -8400,26 +8400,22 @@ defmod('./src/websocket.js', function(module, exp){
   //window.ononline = window.onoffline = function(){ console.log('online?', navigator.onLine) }
 
   Zen.on("opt", function (root) {
+    var opt = root.opt;
+    var websocket = opt && (opt.WebSocket || globalThis.WebSocket);
+    var wired;
+    if (opt && false !== opt.WebSocket && websocket) {
+      var mesh = (opt.mesh = opt.mesh || Zen.Mesh(root));
+      wired = mesh.wire || opt.wire;
+      mesh.wire = opt.wire = open;
+    }
     this.to.next(root);
     if (root.once) {
       return;
     }
-    var opt = root.opt;
-    if (false === opt.WebSocket) {
-      return;
-    }
-
-    var mesh = (opt.mesh = opt.mesh || Zen.Mesh(root));
-
-    var websocket =
-      opt.WebSocket || globalThis.WebSocket;
-    if (!websocket) {
+    if (!opt || false === opt.WebSocket || !websocket) {
       return;
     }
     opt.WebSocket = websocket;
-
-    var wired = mesh.wire || opt.wire;
-    mesh.wire = opt.wire = open;
     function open(peer) {
       try {
         if (!peer || !peer.url) {
