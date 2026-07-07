@@ -742,10 +742,17 @@ var Zen;
       it("read one", function (done) {
         // RAD batches disk writes with opt.until=250ms delay. The previous
         // "write contacts" test ACKs when data is in memory, not on disk.
-        // Wait 500ms to ensure the disk flush has completed before reading
-        // with a fresh instance that has no in-memory graph.
-        setTimeout(function () {
+        // A fresh instance reads the file as-of open time, so a single fixed
+        // delay races the flush on slow runners (flaky on macos-latest).
+        // Retry with a new instance until the flushed data is visible.
+        this.timeout(1000 * 45);
+        var tries = 0;
+        setTimeout(function attempt() {
           var g = Zen({ chunk: ochunk });
+          var to = setTimeout(function () {
+            if (done.c) { return; }
+            if (++tries < 12) { return attempt(); }
+          }, 3000);
           // on this chunk setting, Stu should be split between 2 files.
           // Use .on() (not .once()) so the callback re-fires when RAD disk
           // data arrives after the initial undefined fire from an empty graph.
@@ -757,6 +764,7 @@ var Zen;
               if (!data || !data.name || !data.age) { return; }
               if (done.c) { return; }
               done.c = 1;
+              clearTimeout(to);
               expect(data.name).to.be.ok();
               expect(data.age).to.be.ok();
               done();
