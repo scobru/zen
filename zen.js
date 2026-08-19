@@ -2092,7 +2092,7 @@ defmod('./src/hash.js', function(module, exp){
           }
           counter++;
           if (counter % 1000 === 0) {
-            await new Promise((r) => setTimeout.turn(r));
+            await new Promise((r) => setTimeout(r));
           }
         }
       }

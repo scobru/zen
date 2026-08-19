@@ -98,7 +98,7 @@ export default async function hash(data, pair, cb, opt) {
         }
         counter++;
         if (counter % 1000 === 0) {
-          await new Promise((r) => setTimeout.turn(r));
+          await new Promise((r) => setTimeout(r));
         }
       }
     }
