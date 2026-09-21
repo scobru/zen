@@ -1373,7 +1373,19 @@ defmod('./src/crypto.js', function(module, exp){
   // All primitive calls are synchronous after the initial WASM load.
   // The module exposes typed wrappers that handle WASM memory management.
 
-  const __cryptoWasmURL = new URL("./crypto.wasm", import.meta.url);
+  let __cryptoWasmURL;
+  try {
+    const __metaUrl =
+      typeof import.meta !== "undefined" && import.meta && import.meta.url;
+    const __baseUrl =
+      __metaUrl ||
+      (typeof location !== "undefined" && location && location.href) ||
+      (typeof window !== "undefined" && window.location && window.location.href) ||
+      "http://localhost/";
+    __cryptoWasmURL = new URL("./crypto.wasm", __baseUrl);
+  } catch (e) {
+    __cryptoWasmURL = "./crypto.wasm";
+  }
 
   let _wasm = null;
 
@@ -1393,13 +1405,22 @@ defmod('./src/crypto.js', function(module, exp){
     if (typeof fetch !== "undefined") {
       return fetch(__cryptoWasmURL)
         .then((r) => {
-          if (!r.ok)
+          if (!r.ok || r.headers.get("content-type")?.includes("text/html"))
             throw new Error("crypto.wasm fetch failed: " + r.status + " " + r.url);
           return r.arrayBuffer();
         })
-        .then((buf) => WebAssembly.instantiate(buf, {}))
+        .then((buf) => {
+          const u8 = new Uint8Array(buf);
+          if (u8[0] !== 0x00 || u8[1] !== 0x61 || u8[2] !== 0x73 || u8[3] !== 0x6d) {
+            throw new Error("crypto.wasm invalid magic header");
+          }
+          return WebAssembly.instantiate(buf, {});
+        })
         .then((r) => {
           _wasm = r;
+        })
+        .catch((e) => {
+          console.warn("[zen] crypto.wasm skipped:", e.message);
         });
     }
     return Promise.reject(new Error("crypto_wasm_bridge: cannot load crypto.wasm"));
@@ -4146,7 +4167,19 @@ defmod('./src/security.js', function(module, exp){
 defmod('./src/pen.js', function(module, exp){
   var SecurityMod = reqmod('./src/security.js').default;
   var base62 = reqmod('./src/base62.js').default;
-  const __penWasmURL = new URL("./pen.wasm", import.meta.url);
+  let __penWasmURL;
+  try {
+    const __metaUrl =
+      typeof import.meta !== "undefined" && import.meta && import.meta.url;
+    const __baseUrl =
+      __metaUrl ||
+      (typeof location !== "undefined" && location && location.href) ||
+      (typeof window !== "undefined" && window.location && window.location.href) ||
+      "http://localhost/";
+    __penWasmURL = new URL("./pen.wasm", __baseUrl);
+  } catch (e) {
+    __penWasmURL = "./pen.wasm";
+  }
   {
     var runtime = SecurityMod;
 
@@ -4178,17 +4211,24 @@ defmod('./src/pen.js', function(module, exp){
       if (typeof fetch !== "undefined") {
         return fetch(__penWasmURL)
           .then(function (r) {
-            if (!r.ok)
+            if (!r.ok || r.headers.get("content-type")?.includes("text/html"))
               throw new Error(
                 "pen: fetch pen.wasm failed: " + r.status + " " + r.url,
               );
             return r.arrayBuffer();
           })
           .then(function (buf) {
+            var u8 = new Uint8Array(buf);
+            if (u8[0] !== 0x00 || u8[1] !== 0x61 || u8[2] !== 0x73 || u8[3] !== 0x6d) {
+              throw new Error("pen.wasm invalid magic header");
+            }
             return WebAssembly.instantiate(buf, {});
           })
           .then(function (r) {
             _wasm = r;
+          })
+          .catch(function (e) {
+            console.warn("[zen] pen.wasm skipped:", e.message);
           });
       }
       return Promise.reject(

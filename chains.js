@@ -1378,7 +1378,19 @@ defmod('./zen.js', function(module, exp){
     // All primitive calls are synchronous after the initial WASM load.
     // The module exposes typed wrappers that handle WASM memory management.
 
-    const __cryptoWasmURL = new URL("./crypto.wasm", import.meta.url);
+    let __cryptoWasmURL;
+    try {
+      const __metaUrl =
+        typeof import.meta !== "undefined" && import.meta && import.meta.url;
+      const __baseUrl =
+        __metaUrl ||
+        (typeof location !== "undefined" && location && location.href) ||
+        (typeof window !== "undefined" && window.location && window.location.href) ||
+        "http://localhost/";
+      __cryptoWasmURL = new URL("./crypto.wasm", __baseUrl);
+    } catch (e) {
+      __cryptoWasmURL = "./crypto.wasm";
+    }
 
     let _wasm = null;
 
@@ -1398,13 +1410,22 @@ defmod('./zen.js', function(module, exp){
       if (typeof fetch !== "undefined") {
         return fetch(__cryptoWasmURL)
           .then((r) => {
-            if (!r.ok)
+            if (!r.ok || r.headers.get("content-type")?.includes("text/html"))
               throw new Error("crypto.wasm fetch failed: " + r.status + " " + r.url);
             return r.arrayBuffer();
           })
-          .then((buf) => WebAssembly.instantiate(buf, {}))
+          .then((buf) => {
+            const u8 = new Uint8Array(buf);
+            if (u8[0] !== 0x00 || u8[1] !== 0x61 || u8[2] !== 0x73 || u8[3] !== 0x6d) {
+              throw new Error("crypto.wasm invalid magic header");
+            }
+            return WebAssembly.instantiate(buf, {});
+          })
           .then((r) => {
             _wasm = r;
+          })
+          .catch((e) => {
+            console.warn("[zen] crypto.wasm skipped:", e.message);
           });
       }
       return Promise.reject(new Error("crypto_wasm_bridge: cannot load crypto.wasm"));
@@ -3516,11 +3537,22 @@ defmod('./zen.js', function(module, exp){
       },
       forget: function (ctx, next) {
         var soul = ctx.soul,
+          key = ctx.key,
           state = ctx.state,
           msg = ctx.msg,
+          mark,
           tmp2;
-        if (0 <= soul.indexOf("<?")) {
-          tmp2 = parseFloat(soul.split("<?")[1] || "");
+        // <?N marks EPHEMERAL data — on the soul (the whole node) or on the
+        // key (one slot of a durable node, e.g. a PEN mailbox slot). Either
+        // way: a copy staler than N seconds is dropped at ingest.
+        mark =
+          typeof soul === "string" && 0 <= soul.indexOf("<?")
+            ? soul
+            : typeof key === "string" && 0 <= key.indexOf("<?")
+              ? key
+              : null;
+        if (mark !== null) {
+          tmp2 = parseFloat(mark.split("<?")[1] || "");
           if (tmp2 && state < Zen.state() - tmp2 * 1000) {
             (tmp2 = msg._) && tmp2.stun && tmp2.stun--;
             return;
@@ -4140,7 +4172,19 @@ defmod('./zen.js', function(module, exp){
   defmod('./src/pen.js', function(module, exp){
     var SecurityMod = reqmod('./src/security.js').default;
     var base62 = reqmod('./src/base62.js').default;
-    const __penWasmURL = new URL("./pen.wasm", import.meta.url);
+    let __penWasmURL;
+    try {
+      const __metaUrl =
+        typeof import.meta !== "undefined" && import.meta && import.meta.url;
+      const __baseUrl =
+        __metaUrl ||
+        (typeof location !== "undefined" && location && location.href) ||
+        (typeof window !== "undefined" && window.location && window.location.href) ||
+        "http://localhost/";
+      __penWasmURL = new URL("./pen.wasm", __baseUrl);
+    } catch (e) {
+      __penWasmURL = "./pen.wasm";
+    }
     {
       var runtime = SecurityMod;
 
@@ -4172,17 +4216,24 @@ defmod('./zen.js', function(module, exp){
         if (typeof fetch !== "undefined") {
           return fetch(__penWasmURL)
             .then(function (r) {
-              if (!r.ok)
+              if (!r.ok || r.headers.get("content-type")?.includes("text/html"))
                 throw new Error(
                   "pen: fetch pen.wasm failed: " + r.status + " " + r.url,
                 );
               return r.arrayBuffer();
             })
             .then(function (buf) {
+              var u8 = new Uint8Array(buf);
+              if (u8[0] !== 0x00 || u8[1] !== 0x61 || u8[2] !== 0x73 || u8[3] !== 0x6d) {
+                throw new Error("pen.wasm invalid magic header");
+              }
               return WebAssembly.instantiate(buf, {});
             })
             .then(function (r) {
               _wasm = r;
+            })
+            .catch(function (e) {
+              console.warn("[zen] pen.wasm skipped:", e.message);
             });
         }
         return Promise.reject(
@@ -4869,13 +4920,28 @@ defmod('./zen.js', function(module, exp){
             });
             return;
           }
-          // Peer re-propagation: verify existing signature then unpack.
-          // If check.auth already ran (new-write path), msg.put[":"] is an object
-          // with a "~" signature field — use it directly without recovery.
+          // Peer re-propagation: verify the signature AND RECOVER THE WRITER.
+          // R5 is documented as "the pub recovered from the signature" — leaving
+          // it blank here made every writer-pinning policy fail on every remote
+          // peer, so pen-soul data silently never propagated. Remote peers are
+          // exactly where writer pinning matters most.
           var putVal = ctx.put[":"];
           if (putVal && typeof putVal === "object" && putVal["~"]) {
-            ctx.val = putVal[":"];
-            mineIfNeeded(runPredicate);
+            runtime.opt.pack(ctx.put, function (packed) {
+              runtime
+                .recover(packed)
+                .then(function (signerPub) {
+                  runtime.verify(packed, signerPub || null, function (data) {
+                    if (data === void 0) return reject("PEN: valid signature required");
+                    writer = signerPub || "";
+                    ctx.val = putVal[":"];
+                    mineIfNeeded(runPredicate);
+                  });
+                })
+                .catch(function () {
+                  reject("PEN: cannot recover signer pub");
+                });
+            });
             return;
           }
           runtime.opt.pack(ctx.put, function (packed) {
@@ -4884,6 +4950,7 @@ defmod('./zen.js', function(module, exp){
               runtime.verify(packed, signerPub || sec.upub || null, function (data) {
                 data = runtime.opt.unpack(data);
                 if (data === void 0) return reject("PEN: valid signature required");
+                writer = signerPub || sec.upub || "";
                 var sig = (packed && packed.s) || "";
                 ctx.put[":"] = { ":": data, "~": sig, v: packed && packed.v, c: packed && packed.c };
                 ctx.put["="] = data;
@@ -6853,9 +6920,6 @@ defmod('./zen.js', function(module, exp){
   });
 
   defmod('./src/get.js', function(module, exp){
-    var __root = reqmod('./src/root.js').default;
-    var Zen = __root;
-
     Zen.chain.get = function (key, cb, as) {
       var zen, tmp;
       if (typeof key === "string") {
@@ -6910,7 +6974,9 @@ defmod('./zen.js', function(module, exp){
           id;
         opt.at = cat;
         opt.ok = key;
-        var wait = {}; // can we assign this to the at instead, like in once?
+        var wait = {}, // what each node has folded into the open batch
+          told = {}; // and which of those values it has already been handed
+        // can we assign this to the at instead, like in once?
         //var path = []; cat.$.back(at => { at.get && path.push(at.get.slice(0,9))}); path = path.reverse().join('.');
         function any(msg, eve, f) {
           if (any.stun) {
@@ -6974,13 +7040,102 @@ defmod('./zen.js', function(module, exp){
     					cat.on('out', opt.out);
     					return;
     				}*/
+            // A piece of a multi-file read merges into the graph but must not be
+            // announced: the node is still being assembled, and a caller that keeps
+            // the first value it is handed would take a piece for the whole record.
+            //
+            // This has to be decided before the batch is joined, not after. The
+            // first message for a node parks on the open batch and every later one
+            // folds into it, so whichever message parks speaks for all of them when
+            // the batch ends. Let a piece park and the batch's whole delivery --
+            // including the message that completed the node -- is dropped on its
+            // behalf, and nothing is left to hand the node over. Under load that is
+            // what a read spanning several files does: the pieces land inside one
+            // batch instead of after it.
+            if ((msg._ || "").quiet) {
+              return;
+            }
             if ((tmp = root.hatch) && !tmp.end && u === opt.hatch && !f) {
-              // quick hack! // What's going on here? Because data is streamed, we get things one by one, but a lot of developers would rather get a callback after each batch instead, so this does that by creating a wait list per chain id that is then called at the end of the batch by the hatch code in the root put listener.
-              if (wait[at.$._.id]) {
+              // quick hack! // Because data is streamed we get things one by one, but callers would rather be called once per batch than once per piece, so the first delivery for a node parks on the batch and later ones fold into it, to be handed out together when the batch ends.
+              var node = at.$._.id,
+                held = wait[node];
+              if (held) {
+                // Folding is right while these say the same thing, and they usually
+                // do: one put is carried out in several passes and stamps every
+                // field it writes with a single state. A different state is a
+                // different write, though, and the delivery already queued cannot
+                // speak for the older one -- it carries no value of its own, it
+                // reads the node when the batch ends, and by then this newer write
+                // has replaced what it would have said. That is how a node written
+                // twice inside one batch used to lose its first value with nobody
+                // noticing: every message carrying it was folded away as a repeat.
+                // So hand the older value over now, from the copy taken when it was
+                // queued, which is the only one left of it.
+                if ((tmp = stamp(data) || stamp(msg.put))) {
+                  // Pieces of one node read back from different files carry the
+                  // state of the write that made them, so state alone cannot tell
+                  // "the same thing again" from "the rest of it", and folding by
+                  // state discards the piece that completes the node. The store
+                  // says which is which: a node still being read is marked, and the
+                  // mark is gone on the piece that finishes it. Fold the incomplete
+                  // ones; let the one that completes the node through.
+                  if (tmp === held.when) {
+                    var part = !!(sat || at || "").part;
+                    if (held.part && !part) {
+                      held.part = 0;
+                      held.snap = snapshot(data);
+                      if (!opt.v2020 && told[node] !== tmp) {
+                        told[node] = tmp;
+                        opt.ok.call(at.$, data, at.get, msg, eve || any);
+                      }
+                      return;
+                    }
+                    held.part = part;
+                  }
+                  if (tmp !== held.when) {
+                    // The copy on its own is not enough to hand over: a node
+                    // arrives a field at a time, so it can be half-built, and a
+                    // caller that keeps the first thing it is given would take the
+                    // half for the whole. It does not have to be, though -- every
+                    // field this write did not touch is still standing in the node.
+                    // So put the older value back together: the node as it is now,
+                    // with the fields this write replaced taken from the copy.
+                    if (!opt.v2020 && told[node] !== held.when) {
+                      // A field's value is a value, not a node: there is nothing to
+                      // put back together, the copy is simply what it said before.
+                      var back =
+                        data && "object" == typeof data
+                          ? asof(data, held.snap, held.when)
+                          : held.snap;
+                      if (u !== back && back !== data) {
+                        told[node] = held.when;
+                        opt.ok.call(at.$, back, at.get, msg, eve || any);
+                      }
+                    }
+                    held.when = tmp;
+                  }
+                  // Keep the copy current within this write. A node arrives a field
+                  // at a time and every piece carries the same state, so the first
+                  // message for it is usually a half-built one -- holding on to that
+                  // would mean handing over a value with the interesting part still
+                  // missing.
+                  held.snap = snapshot(data);
+                }
                 return;
               }
-              wait[at.$._.id] = 1;
+              wait[node] = held = {
+                when: stamp(data) || stamp(msg.put),
+                snap: snapshot(data),
+                part: !!(sat || at || "").part,
+              };
               tmp.push(function () {
+                // What this was queued to say may have been said already, if the
+                // node moved on while the batch was still going.
+                var now = (msg.$$ || msg.$ || "")._;
+                now = stamp(now && now.put);
+                if (now && told[node] === now) {
+                  return;
+                }
                 any(msg, eve, 1);
               });
               return;
@@ -6992,7 +7147,16 @@ defmod('./zen.js', function(module, exp){
             if (root.pass[id + at.id]) {
               return;
             }
-            root.pass[id + at.id] = 1;
+            // A read through a link delivers twice in the same pass: the pointer
+            // first, then the node it points at once that has loaded. Claiming the
+            // pass slot for the pointer makes the second delivery look like a
+            // repeat of the first, and it is dropped -- so the listener is left
+            // holding `{"#": soul}` and the node it asked for never arrives at
+            // all. Handing over a pointer is not an answer; do not spend the slot
+            // on it.
+            if ("string" != typeof Zen.valid(data)) {
+              root.pass[id + at.id] = 1;
+            }
           }
           if (opt.v2020) {
             opt.ok(msg, eve || any);
@@ -7131,6 +7295,100 @@ defmod('./zen.js', function(module, exp){
       //tmp.echo[cat.id] = {}; // TODO: Warning: This unsubscribes ALL of this chain's listeners from this link, not just the one callback event.
       //obj.del(map, at); // TODO: Warning: This unsubscribes ALL of this chain's listeners from this link, not just the one callback event.
       return;
+    }
+    // The node as it stood before this write, or nothing if that cannot be told.
+    //
+    // Fields this write did not touch are still in the node itself, so they are
+    // taken from there and are whole. Fields it replaced are gone, and the only
+    // record left of them is the copy kept while they were being folded away -- if
+    // the copy does not have one either, then nothing was lost that can be given
+    // back, and there is nothing to hand over.
+    function asof(now, was, when) {
+      var ns = ((now || "")._ || "")[">"],
+        ws = ((was || "")._ || "")[">"] || "",
+        out = {},
+        at = {},
+        lost = 0,
+        k;
+      if (!ns) {
+        return;
+      }
+      for (k in ns) {
+        if (!(ns[k] > when)) {
+          out[k] = now[k];
+          at[k] = ns[k];
+          continue;
+        } // this write left it alone, so the node still has it
+        if (u === ws[k]) {
+          // This write touched a field the copy knows nothing about. Either it
+          // added one that did not exist, or it replaced one whose value had not
+          // reached this listener yet -- a node arrives a field at a time, so the
+          // copy runs behind. From here those look the same, and guessing wrong
+          // means handing over a node with a field missing, which a caller that
+          // keeps the first thing it is given takes for the whole truth. Say
+          // nothing rather than say half.
+          return;
+        }
+        out[k] = was[k]; // replaced: give back what the copy kept
+        at[k] = ws[k];
+        lost = 1;
+      }
+      if (!lost) {
+        return;
+      } // nothing was taken away, so nothing to hand back
+      out._ = { "#": ((now || "")._ || "")["#"], ">": at };
+      return out;
+    }
+    // A copy of a value as it stands now. Cached nodes are mutated in place by
+    // later writes, so holding one by reference holds nothing -- by the time it is
+    // read it says whatever the newest write left behind.
+    function snapshot(d) {
+      if (!d || "object" != typeof d) {
+        return d;
+      }
+      var o = {},
+        k,
+        s = d._,
+        g,
+        gs;
+      for (k in d) {
+        if ("_" !== k) {
+          o[k] = d[k];
+        }
+      }
+      if (s) {
+        g = {};
+        gs = s[">"] || "";
+        for (k in gs) {
+          g[k] = gs[k];
+        }
+        o._ = { "#": s["#"], ">": g };
+      }
+      return o;
+    }
+    // The state a write stamped on a value. One put stamps every field it writes
+    // with the same state, so this stays put while a single write is still being
+    // assembled, and moves as soon as a later write touches the node.
+    function stamp(d) {
+      if (!d || "object" != typeof d) {
+        return 0;
+      }
+      var s = d[">"],
+        m = 0,
+        k;
+      if ("number" == typeof s) {
+        return s;
+      }
+      s = (d._ || "")[">"];
+      if (!s) {
+        return 0;
+      }
+      for (k in s) {
+        if (s[k] > m) {
+          m = s[k];
+        }
+      }
+      return m;
     }
     var empty = {},
       valid = Zen.valid,
@@ -8448,11 +8706,26 @@ defmod('./zen.js', function(module, exp){
 
     Zen.on("opt", function (root) {
       this.to.next(root);
-      if (root.once) {
-        return;
-      }
       var opt = root.opt;
       if (false === opt.WebSocket) {
+        return;
+      }
+      if (root.once) {
+        // A peer added AFTER boot must be dialled, not merely recorded. opt(url)
+        // is the documented way to add one at runtime — akao's zen hub starts with
+        // no peers and dials the site's relay once the site config has loaded —
+        // and this handler used to return right here, so the peer landed in
+        // opt.peers and no socket was ever opened. The failure was silent and
+        // total: in a browser, user state and alert documents never left the tab.
+        if (opt.wire) {
+          var known = opt.peers || {};
+          Object.keys(known).forEach(function (url) {
+            var peer = known[url];
+            if (peer && peer.url && !peer.wire) {
+              opt.wire(peer);
+            }
+          });
+        }
         return;
       }
 
@@ -8772,6 +9045,14 @@ defmod('./zen.js', function(module, exp){
           id = msg["#"],
           ok = msg.ok || "",
           tmp; // pull data off wire envelope
+        // <?N souls are EPHEMERAL — never persisted, browser storage included.
+        // Same ack discipline as the memory-only branch above.
+        if ((typeof soul === "string" && 0 <= soul.indexOf("<?")) || (typeof key === "string" && 0 <= key.indexOf("<?"))) {
+          if (!msg["@"]) {
+            root.on("in", { "@": id, ok: 1 });
+          }
+          return;
+        }
         disk[soul] = Zen.state.ify(disk[soul], key, put[">"], put[":"], soul); // merge into disk object
         if (stop && size > 4999880) {
           root.on("in", { "@": id, err: "localStorage max!" });
@@ -10158,7 +10439,12 @@ defmod('./lib/chains/evm.js', function(module, exp){
    *
    * Migration note from ethers:
    *   - contract.interface.encodeFunctionData() now returns a Promise (keccak is async).
-   *     Callers must `await` it.
+   *     Callers must `await` it. contract.interface.getFunction() stays synchronous,
+   *     as in ethers, because a name and a signature are answerable from the parsed
+   *     ABI without hashing anything.
+   *   - contract.interface implements three of ethers v6 Interface's 32 members, and
+   *     REFUSES the other 29 by name rather than being undefined at them. See the
+   *     comment on `this.interface` for which, and why those three.
    *   - new Wallet(priv) sets .address asynchronously; await wallet._ready before
    *     accessing .address, or use await Wallet.create(priv).
    */
@@ -10925,6 +11211,7 @@ defmod('./lib/chains/evm.js', function(module, exp){
           this._reconnecting = false
           this._destroyed = false
           this._errorHandler = null
+          this._reconnectHandler = null
       }
 
       _connect() {
@@ -10991,6 +11278,11 @@ defmod('./lib/chains/evm.js', function(module, exp){
                   await this._connect()
                   await this._resubscribeAll()
                   this._reconnecting = false
+                  // Fired only after the subscriptions are back: a consumer that
+                  // mines candles from pushed logs uses this to heal whatever
+                  // the dead socket dropped — telling it any earlier would let
+                  // fresh events land on an unhealed gap.
+                  if (this._reconnectHandler) try { this._reconnectHandler() } catch {}
               } catch {
                   this._ready = null
                   this._reconnecting = false
@@ -10999,8 +11291,12 @@ defmod('./lib/chains/evm.js', function(module, exp){
           }, delay)
       }
 
-      async _subscribeTopic(topic, handler) {
-          const subId = await this.send("eth_subscribe", [topic])
+      // A topic is the local KEY; the params are what eth_subscribe is sent —
+      // they differ for logs ("logs" plus a filter) and for "head" (a second
+      // newHeads subscription that keeps the full header). _subHandlers stores
+      // { handler, params } so reconnects resubscribe with the exact filter.
+      async _subscribeTopic(topic, handler, params = [topic]) {
+          const subId = await this.send("eth_subscribe", params)
           this._subs.set(subId, handler)
           this._subTopics.set(subId, topic)
           return subId
@@ -11009,8 +11305,10 @@ defmod('./lib/chains/evm.js', function(module, exp){
       async _resubscribeAll() {
           this._subs.clear()
           this._subTopics.clear()
-          for (const [topic, handler] of this._subHandlers.entries()) {
-              await this._subscribeTopic(topic, handler)
+          for (const [topic, entry] of this._subHandlers.entries()) {
+              const handler = typeof entry === "function" ? entry : entry.handler
+              const params = typeof entry === "function" ? [topic] : entry.params
+              await this._subscribeTopic(topic, handler, params)
           }
       }
 
@@ -11032,30 +11330,58 @@ defmod('./lib/chains/evm.js', function(module, exp){
       }
 
       async on(event, handler) {
-          await this._connect()
-          if (event === "block") {
-              const wrapped = result => handler(result?.number != null ? parseInt(result.number, 16) : result)
-              this._subHandlers.set("newHeads", wrapped)
-              return this._subscribeTopic("newHeads", wrapped)
+          // Handler-only registrations must not force a connection.
+          if (event === "reconnect") {
+              this._reconnectHandler = handler
+              return null
           }
           if (event === "error") {
               this._errorHandler = handler
               return null
           }
+          await this._connect()
+          if (event === "block") {
+              // ethers parity: the block event is a bare number
+              const wrapped = result => handler(result?.number != null ? parseInt(result.number, 16) : result)
+              this._subHandlers.set("newHeads", { handler: wrapped, params: ["newHeads"] })
+              return this._subscribeTopic("newHeads", wrapped)
+          }
+          if (event === "head") {
+              // The FULL header, enriched like getBlock — a consumer that stamps
+              // candles with the block's real timestamp must not pay a getBlock
+              // round trip per block.
+              const wrapped = result => handler(_enrichBlock(result))
+              this._subHandlers.set("head", { handler: wrapped, params: ["newHeads"] })
+              return this._subscribeTopic("head", wrapped, ["newHeads"])
+          }
+          if (event && typeof event === "object") {
+              // ethers parity: a filter object is a logs subscription
+              const topic = "logs:" + JSON.stringify(event)
+              const wrapped = result => handler(result)
+              this._subHandlers.set(topic, { handler: wrapped, params: ["logs", event] })
+              return this._subscribeTopic(topic, wrapped, ["logs", event])
+          }
+      }
+
+      async _offTopic(topic) {
+          this._subHandlers.delete(topic)
+          for (const [subId, subscribed] of this._subTopics.entries()) {
+              if (subscribed === topic) {
+                  try { await this.send("eth_unsubscribe", [subId]) } catch {}
+                  this._subs.delete(subId)
+                  this._subTopics.delete(subId)
+              }
+          }
       }
 
       async off(subIdOrEvent) {
-          if (subIdOrEvent === "block") {
-              this._subHandlers.delete("newHeads")
-              for (const [subId, topic] of this._subTopics.entries()) {
-                  if (topic === "newHeads") {
-                      try { await this.send("eth_unsubscribe", [subId]) } catch {}
-                      this._subs.delete(subId)
-                      this._subTopics.delete(subId)
-                  }
-              }
+          if (subIdOrEvent === "block") return this._offTopic("newHeads")
+          if (subIdOrEvent === "head") return this._offTopic("head")
+          if (subIdOrEvent === "reconnect") {
+              this._reconnectHandler = null
               return
           }
+          if (subIdOrEvent && typeof subIdOrEvent === "object") return this._offTopic("logs:" + JSON.stringify(subIdOrEvent))
           if (subIdOrEvent && typeof subIdOrEvent === "string" && subIdOrEvent.startsWith("0x")) {
               const topic = this._subTopics.get(subIdOrEvent)
               try { await this.send("eth_unsubscribe", [subIdOrEvent]) } catch {}
@@ -11101,9 +11427,21 @@ defmod('./lib/chains/evm.js', function(module, exp){
           if (tx.value !== undefined) obj.value = "0x" + BigInt(tx.value).toString(16)
           return BigInt(await this.send("eth_estimateGas", [obj]))
       }
+      /** Stop for good: no reconnects, no leaks. The old body only closed the
+       *  socket — pending calls hung to their timeout and every subscription
+       *  table survived, so a dropped provider was a zombie, not a corpse. */
       async destroy() {
           this._destroyed = true
-          if (this._ws) this._ws.close()
+          this._reconnectHandler = null
+          this._errorHandler = null
+          for (const { reject } of this._pending.values()) reject(new Error("WS destroyed"))
+          this._pending.clear()
+          this._subs.clear()
+          this._subTopics.clear()
+          this._subHandlers.clear()
+          try { if (this._ws) this._ws.close() } catch {}
+          this._ws = null
+          this._ready = null
       }
   }
 
@@ -11279,6 +11617,45 @@ defmod('./lib/chains/evm.js', function(module, exp){
 
   // ─── Contract ─────────────────────────────────────────────────────────────────
 
+  // ethers v6 `Interface`'s whole public surface: every own data property of an
+  // instance plus every non-underscore method on the prototype, read off
+  // ethers 6.17.0 on 2026-08-28. It is here so that `Contract.interface` can
+  // refuse the members it does not implement BY NAME instead of handing back
+  // `undefined` and letting the caller discover the gap as
+  // `undefined is not a function` — see the comment on `this.interface`.
+  // test/chains/evm.js re-reads this list from the installed ethers and fails
+  // if the two disagree, so a member ethers adds arrives as a red test rather
+  // than as a silent hole at a caller.
+  const INTERFACE_MEMBERS = [
+      "deploy", "fallback", "fragments", "receive",
+      "decodeErrorResult", "decodeEventLog", "decodeFunctionData", "decodeFunctionResult",
+      "encodeDeploy", "encodeErrorResult", "encodeEventLog", "encodeFilterTopics",
+      "encodeFunctionData", "encodeFunctionResult", "forEachError", "forEachEvent",
+      "forEachFunction", "format", "formatJson", "getAbiCoder", "getError", "getEvent",
+      "getEventName", "getFunction", "getFunctionName", "hasEvent", "hasFunction",
+      "makeError", "parseCallResult", "parseError", "parseLog", "parseTransaction",
+  ]
+
+  // Give every ethers Interface member this shim does NOT implement a getter that
+  // says so and lists what it does implement. Non-enumerable on purpose: an
+  // enumerable throwing getter would make `console.log(contract)` throw, because
+  // util.inspect reads every enumerable own property.
+  function declareInterfaceGaps(iface) {
+      const implemented = Object.keys(iface)
+      const available = implemented.join(", ")
+      for (const member of INTERFACE_MEMBERS) {
+          if (implemented.includes(member)) continue
+          Object.defineProperty(iface, member, {
+              enumerable: false,
+              configurable: true,
+              get() {
+                  throw new Error("zen Contract.interface: no `" + member + "`. Implemented: " + available + ".")
+              },
+          })
+      }
+      return iface
+  }
+
   class Contract {
       constructor(address, abi, providerOrWallet) {
           this.address  = address
@@ -11289,11 +11666,63 @@ defmod('./lib/chains/evm.js', function(module, exp){
               ? providerOrWallet._provider
               : providerOrWallet
 
-          this.interface = {
+          // An ethers v6 `Interface` shim, and the declared edge of it.
+          //
+          // A shim that names ethers is read as a promise about the whole of
+          // ethers' shape, so every member missing from it is a call that
+          // compiles, ships, and throws `undefined is not a function` on the
+          // one path that reaches a live chain. That is how akao's V4 position
+          // reader carried an `interface.getFunction(method).outputs` call
+          // through three PRs: its write path is proven against frozen
+          // calldata, and frozen calldata never meets a connector (#101).
+          //
+          // So the surface is stated twice — what is here, and what is
+          // deliberately not. `declareInterfaceGaps` gives every remaining
+          // member of `INTERFACE_MEMBERS` a getter that refuses by name and
+          // lists what does exist. A Proxy would cover misspellings too, but it
+          // taxes every read of this object, the implemented members included:
+          // measured 2026-08-28 on this machine, 1e7 property gets cost 26ms
+          // through a plain object and 868ms through a Proxy (2.6ns → 87ns, 33x),
+          // while a getter costs nothing until someone asks for a name that is
+          // not there. Feature detection (`if (iface.getEvent)`) throws instead
+          // of reading false — deliberately, since against real ethers that
+          // branch is never taken anyway.
+          //
+          // Implemented, and nothing else: encodeFunctionData, getFunction,
+          // parseLog. Each was chosen because a caller was measured reaching for
+          // it (#101); getEvent, decodeFunctionResult and the rest of ethers'
+          // 32-member surface are refusals, not omissions.
+          this.interface = declareInterfaceGaps({
               encodeFunctionData: (name, args) => {
                   const item = this.abi.find(i => i.type === "function" && i.name === name)
                   if (!item) throw new Error("Contract.interface: unknown function " + name)
                   return buildCalldata(buildSig(item), item.inputs, args)
+              },
+              // ethers-parity: the function fragment for a name or a full
+              // signature, out of the SAME parsed ABI `_buildMethods` closes
+              // over — `getFunction(name) === contract[name].fragment`, one
+              // array, one read path, so the two cannot drift. Returns null
+              // when nothing matches and throws on an ambiguous overload name,
+              // both the ethers v6 semantics.
+              //
+              // Synchronous, unlike `encodeFunctionData`: a name and a signature
+              // are both answerable from the parsed ABI, and callers read
+              // `.outputs` inline. A 4-byte selector is the one lookup ethers
+              // also accepts and this cannot — it needs keccak, which is async
+              // here — so it is refused by name rather than silently missed.
+              getFunction: nameOrSignature => {
+                  const key = String(nameOrSignature ?? "")
+                  if (/^0x[0-9a-fA-F]{8}$/.test(key)) throw new Error(
+                      "Contract.interface.getFunction: `" + key + "` is a selector, and resolving one needs keccak, which is async in zen. Pass the function name or its full signature."
+                  )
+                  const functions = this.abi.filter(item => item.type === "function")
+                  const bySignature = functions.find(item => buildSig(item) === key)
+                  if (bySignature) return bySignature
+                  const byName = functions.filter(item => item.name === key)
+                  if (byName.length > 1) throw new Error(
+                      "Contract.interface.getFunction: ambiguous function description (i.e. matches " + byName.map(item => JSON.stringify(buildSig(item))).join(", ") + ")"
+                  )
+                  return byName[0] || null
               },
               // ethers-parity: decode one raw log against this contract's event
               // fragments. Returns null for a log no fragment matches — the
@@ -11312,7 +11741,7 @@ defmod('./lib/chains/evm.js', function(module, exp){
                   for (const inp of item.inputs) if (inp.name) args[inp.name] = named[inp.name]
                   return { name: item.name, args, fragment: item }
               }
-          }
+          })
 
           this._buildMethods()
       }
@@ -11355,6 +11784,11 @@ defmod('./lib/chains/evm.js', function(module, exp){
                   return receipt
               }
               method._abiGenerated = true
+              // ethers-parity, and the proof that `interface.getFunction` is not
+              // a second read of the ABI: this is the very fragment the method
+              // encodes with, so `interface.getFunction(name) === contract[name].fragment`
+              // holds by identity rather than by resemblance.
+              method.fragment = item
 
               // ethers-parity: simulate a write without sending it. Runs the
               // same calldata through eth_call as the signer — the sender
@@ -11614,6 +12048,7 @@ defmod('./lib/chains/evm.js', function(module, exp){
   exp.decodeEventLog = decodeEventLog;
   exp.buildEventTopicMap = buildEventTopicMap;
   exp.decodeReceiptEvents = decodeReceiptEvents;
+  exp.INTERFACE_MEMBERS = INTERFACE_MEMBERS;
   exp.encodePath = encodePath;
   exp.formatUnits = formatUnits;
   exp.parseUnits = parseUnits;
