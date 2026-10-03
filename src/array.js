@@ -14,7 +14,7 @@ ZenArray.prototype.toString = function (enc, start, end) {
       .map((i) => buf[i + start].toString(16).padStart(2, "0"))
       .join("");
   }
-  if (enc === "utf8") {
+  if (enc === "utf8" || enc === "latin1" || enc === "binary") {
     return Array.from({ length: (end || length) - start }, (_, i) =>
       String.fromCharCode(this[i + start]),
     ).join("");

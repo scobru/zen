@@ -51,7 +51,7 @@ defmod('./src/array.js', function(module, exp){
         .map((i) => buf[i + start].toString(16).padStart(2, "0"))
         .join("");
     }
-    if (enc === "utf8") {
+    if (enc === "utf8" || enc === "latin1" || enc === "binary") {
       return Array.from({ length: (end || length) - start }, (_, i) =>
         String.fromCharCode(this[i + start]),
       ).join("");
@@ -1952,9 +1952,26 @@ defmod('./src/aeskey.js', function(module, exp){
   var shim = reqmod('./src/shim.js').default;
   var settings = reqmod('./src/settings.js').default;
   var sha256 = reqmod('./src/sha256.js').default;
+  function rawSaltToString(s) {
+    if (!s) return "";
+    if (typeof s === "string") return s;
+    if (s instanceof Uint8Array || Array.isArray(s)) {
+      return Array.from(s, (b) => String.fromCharCode(b)).join("");
+    }
+    if (typeof s.toString === "function") {
+      try {
+        return s.toString("latin1");
+      } catch (_) {
+        return s.toString("utf8");
+      }
+    }
+    return String(s);
+  }
+
   async function aeskey(key, salt, opt) {
     opt = opt || {};
-    const combo = key + (salt || shim.random(8)).toString("utf8");
+    const saltObj = salt || shim.random(8);
+    const combo = key + rawSaltToString(saltObj);
     const hash = shim.Buffer.from(await sha256(combo), "binary");
     const jwkKey = settings.keyToJwk(hash);
     return await shim.subtle.importKey(
